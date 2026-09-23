@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>新建流水线任务 - 步骤与角色自定义 - Harness Pipeline</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+</head>
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex">
+
+  <!-- 1. 全局最左侧活动栏 -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+
+    <!-- 运行态 (Run-time) -->
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn active" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
+    <a href="run-workflow.html" class="activity-btn" title="BPMN 业务工作流 (Workflow)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></a>
+    <a href="run-terminal.html" class="activity-btn" title="终端与长任务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></a>
+    <a href="run-trajectory.html" class="activity-btn" title="事件轨迹审计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></a>
+
+            <div class="my-3 w-6 border-b border-slate-800"></div>
+
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-knowledge.html" class="activity-btn" title="独立知识库中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 主内容区 (完整表单大屏) -->
+  <div class="flex-1 flex flex-col overflow-y-auto">
+    
+    <!-- 顶栏 -->
+    <header class="h-12 bg-[#090d18] border-b border-[#1a2333] px-6 flex items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center space-x-3">
+        <a href="run-pipeline.html" class="text-slate-400 hover:text-white flex items-center pr-2 border-r border-slate-800 text-xs">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          <span>返回任务列表</span>
+        </a>
+        <h1 class="text-sm font-bold text-white">发起新多角色流水线任务 · 步骤与角色定制</h1>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button onclick="addCustomStep()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          <span>+ 增加流水线步骤</span>
+        </button>
+        <a href="run-pipeline-detail.html" class="px-4 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow flex items-center space-x-1.5">
+          <span>确认流程并启动流水线 &rarr;</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="flex-1 p-8 space-y-8 max-w-5xl w-full mx-auto">
+      
+      <!-- 1. 任务基本信息设定 (目标与工作区) -->
+      <section class="p-6 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+            <h2 class="text-sm font-bold text-white">第一步：定义任务目标与工作区绑定</h2>
+          </div>
+          <span class="text-xs text-slate-500 font-mono">必填项</span>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <div class="space-y-1.5">
+            <label class="block text-slate-300 font-medium">任务名称 / 目标需求：</label>
+            <input type="text" value="针对 Issue #101 实现支付网关签名防重放机制" class="w-full bg-[#090d18] border border-slate-700 rounded px-3 py-2 text-white font-medium focus:border-purple-500">
+          </div>
+
+          <div class="space-y-1.5">
+            <label class="block text-slate-300 font-medium">绑定目标工作区目录 (Workspace Root)：</label>
+            <div class="flex items-center space-x-2">
+              <input type="text" value="G:\Projects\auth-service" class="flex-1 bg-[#090d18] border border-slate-700 rounded px-3 py-2 text-white font-mono text-[11px] focus:border-purple-500">
+              <button class="px-3 py-2 rounded bg-slate-800 text-slate-200 border border-slate-700 hover:bg-slate-700">浏览...</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="space-y-1.5 text-xs">
+          <label class="block text-slate-300 font-medium">需求背景 / Issue 详细说明与约束：</label>
+          <textarea rows="2" class="w-full bg-[#090d18] border border-slate-700 rounded p-2.5 text-white placeholder-slate-500 focus:border-purple-500">外部请求在 timestamp 超过 300 秒或 Nonce 重复时拒绝；使用内存 LRU 结构存储近 10 万条 Nonce；补齐单元测试。</textarea>
+        </div>
+      </section>
+
+      <!-- 2. 流水线步骤与角色执行编排设置 (核心重点：用户随时增删改查步骤、配角色) -->
+      <section class="p-6 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-xl">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="w-2 h-2 rounded-full bg-purple-400"></span>
+              <h2 class="text-sm font-bold text-white">第二步：流水线步骤 (Steps) 与负责角色 (Roles) 编排</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">可根据任务自由增删步骤、调换顺序、指定每个步骤由哪个 Agent 角色负责、使用什么指令契约与工具权限。</p>
+          </div>
+
+          <button onclick="addCustomStep()" class="px-3.5 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow flex items-center space-x-1.5 transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>+ 在末尾追加步骤</span>
+          </button>
+        </div>
+
+        <!-- 步骤列表容器 -->
+        <div id="steps-container" class="space-y-4">
+          
+          <!-- 步骤 1 -->
+          <div class="step-card p-4 rounded-lg bg-[#090d18] border border-slate-800 space-y-3 relative group hover:border-purple-500/40 transition">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="w-6 h-6 rounded-full bg-purple-950 text-purple-300 border border-purple-800 flex items-center justify-center font-mono font-bold text-xs">1</span>
+                <span class="text-xs font-bold text-white">步骤一：需求分析与规格提炼</span>
+              </div>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <button onclick="insertStepAfter(this)" class="text-purple-400 hover:text-purple-300 font-medium">+ 在此步骤后插入</button>
+              <span class="text-slate-700">|</span>
+              <span class="text-slate-500 font-mono">顺序: 01</span>
+              <span class="text-slate-700">|</span>
+              <button onclick="this.closest('.step-card').remove(); reindexSteps();" class="text-rose-400 hover:text-rose-300">删除步骤</button>
+            </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">负责 Agent 角色名称：</label>
+                <input type="text" value="Product Specifier Agent" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium">
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">执行角色定位 / 绑定模型：</label>
+                <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+                  <option>DeepSeek-R1 (深度推理边界)</option>
+                  <option>DeepSeek-V3 (通用)</option>
+                  <option>Claude 3.5 Sonnet</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">步骤流转控制 (Gatekeeper)：</label>
+                <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 font-medium">
+                  <option>需人工确认产物后推进 (Gatekeeper)</option>
+                  <option>自动放行流入下一步</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">该步骤 Agent 提示词说明 (该步骤具体做什么)：</label>
+                <textarea rows="2" class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-300 font-mono text-[11px] focus:outline-none">分析需求，通过 read_file/grep 勘察代码，梳理边界溢出条件并生成验收测试清单；严禁改写代码。</textarea>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">产出交付工件至 (选填输出目录)：</label>
+                <input type="text" value="artifacts/" placeholder="留空则直接改写工作区代码文件" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-[11px]">
+                <div class="text-[10px] text-slate-500 mt-1">留空时系统将通过 Git 状态自动追踪该步骤全部代码/测试文件增量</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 步骤 2 -->
+          <div class="step-card p-4 rounded-lg bg-[#090d18] border border-slate-800 space-y-3 relative group hover:border-purple-500/40 transition">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="w-6 h-6 rounded-full bg-purple-950 text-purple-300 border border-purple-800 flex items-center justify-center font-mono font-bold text-xs">2</span>
+                <span class="text-xs font-bold text-white">步骤二：架构设计与类型契约</span>
+              </div>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <button onclick="insertStepAfter(this)" class="text-purple-400 hover:text-purple-300 font-medium">+ 在此步骤后插入</button>
+              <span class="text-slate-700">|</span>
+              <span class="text-slate-500 font-mono">顺序: 02</span>
+              <span class="text-slate-700">|</span>
+              <button onclick="this.closest('.step-card').remove(); reindexSteps();" class="text-rose-400 hover:text-rose-300">删除步骤</button>
+            </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">负责 Agent 角色名称：</label>
+                <input type="text" value="Software Architect Agent" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium">
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">执行角色定位 / 绑定模型：</label>
+                <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+                  <option>DeepSeek-R1 (深度推理边界)</option>
+                  <option>DeepSeek-V3 (通用)</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">步骤流转控制 (Gatekeeper)：</label>
+                <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 font-medium">
+                  <option>需人工确认产物后推进 (Gatekeeper)</option>
+                  <option>自动放行流入下一步</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">该步骤 Agent 提示词说明 (该步骤具体做什么)：</label>
+                <textarea rows="2" class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-300 font-mono text-[11px] focus:outline-none">消费上一阶段 spec-v1.md，设计防重放中间件的接口与内存 LRU 缓存结构，定义 TS 类型契约。</textarea>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">产出交付工件至 (选填输出目录)：</label>
+                <input type="text" value="artifacts/" placeholder="留空则直接改写工作区代码文件" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-purple-300 font-mono text-[11px]">
+                <div class="text-[10px] text-slate-500 mt-1">选填；设计图/类型文件将自动归档至此目录</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 步骤 3 -->
+          <div class="step-card p-4 rounded-lg bg-[#090d18] border border-slate-800 space-y-3 relative group hover:border-purple-500/40 transition">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="w-6 h-6 rounded-full bg-purple-950 text-purple-300 border border-purple-800 flex items-center justify-center font-mono font-bold text-xs">3</span>
+                <span class="text-xs font-bold text-white">步骤三：TDD 编码实现与自测</span>
+              </div>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <button onclick="insertStepAfter(this)" class="text-purple-400 hover:text-purple-300 font-medium">+ 在此步骤后插入</button>
+              <span class="text-slate-700">|</span>
+              <span class="text-slate-500 font-mono">顺序: 03</span>
+              <span class="text-slate-700">|</span>
+              <button onclick="this.closest('.step-card').remove(); reindexSteps();" class="text-rose-400 hover:text-rose-300">删除步骤</button>
+            </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">负责 Agent 角色名称：</label>
+                <input type="text" value="Senior Dev Agent" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium">
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">执行角色定位 / 绑定模型：</label>
+                <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+                  <option selected>DeepSeek-V3 (通用编码)</option>
+                  <option>Claude 3.5 Sonnet</option>
+                  <option>DeepSeek-R1</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">步骤流转控制 (Gatekeeper)：</label>
+                <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-300 font-medium">
+                  <option selected>自动放行流入下一步</option>
+                  <option>需人工确认产物后推进 (Gatekeeper)</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">该步骤 Agent 提示词说明 (该步骤具体做什么)：</label>
+                <textarea rows="2" class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-300 font-mono text-[11px] focus:outline-none">严格按照 TDD 流程：先写失败测试，再实现 src/auth/token-guard.ts，确保 pnpm test 全绿通过。</textarea>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">产出交付工件至 (选填输出目录)：</label>
+                <input type="text" value="" placeholder="选填，默认留在代码工作区" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 font-mono text-[11px]">
+                <div class="text-[10px] text-slate-500 mt-1">留空时自动以 Git 工作区改动作为本步骤交付物</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 步骤 4 -->
+          <div class="step-card p-4 rounded-lg bg-[#090d18] border border-slate-800 space-y-3 relative group hover:border-purple-500/40 transition">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <span class="w-6 h-6 rounded-full bg-purple-950 text-purple-300 border border-purple-800 flex items-center justify-center font-mono font-bold text-xs">4</span>
+                <span class="text-xs font-bold text-white">步骤四：全量测试验证与安全审计验收</span>
+              </div>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <button onclick="insertStepAfter(this)" class="text-purple-400 hover:text-purple-300 font-medium">+ 在此步骤后插入</button>
+              <span class="text-slate-700">|</span>
+              <span class="text-slate-500 font-mono">顺序: 04</span>
+              <span class="text-slate-700">|</span>
+              <button onclick="this.closest('.step-card').remove(); reindexSteps();" class="text-rose-400 hover:text-rose-300">删除步骤</button>
+            </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">负责 Agent 角色名称：</label>
+                <input type="text" value="QA & Security Auditor Agent" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium">
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">执行角色定位 / 绑定模型：</label>
+                <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+                  <option selected>DeepSeek-R1 (深度审查)</option>
+                  <option>DeepSeek-V3</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">步骤流转控制 (Gatekeeper)：</label>
+                <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 font-medium">
+                  <option selected>需人工确认产物后推进 (Gatekeeper)</option>
+                  <option>自动放行</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div>
+                <label class="block text-slate-400 mb-1">该步骤 Agent 提示词说明 (该步骤具体做什么)：</label>
+                <textarea rows="2" class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-300 font-mono text-[11px] focus:outline-none">运行全量自动化测试，检查内存泄露，审查 Git Diff 是否包含未授权修改，生成审计验收报告。</textarea>
+              </div>
+              <div>
+                <label class="block text-slate-400 mb-1">产出交付工件至 (选填输出目录)：</label>
+                <input type="text" value="reports/" placeholder="例如 reports/" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-300 font-mono text-[11px]">
+                <div class="text-[10px] text-slate-500 mt-1">选填；验收报告自动输出至该文件夹</div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- 底部提交操作条 -->
+      <div class="flex items-center justify-between pt-4 border-t border-slate-800">
+        <a href="run-pipeline.html" class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">取消并返回列表</a>
+        
+        <div class="flex items-center space-x-3">
+          <button class="px-4 py-2 rounded bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/40 text-xs">保存为新流水线模板</button>
+          <a href="run-pipeline-detail.html" class="px-6 py-2 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold text-xs shadow-lg flex items-center space-x-1.5">
+            <span>保存步骤并立即启动流水线任务 &rarr;</span>
+          </a>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <script>
+    function buildStepElement(index) {
+      const stepDiv = document.createElement('div');
+      stepDiv.className = "step-card p-4 rounded-lg bg-[#090d18] border border-purple-500/50 space-y-3 relative";
+      stepDiv.innerHTML = `
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="step-num w-6 h-6 rounded-full bg-purple-950 text-purple-300 border border-purple-800 flex items-center justify-center font-mono font-bold text-xs">${index}</span>
+            <span class="step-title text-xs font-bold text-white">步骤${index}：自定义业务步骤</span>
+          </div>
+          <div class="flex items-center space-x-2 text-[11px]">
+            <button onclick="insertStepAfter(this)" class="text-purple-400 hover:text-purple-300 font-medium">+ 在此步骤后插入</button>
+            <span class="text-slate-700">|</span>
+            <span class="step-order text-slate-500 font-mono">顺序: ${String(index).padStart(2, '0')}</span>
+            <span class="text-slate-700">|</span>
+            <button onclick="this.closest('.step-card').remove(); reindexSteps();" class="text-rose-400 hover:text-rose-300">删除步骤</button>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">负责 Agent 角色名称：</label>
+            <input type="text" placeholder="例如：API Doc Writer Agent" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">绑定模型：</label>
+            <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+              <option>DeepSeek-V3</option>
+              <option>DeepSeek-R1</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">Gatekeeper 审批门：</label>
+            <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300">
+              <option>需人工确认产物后推进 (Gatekeeper)</option>
+              <option selected>自动放行流入下一步</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+          <div>
+            <label class="block text-slate-400 mb-1">该步骤 Agent 提示词说明 (该步骤具体做什么)：</label>
+            <textarea rows="2" placeholder="详细输入该角色的具体任务与执行边界..." class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-300 font-mono text-[11px]"></textarea>
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">产出交付工件至 (选填输出目录)：</label>
+            <input type="text" placeholder="选填，例如 artifacts/ 或留空按 Git 状态追踪" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-300 font-mono text-[11px]">
+            <div class="text-[10px] text-slate-500 mt-1">留空时系统自动通过 Git 状态追踪该步骤修改的代码/测试文件</div>
+          </div>
+        </div>
+      `;
+      return stepDiv;
+    }
+
+    function addCustomStep() {
+      const container = document.getElementById('steps-container');
+      const count = container.querySelectorAll('.step-card').length + 1;
+      const stepDiv = buildStepElement(count);
+      container.appendChild(stepDiv);
+      reindexSteps();
+    }
+
+    function insertStepAfter(btn) {
+      const currentCard = btn.closest('.step-card');
+      const stepDiv = buildStepElement(1);
+      currentCard.parentNode.insertBefore(stepDiv, currentCard.nextSibling);
+      reindexSteps();
+    }
+
+    function reindexSteps() {
+      const cards = document.querySelectorAll('#steps-container .step-card');
+      cards.forEach((card, idx) => {
+        const num = idx + 1;
+        const numEl = card.querySelector('.step-num');
+        const orderEl = card.querySelector('.step-order');
+        if (numEl) numEl.textContent = num;
+        if (orderEl) orderEl.textContent = '顺序: ' + String(num).padStart(2, '0');
+      });
+    }
+  </script>
+
+</body>
+</html>
+
+
+
+

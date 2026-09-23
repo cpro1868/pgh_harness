@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>主会话工作台 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    /* Markdown 暗色调精美样式 (对齐 deepseek-harness 高信息密度体验) */
+    .prose-dark {
+      color: #e2e8f0;
+      line-height: 1.6;
+      font-size: 13px;
+    }
+    .prose-dark h1, .prose-dark h2, .prose-dark h3, .prose-dark h4 {
+      color: #f8fafc;
+      font-weight: 700;
+      margin-top: 0.8em;
+      margin-bottom: 0.4em;
+    }
+    .prose-dark h1 { font-size: 1.3em; border-bottom: 1px solid #334155; padding-bottom: 0.3em; }
+    .prose-dark h2 { font-size: 1.15em; border-bottom: 1px solid #1e293b; padding-bottom: 0.2em; }
+    .prose-dark h3 { font-size: 1.05em; }
+    .prose-dark p { margin-bottom: 0.6em; }
+    .prose-dark ul, .prose-dark ol { padding-left: 1.4em; margin-bottom: 0.6em; }
+    .prose-dark ul { list-style-type: disc; }
+    .prose-dark ol { list-style-type: decimal; }
+    .prose-dark li { margin-bottom: 0.2em; }
+    .prose-dark blockquote {
+      border-left: 3px solid #6366f1;
+      padding-left: 0.8em;
+      color: #94a3b8;
+      margin: 0.6em 0;
+      background: rgba(99, 102, 241, 0.05);
+      border-radius: 0 4px 4px 0;
+    }
+    .prose-dark pre {
+      background: #090d16 !important;
+      border: 1px solid #1e293b;
+      border-radius: 6px;
+      padding: 10px 12px;
+      overflow-x: auto;
+      margin: 0.6em 0;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 11px;
+    }
+    .prose-dark code:not(pre code) {
+      background: #1e293b;
+      color: #38bdf8;
+      padding: 0.15em 0.4em;
+      border-radius: 4px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.9em;
+    }
+    .prose-dark table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0.6em 0;
+      font-size: 11px;
+    }
+    .prose-dark th, .prose-dark td {
+      border: 1px solid #334155;
+      padding: 6px 10px;
+      text-align: left;
+    }
+    .prose-dark th {
+      background: #0f172a;
+      color: #f1f5f9;
+      font-weight: 600;
+    }
+    .prose-dark tr:nth-child(even) {
+      background: rgba(15, 23, 42, 0.4);
+    }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans">
+
+  <!-- 统一 40px 顶栏 -->
+  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs select-none">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-6 h-6 rounded bg-purple-600 flex items-center justify-center font-bold text-white text-[11px] font-mono shadow-sm">PG</div>
+      <span class="font-bold text-white tracking-wide text-xs">Purple Grapes Harness</span>
+      <span class="text-slate-600">/</span>
+      <!-- 工作区锁定指示 (对齐 deepseek-harness，支持在顶栏切换工作区，绝不阻塞输入区) -->
+      <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 font-mono text-[11px] text-blue-300">
+        <span>🔒</span>
+        <select id="topbar-workspace-select" onchange="handleWorkspaceChange(this.value)" class="bg-transparent text-blue-300 border-0 focus:outline-none cursor-pointer">
+          <option value="">正在检测工作区...</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="flex items-center space-x-3 text-[11px]">
+      <div class="flex items-center space-x-1.5 font-mono text-slate-400">
+        <span>Token: <b id="session-tokens" class="text-emerald-400">0</b></span>
+        <span>·</span>
+        <span>费用: <b id="session-cost" class="text-emerald-400">$0.000</b></span>
+      </div>
+      <!-- 模型选择 -->
+      <select id="topbar-model-select" class="bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500">
+        <option value="deepseek-chat">deepseek-chat</option>
+        <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
+      </select>
+      <button
+        type="button"
+        onclick="exportSession()"
+        title="导出当前会话全部对话为 Markdown"
+        class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
+      >
+        <span>⬇️</span><span>导出对话</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- 主体区域：左侧 48px 一级侧边栏 + 220px 二级会话树 + 主聊天窗口 -->
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+    
+    <!-- 全系统严格一致的 48px 一级侧边栏 -->
+    <aside class="activity-bar">
+      <a href="run-chat.html" class="activity-btn active" title="主会话工作台 (Chat)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      </a>
+      <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则 (Workspaces)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn" title="Provider 资产池">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <div class="flex-1"></div>
+      <a href="config-settings.html" class="activity-btn" title="系统设置中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </a>
+    </aside>
+
+    <!-- 二级会话列表栏 (对齐 deepseek-harness，实时加载与回放) -->
+    <div class="w-56 bg-[#0c101c] border-r border-[#1a2333] flex flex-col shrink-0">
+      <div class="p-2 border-b border-[#1a2333]">
+        <button onclick="createNewSession()" class="w-full py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-semibold flex items-center justify-center space-x-1 shadow-sm transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          <span>新建对话</span>
+        </button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-1.5 space-y-1 font-sans">
+        <div class="px-2 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider font-mono">会话清单</div>
+        <div id="session-list-container" class="space-y-1 text-xs">
+          <!-- 动态加载历史会话 -->
+        </div>
+      </div>
+
+      <div class="p-2 border-t border-[#1a2333] text-[10px] text-slate-500 font-mono flex items-center justify-between bg-[#090d16]">
+        <span>PGH Core</span>
+        <span class="flex items-center text-emerald-400"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span>SSE 在线</span>
+      </div>
+    </div>
+
+    <!-- 消息对话与操作主区域 -->
+    <main class="flex-1 flex flex-col justify-between overflow-hidden bg-[#070a12]">
+      <!-- 消息滚动展示区 -->
+      <div id="messages-scroll-area" class="flex-1 overflow-y-auto p-6 space-y-4 max-w-4xl w-full mx-auto">
+        <!-- 初始就绪空状态 (Hero Shell) -->
+        <div id="chat-empty-state" class="py-16 text-center space-y-3 select-none">
+          <span class="text-4xl block">⚡</span>
+          <h2 class="text-base font-bold text-white">欢迎使用 Purple Grapes Harness (PGH)</h2>
+          <p class="text-xs text-slate-400 max-w-md mx-auto leading-relaxed">
+            极简沉浸式编码工作台已就绪。<br>
+            直接在下方输入指令并按 <strong>Enter</strong> 开启对话。<br>
+            具备<strong>大模型流式思考</strong>、<strong>工具自主执行</strong>与<strong>单回合 Git Checkpoint 一秒原子撤销</strong>。
+          </p>
+        </div>
+
+        <!-- 动态消息流容器 -->
+        <div id="messages-stream-container" class="space-y-4 hidden"></div>
+      </div>
+
+      <!-- 底部 Composer 输入面板 (完全重构：对齐 deepseek-harness 极简沉浸交互) -->
+      <div class="p-4 border-t border-[#1a2333] bg-[#0a0f1d] shrink-0">
+        <div class="max-w-4xl mx-auto space-y-2">
+          
+          <!-- 异常诊断横幅 (代替 alert，错误即时可见) -->
+          <div id="composer-error-banner" class="hidden px-3 py-2 bg-rose-950/80 border border-rose-800/80 rounded-lg text-rose-200 text-xs flex items-center justify-between">
+            <span id="composer-error-text">异常信息</span>
+            <button onclick="document.getElementById('composer-error-banner').classList.add('hidden')" class="text-rose-400 hover:text-white ml-2">✕</button>
+          </div>
+
+          <!-- 任务清单进度卡片 (todo_write) -->
+          <div id="todo-dock" class="hidden rounded-lg border border-slate-700/70 bg-[#0b1120] px-3 py-2 space-y-1.5">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono text-slate-400">📋 任务清单 <span id="todo-progress" class="text-blue-300"></span></span>
+              <button type="button" onclick="toggleTodoDock()" class="text-[10px] text-slate-500 hover:text-slate-300">收起 / 展开</button>
+            </div>
+            <div id="todo-items" class="space-y-1 max-h-40 overflow-y-auto"></div>
+          </div>
+
+          <!-- 输入主卡片容器 -->
+          <div class="border border-slate-700/80 rounded-xl bg-[#080d1a] p-3 focus-within:border-blue-500 transition shadow-inner">
+            <textarea
+              id="composer-textarea"
+              placeholder="输入任务指令... (按 Enter 直接发送，Shift+Enter 换行)"
+              rows="2"
+              class="w-full bg-transparent border-0 resize-none text-xs text-white placeholder-slate-500 focus:outline-none leading-relaxed"
+            ></textarea>
+
+            <!-- 待发送附件 chips（仅 markdown 参考材料） -->
+            <div id="attachment-chips" class="hidden flex-wrap gap-1.5 pt-2"></div>
+            
+            <div class="flex items-center justify-between pt-2 border-t border-slate-800/80 text-xs">
+              <div class="flex items-center space-x-2 text-slate-400 font-mono text-[11px]">
+                <input type="file" id="attachment-input" accept=".md,text/markdown" multiple class="hidden" onchange="handleAttachmentPicked(event)">
+                <button
+                  type="button"
+                  onclick="document.getElementById('attachment-input').click()"
+                  class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center space-x-1 transition"
+                  title="添加 Markdown 参考材料（仅 .md，单个 ≤ 64KB，最多 3 个）"
+                >
+                  <span>📎 添加 .md</span>
+                </button>
+                <button
+                  type="button"
+                  id="revert-turn-btn"
+                  onclick="triggerRevertTurn()"
+                  class="px-2.5 py-1.5 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 flex items-center space-x-1 transition"
+                  title="撤销本回合涉及的所有代码修改，原子恢复回合前干净基线"
+                >
+                  <span>🔄 撤销本回合</span>
+                </button>
+              </div>
+
+              <!-- 对齐 deepseek-harness 的 Send / Stop 二合一动态状态机按钮 -->
+              <div class="flex items-center space-x-2">
+                <button
+                  type="button"
+                  id="compact-btn"
+                  onclick="triggerCompact()"
+                  title="手动压缩上下文 (/compact)：将历史滚动摘要为新基线，释放窗口空间"
+                  class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] font-mono flex items-center space-x-1 transition"
+                >
+                  <span>🗜️</span><span>压缩上下文</span>
+                </button>
+                <button
+                  type="button"
+                  id="composer-primary-btn"
+                  onclick="handlePrimaryButtonClick()"
+                  class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5 transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19V5m-7 7l7-7 7 7"></path></svg>
+                  <span id="composer-primary-text">发送 (Enter)</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+  </div>
+
+  <!-- 首次启动破冰向导 (WBS-01-08-04 / D57)：冷启动两步打通端到端 -->
+  <div id="wizard-modal" class="hidden fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-lg rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl overflow-hidden flex flex-col font-sans text-xs">
+      <div class="px-5 py-3.5 bg-[#131d38] border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-2">
+          <span class="text-base">🚀</span>
+          <div>
+            <div class="text-sm font-bold text-white">一分钟破冰向导</div>
+            <div class="text-[10px] text-slate-400">接入首个模型 + 选择首个本地项目目录</div>
+          </div>
+        </div>
+        <span id="wizard-step-badge" class="text-[10px] font-mono text-blue-300 bg-blue-950/60 border border-blue-800/50 px-2 py-0.5 rounded">步骤 1 / 2</span>
+      </div>
+
+      <!-- 步骤 1：接入首个模型 -->
+      <div id="wizard-step-1" class="p-5 space-y-3">
+        <div class="p-3 rounded-lg bg-[#090d16] border border-slate-800 space-y-2.5">
+          <div>
+            <label class="text-slate-400 block mb-1">Provider 名称：</label>
+            <input id="wizard-provider-name" type="text" value="DeepSeek" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-blue-500">
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">Base URL：</label>
+            <input id="wizard-provider-baseurl" type="text" value="https://api.deepseek.com/v1" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+          </div>
+          <div>
+            <label class="text-slate-400 block mb-1">API Key：</label>
+            <input id="wizard-provider-key" type="password" placeholder="sk-..." class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+          </div>
+          <div class="flex items-center space-x-2">
+            <button type="button" onclick="wizardProbeModels()" id="wizard-probe-btn" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 whitespace-nowrap">探测可用模型</button>
+            <select id="wizard-model-select" class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-2 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+              <option value="">（可选）探测后选择模型</option>
+            </select>
+          </div>
+        </div>
+        <button type="button" onclick="wizardSaveProvider()" class="w-full py-2 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold">保存模型并继续 →</button>
+      </div>
+
+      <!-- 步骤 2：选择首个项目目录 -->
+      <div id="wizard-step-2" class="p-5 space-y-3 hidden">
+        <div class="p-3 rounded-lg bg-[#090d16] border border-slate-800 space-y-2">
+          <label class="text-slate-400 block">本地项目绝对路径：</label>
+          <div class="flex items-center space-x-2">
+            <input id="wizard-ws-path" type="text" placeholder="例如：G:\Projects\my-app" class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+            <button type="button" onclick="wizardBrowseFolder()" id="wizard-browse-btn" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 whitespace-nowrap">浏览目录…</button>
+          </div>
+          <span class="text-[10px] text-slate-500 block">也可稍后在「工作区治理中心」用应用内目录浏览器登记更多项目。</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <button type="button" onclick="wizardGoStep(1)" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">← 上一步</button>
+          <button type="button" onclick="wizardFinish()" class="flex-1 py-2 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-semibold">完成破冰，进入工作台</button>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 bg-[#0b1120] border-t border-slate-800 flex items-center justify-between">
+        <button type="button" onclick="skipWizard()" class="text-[10px] text-slate-500 hover:text-slate-300 underline">跳过向导，稍后配置</button>
+        <span id="wizard-status" class="text-[10px] text-amber-400 font-mono"></span>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let activeSessionId = null;
+    let activeWorkspacePath = 'G:\\Projects\\Agent\\harness';
+    let lastTurnId = null;
+    let isRunning = false;
+    let activeAbortController = null;
+    // 待发送附件（最小版：仅 .md 参考材料，不落用户仓库）
+    let pendingAttachments = [];
+    const MAX_ATTACHMENTS = 3;
+    const MAX_ATTACHMENT_BYTES = 64 * 1024;
+
+    function renderAttachmentChips() {
+      const box = document.getElementById('attachment-chips');
+      box.innerHTML = '';
+      if (pendingAttachments.length === 0) {
+        box.className = 'hidden';
+        return;
+      }
+      box.className = 'flex flex-wrap gap-1.5 pt-2';
+      pendingAttachments.forEach((att, index) => {
+        const chip = document.createElement('span');
+        chip.className = 'inline-flex items-center space-x-1.5 px-2 py-1 rounded bg-slate-800 border border-slate-700 text-[11px] font-mono text-slate-300';
+        chip.innerHTML = `<span>📄 ${escapeHtml(att.filename)}</span><span class="text-slate-500">${(att.bytes / 1024).toFixed(1)}KB</span><button type="button" class="text-slate-500 hover:text-rose-400" title="移除">✕</button>`;
+        chip.querySelector('button').addEventListener('click', () => {
+          pendingAttachments.splice(index, 1);
+          renderAttachmentChips();
+        });
+        box.appendChild(chip);
+      });
+    }
+
+    async function handleAttachmentPicked(event) {
+      const files = [...(event.target.files || [])];
+      event.target.value = '';
+      for (const file of files) {
+        if (!/\.md$/i.test(file.name)) {
+          showErrorBanner(`仅支持 .md 文件：${file.name}`);
+          continue;
+        }
+        const content = await file.text();
+        const bytes = new Blob([content]).size;
+        if (bytes > MAX_ATTACHMENT_BYTES) {
+          showErrorBanner(`附件 ${file.name} 超过 ${Math.round(MAX_ATTACHMENT_BYTES / 1024)}KB 上限`);
+          continue;
+        }
+        if (pendingAttachments.length >= MAX_ATTACHMENTS) {
+          showErrorBanner(`单条消息最多 ${MAX_ATTACHMENTS} 个附件`);
+          break;
+        }
+        pendingAttachments.push({ filename: file.name, content, bytes });
+      }
+      renderAttachmentChips();
+    }
+
+    // 1. 初始化配置 marked 代码高亮
+    if (window.marked && window.hljs) {
+      marked.setOptions({
+        highlight: function(code, lang) {
+          const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+          return hljs.highlight(code, { language }).value;
+        },
+        breaks: true,
+        gfm: true,
+      });
+    }
+
+    function renderMarkdown(rawMd) {
+      if (!rawMd) return '';
+      let html = rawMd;
+      if (window.marked) {
+        try {
+          html = marked.parse(rawMd);
+        } catch {
+          html = rawMd;
+        }
+      }
+      // 安全红线：模型输出视为不可信输入，渲染前强制消毒防 XSS
+      if (window.DOMPurify) {
+        try {
+          return DOMPurify.sanitize(html);
+        } catch {
+          return html;
+        }
+      }
+      return html;
+    }
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    function showBanner(msg, tone) {
+      const banner = document.getElementById('composer-error-banner');
+      const text = document.getElementById('composer-error-text');
+      const base = 'px-3 py-2 rounded-lg text-xs flex items-center justify-between border ';
+      banner.className = base + (tone === 'info'
+        ? 'bg-emerald-950/80 border-emerald-800/80 text-emerald-200'
+        : 'bg-rose-950/80 border-rose-800/80 text-rose-200');
+      text.textContent = msg;
+    }
+
+    function showErrorBanner(msg) {
+      showBanner(msg, 'error');
+    }
+
+    function showInfoBanner(msg) {
+      showBanner(msg, 'info');
+    }
+
+    function hideErrorBanner() {
+      document.getElementById('composer-error-banner').classList.add('hidden');
+    }
+
+    // 2. 状态机切换：更新 Send / Stop 二合一主按钮 (对齐 deepseek-harness primaryStops)
+    function setRunningState(running) {
+      isRunning = running;
+      const btn = document.getElementById('composer-primary-btn');
+      const text = document.getElementById('composer-primary-text');
+      const textarea = document.getElementById('composer-textarea');
+
+      if (running) {
+        btn.className = 'px-4 py-1.5 bg-rose-600 hover:bg-rose-500 text-white rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5 transition';
+        text.textContent = '⏹ 停止 (Abort)';
+        textarea.setAttribute('readonly', 'true');
+      } else {
+        btn.className = 'px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow flex items-center space-x-1.5 transition';
+        text.textContent = '发送 (Enter)';
+        textarea.removeAttribute('readonly');
+        textarea.focus();
+      }
+    }
+
+    // 3. 点击主按钮：空闲时发消息，运行态时执行 Abort 硬杀
+    function handlePrimaryButtonClick() {
+      if (isRunning) {
+        triggerAbort();
+      } else {
+        handleSendMessage();
+      }
+    }
+
+    // 4. 工作区与 Provider 加载初始化
+    async function loadWorkspaces() {
+      try {
+        const res = await fetch('/api/workspaces');
+        const result = await res.json();
+        const select = document.getElementById('topbar-workspace-select');
+        select.innerHTML = '';
+
+        if (result.code === 0 && Array.isArray(result.data) && result.data.length > 0) {
+          result.data.forEach((ws, idx) => {
+            const opt = document.createElement('option');
+            opt.value = ws.path;
+            opt.textContent = `${ws.name} (${ws.path})`;
+            if (idx === 0) {
+              opt.selected = true;
+              activeWorkspacePath = ws.path;
+            }
+            select.appendChild(opt);
+          });
+        } else {
+          // 兜底当前目录
+          const opt = document.createElement('option');
+          opt.value = 'G:\\Projects\\Agent\\harness';
+          opt.textContent = '当前 Harness 工程 (G:\\Projects\\Agent\\harness)';
+          select.appendChild(opt);
+          activeWorkspacePath = opt.value;
+        }
+      } catch (err) {
+        console.warn('Load workspaces error:', err);
+      }
+    }
+
+    function handleWorkspaceChange(val) {
+      if (val) activeWorkspacePath = val;
+    }
+
+    async function loadModels() {
+      try {
+        const res = await fetch('/api/providers');
+        const result = await res.json();
+        const select = document.getElementById('topbar-model-select');
+
+        if (result.code === 0 && Array.isArray(result.data) && result.data.length > 0) {
+          select.innerHTML = '';
+          result.data.forEach(p => {
+            if (p.models && Array.isArray(p.models) && p.models.length > 0) {
+              p.models.forEach(m => {
+                const opt = document.createElement('option');
+                opt.value = m.id;
+                opt.textContent = `${m.id} (${p.name})`;
+                select.appendChild(opt);
+              });
+            } else {
+              const opt = document.createElement('option');
+              opt.value = 'deepseek-chat';
+              opt.textContent = `deepseek-chat (${p.name})`;
+              select.appendChild(opt);
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Load models error:', err);
+      }
+    }
+
+    // 5. 左侧会话树：按工作区（Workspace）分组聚合 (100% 对齐 deepseek-harness 交互规范)
+    async function loadSessionList() {
+      try {
+        const [wsRes, sessRes] = await Promise.all([
+          fetch('/api/workspaces'),
+          fetch('/api/sessions'),
+        ]);
+        const wsData = await wsRes.json();
+        const sessData = await sessRes.json();
+
+        const workspaces = (wsData.code === 0 && Array.isArray(wsData.data)) ? wsData.data : [];
+        const sessions = (sessData.code === 0 && Array.isArray(sessData.data)) ? sessData.data : [];
+
+        const container = document.getElementById('session-list-container');
+        container.innerHTML = '';
+
+        if (workspaces.length === 0 && sessions.length === 0) {
+          container.innerHTML = `<div class="p-2 text-[11px] text-slate-500 italic">暂无工作区与会话</div>`;
+          return;
+        }
+
+        // 建立工作区字典与归属映射
+        const wsMap = new Map();
+        workspaces.forEach(w => {
+          wsMap.set(w.path, { workspace: w, sessions: [] });
+        });
+
+        // 收集未在工作区列表中登记的离散会话
+        const ungroupedSessions = [];
+        sessions.forEach(s => {
+          if (wsMap.has(s.workspacePath)) {
+            wsMap.get(s.workspacePath).sessions.push(s);
+          } else {
+            ungroupedSessions.push(s);
+          }
+        });
+
+        // 渲染已登记工作区及其会话分组
+        for (const [wsPath, group] of wsMap.entries()) {
+          const ws = group.workspace;
+          const wsSessions = group.sessions;
+          const wsShort = ws.name || wsPath.split('\\').pop() || wsPath;
+
+          const groupEl = document.createElement('div');
+          groupEl.className = 'space-y-1 mb-2.5';
+
+          // 工作区树根卡片：展示名称与专属 [+] 按钮
+          groupEl.innerHTML = `
+            <div class="px-1.5 py-1 flex items-center justify-between text-slate-300 hover:text-white group font-medium select-none">
+              <div class="flex items-center space-x-1.5 truncate text-[11px]" title="${wsPath}">
+                <span class="text-amber-400">📁</span>
+                <span class="font-bold truncate text-slate-200">${wsShort}</span>
+                <span class="text-[10px] text-slate-500 font-mono">(${wsSessions.length})</span>
+              </div>
+              <button
+                type="button"
+                onclick="createSessionInWorkspace('${encodeURIComponent(wsPath)}')"
+                class="opacity-0 group-hover:opacity-100 p-0.5 px-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded text-[10px] transition"
+                title="在此工作区下开启新会话"
+              >
+                +
+              </button>
+            </div>
+            <div class="space-y-1 pl-2 border-l border-slate-800 ml-2 session-children-box">
+              <!-- 会话条目 -->
+            </div>
+          `;
+
+          const childrenBox = groupEl.querySelector('.session-children-box');
+          if (wsSessions.length === 0) {
+            childrenBox.innerHTML = `<div class="py-1 text-[10px] text-slate-600 italic">暂无会话，点击 + 新建</div>`;
+          } else {
+            wsSessions.forEach(sess => {
+              childrenBox.appendChild(createSessionRowElement(sess));
+            });
+          }
+
+          container.appendChild(groupEl);
+        }
+
+        // 渲染未在工作区列表中但存在历史会话的集合
+        if (ungroupedSessions.length > 0) {
+          const unGroupEl = document.createElement('div');
+          unGroupEl.className = 'space-y-1 mt-2';
+          unGroupEl.innerHTML = `
+            <div class="px-1.5 py-1 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">其他历史会话</div>
+            <div class="space-y-1 pl-2 border-l border-slate-800 ml-2 ungrouped-children-box"></div>
+          `;
+          const unBox = unGroupEl.querySelector('.ungrouped-children-box');
+          ungroupedSessions.forEach(sess => {
+            unBox.appendChild(createSessionRowElement(sess));
+          });
+          container.appendChild(unGroupEl);
+        }
+
+      } catch (err) {
+        console.warn('Load workspace sessions failed:', err);
+      }
+    }
+
+    function createSessionRowElement(sess) {
+      const isActive = sess.id === activeSessionId;
+      const item = document.createElement('div');
+      item.className = `p-1.5 px-2 rounded cursor-pointer transition shadow-sm border flex items-center justify-between group ${
+        isActive ? 'bg-[#162238] border-blue-500/60 text-white font-medium' : 'hover:bg-slate-800/40 border-slate-800/40 text-slate-300'
+      }`;
+      const timeStr = new Date(sess.updatedAt || sess.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+
+      item.innerHTML = `
+        <div class="flex-1 min-w-0 pr-1">
+          <div class="text-[11px] truncate leading-snug">${sess.title || '新对话'}</div>
+          <div class="text-[9px] text-slate-500 font-mono mt-0.5">${timeStr}</div>
+        </div>
+        <button
+          type="button"
+          onclick="deleteSession(event, '${sess.id}')"
+          class="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition text-xs"
+          title="删除此会话与关联事件"
+        >
+          🗑️
+        </button>
+      `;
+      item.onclick = (e) => {
+        if (e.target.closest('button')) return;
+        switchSession(sess.id);
+      };
+      return item;
+    }
+
+    // 在指定工作区直接新建会话
+    function createSessionInWorkspace(encodedPath) {
+      const targetPath = decodeURIComponent(encodedPath);
+      activeWorkspacePath = targetPath;
+      const select = document.getElementById('topbar-workspace-select');
+      if (select) select.value = targetPath;
+      createNewSession();
+    }
+
+    async function deleteSession(event, sessionId) {
+      event.stopPropagation();
+      if (!confirm('确定要删除该会话及其所有历史事件吗？此操作不可逆。')) return;
+
+      try {
+        const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
+        const result = await res.json();
+        if (result.code === 0) {
+          if (activeSessionId === sessionId) {
+            createNewSession();
+          } else {
+            await loadSessionList();
+          }
+        } else {
+          showErrorBanner('删除会话失败: ' + result.message);
+        }
+      } catch (err) {
+        showErrorBanner('删除请求异常: ' + err.message);
+      }
+    }
+
+    function createNewSession() {
+      activeSessionId = null;
+      lastTurnId = null;
+      lastKnownSeq = 0;
+      stopSessionWatch();
+      document.getElementById('chat-empty-state').classList.remove('hidden');
+      const streamBox = document.getElementById('messages-stream-container');
+      streamBox.classList.add('hidden');
+      streamBox.innerHTML = '';
+      loadSessionList();
+    }
+
+    async function switchSession(sessionId) {
+      activeSessionId = sessionId;
+      await loadSessionList();
+
+      try {
+        const res = await fetch(`/api/sessions/${sessionId}/messages?after=0`);
+        const result = await res.json();
+        if (result.code !== 0 || !Array.isArray(result.data)) {
+          showErrorBanner('加载会话历史失败。');
+          return;
+        }
+        renderConversation(result.data);
+        startSessionWatch(sessionId);
+      } catch (err) {
+        console.error('Switch session error:', err);
+        showErrorBanner('加载会话历史异常: ' + err.message);
+      }
+    }
+
+    // ---------- 逐轮对话渲染与操作 (模型标注 / 点赞点踩 / 重做 / 导出) ----------
+
+    function groupTurns(events) {
+      const turns = [];
+      const byId = new Map();
+      for (const ev of events) {
+        if (!ev.turnId) continue;
+        let turn = byId.get(ev.turnId);
+        if (!turn) {
+          turn = { turnId: ev.turnId, user: '', assistant: '', model: '', tools: [], attachments: [], questions: [], answers: [], approvals: [], decisions: [], todos: null, feedback: null };
+          byId.set(ev.turnId, turn);
+          turns.push(turn);
+        }
+        if (ev.type === 'message/user') {
+          turn.user = String((ev.payload || {}).content || '');
+        } else if (ev.type === 'message/attachment') {
+          turn.attachments.push(String((ev.payload || {}).filename || ''));
+        } else if (ev.type === 'question_asked') {
+          turn.questions.push(ev.payload || {});
+        } else if (ev.type === 'question_answered') {
+          turn.answers.push(ev.payload || {});
+        } else if (ev.type === 'approval/requested') {
+          turn.approvals.push(ev.payload || {});
+        } else if (ev.type === 'approval/resolved') {
+          turn.decisions.push(ev.payload || {});
+        } else if (ev.type === 'message/assistant') {
+          turn.assistant = String((ev.payload || {}).content || '');
+          if ((ev.payload || {}).model) turn.model = String(ev.payload.model);
+        } else if (ev.type === 'tool/call') {
+          turn.tools.push({ kind: 'call', tool: String((ev.payload || {}).tool || ''), args: (ev.payload || {}).args });
+        } else if (ev.type === 'tool/result') {
+          turn.tools.push({ kind: 'result', output: String((ev.payload || {}).output || ''), isError: Boolean((ev.payload || {}).isError), meta: (ev.payload || {}).meta });
+        } else if (ev.type === 'todo/update') {
+          turn.todos = Array.isArray((ev.payload || {}).todos) ? ev.payload.todos : null;
+        } else if (ev.type === 'message/feedback') {
+          turn.feedback = String((ev.payload || {}).rating || '');
+        }
+      }
+      return turns.filter((t) => t.user || t.assistant);
+    }
+
+    function renderConversation(events) {
+      const streamBox = document.getElementById('messages-stream-container');
+      const emptyState = document.getElementById('chat-empty-state');
+      const turns = groupTurns(events);
+
+      // 记录已消费到的最大 seq，供长期订阅按增量续传
+      for (const event of events) {
+        if (typeof event.seq === 'number') lastKnownSeq = Math.max(lastKnownSeq, event.seq);
+      }
+
+      streamBox.innerHTML = '';
+      if (turns.length === 0) {
+        emptyState.classList.remove('hidden');
+        streamBox.classList.add('hidden');
+        return;
+      }
+      emptyState.classList.add('hidden');
+      streamBox.classList.remove('hidden');
+
+      const lastTurn = turns[turns.length - 1];
+      lastTurnId = lastTurn ? lastTurn.turnId : null;
+
+      for (const turn of turns) {
+        if (turn.user) appendUserBubble(turn.user, turn.attachments);
+        const card = createAssistantCard(turn.turnId, turn.model, Boolean(lastTurn) && turn.turnId === lastTurn.turnId);
+
+        for (const tool of turn.tools) {
+          if (tool.kind === 'call' && tool.tool === 'ask_user') continue;
+          const line = document.createElement('div');
+          if (tool.kind === 'call') {
+            line.className = 'text-[11px] font-mono text-amber-300/90 bg-amber-950/20 border border-amber-900/30 rounded px-2.5 py-1 my-1';
+            line.textContent = `🔧 执行工具: ${tool.tool} ${JSON.stringify(tool.args || {})}`;
+          } else {
+            line.className = `text-[11px] font-mono rounded px-2.5 py-1 my-0.5 ${tool.isError ? 'text-rose-300 bg-rose-950/20 border border-rose-900/30' : 'text-emerald-300/90 bg-emerald-950/20 border border-emerald-900/30'}`;
+            line.textContent = `📥 工具输出 (${tool.output.length} 字符)${tool.isError ? ' [报错]' : ''}`;
+          }
+          card.toolsEl.appendChild(line);
+        }
+
+        // 行级 Diff 审阅卡（红绿对比）
+        for (const tool of turn.tools) {
+          if (tool.kind === 'result' && tool.meta && Array.isArray(tool.meta.lines)) {
+            card.toolsEl.appendChild(createDiffCard(tool.meta));
+          }
+        }
+
+        for (const question of turn.questions) {
+          const answered = turn.answers.find((entry) => entry.requestID === question.requestID);
+          card.toolsEl.appendChild(createQuestionCard(question, answered || null));
+        }
+
+        for (const approval of turn.approvals) {
+          const decided = turn.decisions.find((entry) => entry.requestID === approval.requestID);
+          card.toolsEl.appendChild(createApprovalCard(approval, decided || null));
+        }
+
+        if (turn.assistant) {
+          card.contentEl.className = 'prose-dark leading-relaxed font-sans';
+          card.contentEl.innerHTML = renderMarkdown(turn.assistant);
+        } else {
+          card.contentEl.textContent = '(本轮未产生文本回答)';
+          card.contentEl.className = 'text-slate-500 italic leading-relaxed font-sans';
+        }
+        if (turn.feedback) card.setFeedback(turn.feedback);
+
+        streamBox.appendChild(card.el);
+      }
+
+      streamBox.scrollTop = streamBox.scrollHeight;
+
+      // 任务清单卡片回放：取整个会话最后一次 todo/update
+      const latestTodos = [...turns].reverse().find((turn) => turn.todos)?.todos ?? null;
+      renderTodoDock(latestTodos);
+    }
+
+    function turnsToMarkdown(turns, title) {
+      const lines = [`# ${title}`, '', `> 导出时间：${new Date().toLocaleString()}`, ''];
+      for (const turn of turns) {
+        if (turn.user) {
+          lines.push('## 👤 用户', '', turn.user, '');
+        }
+        if (turn.attachments && turn.attachments.length > 0) {
+          lines.push(`> 附加参考材料：${turn.attachments.map((n) => `\`${n}\``).join('、')}`, '');
+        }
+        if (turn.tools.length > 0) {
+          lines.push('<details><summary>工具调用轨迹</summary>', '');
+          for (const tool of turn.tools) {
+            if (tool.kind === 'call') {
+              lines.push(`- 🔧 \`${tool.tool}\` ${JSON.stringify(tool.args || {})}`);
+            } else {
+              lines.push(`- 📥 ${tool.isError ? '[失败] ' : ''}${String(tool.output).slice(0, 300).replace(/\n/g, ' ')}`);
+            }
+          }
+          lines.push('', '</details>', '');
+        }
+        if (turn.assistant) {
+          lines.push(`## 🤖 助手${turn.model ? ` · 模型：${turn.model}` : ''}`, '', turn.assistant, '');
+        }
+        if (turn.feedback) {
+          lines.push(`> 本轮评价：${turn.feedback === 'up' ? '👍 答得好' : '👎 有待加强'}`, '');
+        }
+      }
+      return lines.join('\n');
+    }
+
+    function downloadMarkdown(filename, content) {
+      const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    }
+
+    async function fetchSessionTurns() {
+      if (!activeSessionId) return [];
+      const res = await fetch(`/api/sessions/${activeSessionId}/messages?after=0`);
+      const result = await res.json();
+      if (result.code !== 0 || !Array.isArray(result.data)) return [];
+      return groupTurns(result.data);
+    }
+
+    async function exportSession() {
+      const turns = await fetchSessionTurns();
+      if (turns.length === 0) {
+        showErrorBanner('当前会话暂无可导出的对话内容。');
+        return;
+      }
+      downloadMarkdown(`pgh-session-${Date.now()}.md`, turnsToMarkdown(turns, 'Purple Grapes Harness 会话导出'));
+    }
+
+    async function exportTurn(turnId) {
+      if (!turnId) {
+        showErrorBanner('本轮对话尚未落盘，暂时无法导出。');
+        return;
+      }
+      const turns = await fetchSessionTurns();
+      const target = turns.find((t) => t.turnId === turnId);
+      if (!target) {
+        showErrorBanner('未找到该轮对话内容。');
+        return;
+      }
+      downloadMarkdown(`pgh-turn-${turnId}.md`, turnsToMarkdown([target], 'Purple Grapes Harness 单轮对话导出'));
+    }
+
+    function createAssistantCard(turnId, model, isLast) {
+      const el = document.createElement('div');
+      el.className = 'p-4 rounded-xl bg-[#0c1220] border border-slate-800 text-xs space-y-3 shadow-lg font-sans';
+      if (turnId) el.dataset.turnId = turnId;
+      el.innerHTML = `
+        <div class="flex items-center justify-between border-b border-slate-800/60 pb-2">
+          <span class="font-bold text-purple-400 font-mono text-[11px] flex items-center gap-1.5">
+            <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
+            <span>PGH AGENT</span>
+          </span>
+          <span class="text-[10px] text-slate-500 font-mono">已捕获 Git 检查点 🔒</span>
+        </div>
+        <div data-role="reasoning-box" class="hidden border border-purple-900/40 rounded bg-[#090d18] p-2.5 text-xs font-mono">
+          <div data-role="reasoning-toggle" class="flex items-center justify-between text-purple-300 text-[11px] cursor-pointer select-none">
+            <span>🧠 思考链推演 (Reasoning Token Pruning)</span>
+            <span class="text-[10px] text-slate-500 hover:text-slate-300">[点击展开/收起]</span>
+          </div>
+          <div data-role="reasoning-content" class="pt-2 text-[11px] text-purple-200/80 border-t border-purple-950/60 mt-1.5 whitespace-pre-wrap leading-relaxed font-mono"></div>
+        </div>
+        <div data-role="tools" class="space-y-1"></div>
+        <div data-role="content" class="prose-dark leading-relaxed font-sans"><span class="text-slate-500 animate-pulse">正在调度智能体引擎处理...</span></div>
+        <div class="pt-2 border-t border-slate-800/60 space-y-1">
+          <div data-role="model-line" class="text-[10px] text-slate-500 font-mono">模型：${escapeHtml(model || '待确定')}</div>
+          <div class="flex items-center justify-end space-x-1">
+            <button type="button" data-act="up" title="答得好（点赞）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-emerald-400 transition text-[11px]">👍</button>
+            <button type="button" data-act="down" title="有待加强（点踩）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-rose-400 transition text-[11px]">👎</button>
+            ${isLast ? '<button type="button" data-act="redo" title="重做本轮（重新请求模型）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-blue-400 transition text-[11px]">🔄</button>' : ''}
+            <button type="button" data-act="export" title="导出本轮对话" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition text-[11px]">⬇️</button>
+          </div>
+        </div>
+      `;
+
+      const contentEl = el.querySelector('[data-role="content"]');
+      const toolsEl = el.querySelector('[data-role="tools"]');
+      const reasoningBox = el.querySelector('[data-role="reasoning-box"]');
+      const reasoningContent = el.querySelector('[data-role="reasoning-content"]');
+      const modelLine = el.querySelector('[data-role="model-line"]');
+      const upBtn = el.querySelector('[data-act="up"]');
+      const downBtn = el.querySelector('[data-act="down"]');
+      const redoBtn = el.querySelector('[data-act="redo"]');
+      el.querySelector('[data-role="reasoning-toggle"]').addEventListener('click', () => reasoningBox.classList.toggle('hidden'));
+
+      const idleBtn = 'px-1.5 py-0.5 rounded hover:bg-slate-800 transition text-[11px] ';
+      const controller = {
+        el,
+        contentEl,
+        toolsEl,
+        reasoningBox,
+        reasoningContent,
+        turnId: turnId || null,
+        model: model || '',
+        setTurnId(id) {
+          if (!id) return;
+          controller.turnId = id;
+          el.dataset.turnId = id;
+        },
+        setModel(name) {
+          if (!name) return;
+          controller.model = name;
+          modelLine.textContent = `模型：${name}`;
+        },
+        setFeedback(rating) {
+          upBtn.className = idleBtn + (rating === 'up' ? 'bg-slate-800 text-emerald-400' : 'text-slate-500 hover:text-emerald-400');
+          downBtn.className = idleBtn + (rating === 'down' ? 'bg-slate-800 text-rose-400' : 'text-slate-500 hover:text-rose-400');
+        },
+      };
+
+      upBtn.addEventListener('click', () => handleFeedback(controller, 'up'));
+      downBtn.addEventListener('click', () => handleFeedback(controller, 'down'));
+      if (redoBtn) redoBtn.addEventListener('click', () => handleRedo(controller));
+      el.querySelector('[data-act="export"]').addEventListener('click', () => exportTurn(controller.turnId));
+
+      return controller;
+    }
+
+    async function handleFeedback(controller, rating) {
+      if (!activeSessionId || !controller.turnId) {
+        showErrorBanner('本轮对话尚未完成，暂时无法评价。');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/sessions/${activeSessionId}/feedback`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ turnId: controller.turnId, rating }),
+        });
+        const result = await res.json();
+        if (result.code !== 0) {
+          showErrorBanner('反馈提交失败: ' + result.message);
+          return;
+        }
+        controller.setFeedback(rating);
+      } catch (err) {
+        showErrorBanner('反馈请求异常: ' + err.message);
+      }
+    }
+
+    async function handleRedo(controller) {
+      if (isRunning) {
+        showErrorBanner('请先等待当前回合结束或中止后再重做。');
+        return;
+      }
+      if (!activeSessionId || !controller.turnId) {
+        showErrorBanner('暂无可重做的回合。');
+        return;
+      }
+      if (!confirm('重做将清除本轮回答并重新请求模型，确定继续吗？')) return;
+
+      try {
+        const res = await fetch(`/api/sessions/${activeSessionId}/redo`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ turnId: controller.turnId }),
+        });
+        const result = await res.json();
+        if (result.code !== 0) {
+          showErrorBanner('重做失败: ' + result.message);
+          return;
+        }
+
+        const streamBox = document.getElementById('messages-stream-container');
+        controller.el.remove();
+        lastTurnId = null;
+
+        const modelId = document.getElementById('topbar-model-select').value || 'deepseek-chat';
+        const card = createAssistantCard(null, modelId, true);
+        streamBox.appendChild(card.el);
+        streamBox.scrollTop = streamBox.scrollHeight;
+
+        await runStream(result.data.message, modelId, card, result.data.attachments || []);
+      } catch (err) {
+        showErrorBanner('重做请求异常: ' + err.message);
+      }
+    }
+
+    /**
+     * 渲染人机提问卡片（TC-01-04-006）。
+     * @param payload - question_asked 事件载荷。
+     * @param answered - 已有应答（回放时提供），为空表示等待回答。
+     */
+    function createQuestionCard(payload, answered) {
+      const requestId = String(payload.requestID || '');
+      const questions = Array.isArray(payload.questions) ? payload.questions : [];
+      const resolved = answered || null;
+
+      const card = document.createElement('div');
+      card.className = 'p-3 rounded-xl bg-purple-950/20 border border-purple-800/50 text-xs space-y-2 font-sans my-1';
+
+      const head = document.createElement('div');
+      head.className = 'flex items-center justify-between';
+      const stateText = resolved
+        ? (resolved.action === 'reply' ? `已回答：${(resolved.answers || []).join('、')}` : '已驳回，模型自行兜底')
+        : '等待回答';
+      head.innerHTML = `
+        <span class="font-bold text-purple-300 font-mono text-[11px]">❓ 需要你确认（${escapeHtml(requestId.slice(0, 13))}…）</span>
+        <span class="text-[10px] ${resolved ? 'text-slate-500' : 'text-amber-400'} font-mono">${escapeHtml(stateText)}</span>`;
+      card.appendChild(head);
+
+      const inputs = [];
+      questions.forEach((prompt) => {
+        const block = document.createElement('div');
+        block.className = 'space-y-1';
+
+        const title = document.createElement('div');
+        title.className = 'text-slate-200 font-medium';
+        title.textContent = `${prompt.header ? `${prompt.header}：` : ''}${prompt.question || ''}`;
+        block.appendChild(title);
+
+        const options = Array.isArray(prompt.options) ? prompt.options : [];
+        const groupName = `q-${requestId}-${prompt.id || 'x'}`;
+        options.forEach((option) => {
+          const label = document.createElement('label');
+          label.className = 'flex items-start space-x-2 text-slate-300 cursor-pointer';
+          label.innerHTML = `<input type="${prompt.multiple ? 'checkbox' : 'radio'}" name="${escapeHtml(groupName)}" value="${escapeHtml(option.label)}" class="mt-0.5 rounded bg-slate-900 border-slate-700 text-purple-500">
+            <span><b class="text-slate-200">${escapeHtml(option.label)}</b>${option.description ? `<span class="text-slate-500"> · ${escapeHtml(option.description)}</span>` : ''}</span>`;
+          block.appendChild(label);
+        });
+
+        const free = document.createElement('input');
+        free.type = 'text';
+        free.placeholder = options.length > 0 ? '补充说明（可选）' : '请输入你的回答';
+        free.className = 'w-full bg-[#080d1a] border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-200 focus:outline-none focus:border-purple-500';
+        block.appendChild(free);
+
+        inputs.push({ prompt, free, groupName });
+        card.appendChild(block);
+      });
+
+      const actions = document.createElement('div');
+      actions.className = 'flex items-center space-x-2 pt-1';
+      card.appendChild(actions);
+
+      const settle = (label) => {
+        actions.innerHTML = `<span class="text-[10px] text-slate-500 font-mono">${escapeHtml(label)}</span>`;
+        card.querySelectorAll('input, button').forEach((el) => { el.disabled = true; });
+      };
+
+      if (resolved) {
+        settle(stateText);
+        return card;
+      }
+
+      actions.innerHTML = `
+        <button type="button" data-act="reply" class="px-2.5 py-1 rounded bg-purple-700 hover:bg-purple-600 text-white text-[11px] font-semibold">提交回答</button>
+        <button type="button" data-act="reject" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px]">驳回 / 忽略</button>`;
+
+      const collectAnswers = () => {
+        const answers = [];
+        for (const { prompt, free, groupName } of inputs) {
+          const typed = free.value.trim();
+          if (typed) {
+            answers.push(typed);
+            continue;
+          }
+          card.querySelectorAll(`input[name="${groupName}"]:checked`).forEach((el) => {
+            if (el.value) answers.push(el.value);
+          });
+        }
+        return answers;
+      };
+
+      const submit = async (action, body, label) => {
+        try {
+          const res = await fetch(`/api/questions/${encodeURIComponent(requestId)}/${action}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(body),
+          });
+          const result = await res.json();
+          if (!res.ok || result.code !== 0) {
+            showErrorBanner('应答失败: ' + (result.message || res.status));
+            return;
+          }
+          settle(label);
+        } catch (err) {
+          showErrorBanner('应答请求异常: ' + err.message);
+        }
+      };
+
+      actions.querySelector('[data-act="reply"]').addEventListener('click', () => {
+        const answers = collectAnswers();
+        if (answers.length === 0) {
+          showErrorBanner('请先选择一个选项或填写回答。');
+          return;
+        }
+        void submit('reply', { answers }, `已回答：${answers.join('、')}`);
+      });
+      actions.querySelector('[data-act="reject"]').addEventListener('click', () => {
+        void submit('reject', { reason: '用户在界面上驳回' }, '已驳回，模型将自主兜底');
+      });
+
+      return card;
+    }
+
+    /**
+     * 渲染破坏性操作审批卡片（设计 §6.3；超时与拒绝同为 fail-closed）。
+     * @param payload - approval/requested 事件载荷。
+     * @param resolved - 已有裁决（回放时提供）。
+     */
+    function createApprovalCard(payload, resolved) {
+      const requestId = String(payload.requestID || '');
+      const tool = String(payload.tool || '');
+      const args = payload.args && typeof payload.args === 'object' ? payload.args : {};
+
+      const card = document.createElement('div');
+      card.className = 'p-3 rounded-xl bg-amber-950/20 border border-amber-800/50 text-xs space-y-2 font-sans my-1';
+
+      const stateText = resolved
+        ? (resolved.decision === 'allow' ? '已批准' : `已拒绝${resolved.reason ? `：${resolved.reason}` : ''}`)
+        : '等待裁决（超时按拒绝处理）';
+
+      const head = document.createElement('div');
+      head.className = 'flex items-center justify-between';
+      head.innerHTML = `
+        <span class="font-bold text-amber-300 font-mono text-[11px]">⚠️ 需要授权（${escapeHtml(requestId.slice(0, 13))}…）</span>
+        <span class="text-[10px] ${resolved ? 'text-slate-500' : 'text-amber-400'} font-mono">${escapeHtml(stateText)}</span>`;
+      card.appendChild(head);
+
+      const body = document.createElement('div');
+      body.className = 'space-y-1';
+      body.innerHTML = `
+        <div class="text-slate-200"><b>工具</b>：<code class="text-amber-200">${escapeHtml(tool)}</code></div>
+        <div class="text-slate-400 font-mono text-[11px] break-all bg-[#090d18] border border-slate-800 rounded px-2 py-1">${escapeHtml(JSON.stringify(args))}</div>
+        <div class="text-slate-500 text-[11px]">${escapeHtml(String(payload.reason || ''))}</div>`;
+      card.appendChild(body);
+
+      const actions = document.createElement('div');
+      actions.className = 'flex items-center space-x-2 pt-1';
+      card.appendChild(actions);
+
+      const settle = (label) => {
+        actions.innerHTML = `<span class="text-[10px] text-slate-500 font-mono">${escapeHtml(label)}</span>`;
+      };
+
+      if (resolved) {
+        settle(stateText);
+        return card;
+      }
+
+      actions.innerHTML = `
+        <button type="button" data-act="allow" class="px-2.5 py-1 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">批准执行</button>
+        <button type="button" data-act="deny" class="px-2.5 py-1 rounded bg-rose-800 hover:bg-rose-700 text-white text-[11px] font-semibold">拒绝</button>`;
+
+      const decide = async (decision, label) => {
+        try {
+          const res = await fetch(`/api/approvals/${encodeURIComponent(requestId)}/decide`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ decision, reason: decision === 'deny' ? '用户在界面上拒绝' : '' }),
+          });
+          const result = await res.json();
+          if (!res.ok || result.code !== 0) {
+            showErrorBanner('裁决失败: ' + (result.message || res.status));
+            return;
+          }
+          settle(label);
+        } catch (err) {
+          showErrorBanner('裁决请求异常: ' + err.message);
+        }
+      };
+      actions.querySelector('[data-act="allow"]').addEventListener('click', () => void decide('allow', '已批准'));
+      actions.querySelector('[data-act="deny"]').addEventListener('click', () => void decide('deny', '已拒绝'));
+
+      return card;
+    }
+
+    /** 渲染任务清单进度卡片（todo_write 的可见产物）。 */
+    function renderTodoDock(todos) {
+      const dock = document.getElementById('todo-dock');
+      const items = document.getElementById('todo-items');
+      const progress = document.getElementById('todo-progress');
+      if (!dock || !items || !progress) return;
+
+      const list = Array.isArray(todos) ? todos : [];
+      if (list.length === 0) {
+        dock.classList.add('hidden');
+        items.innerHTML = '';
+        progress.textContent = '';
+        return;
+      }
+      dock.classList.remove('hidden');
+      const done = list.filter((item) => item.status === 'completed').length;
+      progress.textContent = `(${done}/${list.length})`;
+      items.innerHTML = list.map((item) => {
+        const icon = item.status === 'completed' ? '✅' : item.status === 'in_progress' ? '🔵' : '⬜';
+        const cls = item.status === 'completed'
+          ? 'text-slate-500 line-through'
+          : item.status === 'in_progress' ? 'text-blue-300' : 'text-slate-300';
+        return `<div class="flex items-start space-x-1.5 text-[11px] ${cls}"><span>${icon}</span><span class="flex-1">${escapeHtml(String(item.content || ''))}</span></div>`;
+      }).join('');
+    }
+
+    function toggleTodoDock() {
+      const items = document.getElementById('todo-items');
+      if (items) items.classList.toggle('hidden');
+    }
+
+    /** 渲染行级 Diff 审阅卡（红绿对比，可折叠）。 */
+    function createDiffCard(meta) {
+      const card = document.createElement('div');
+      card.className = 'rounded-lg border border-slate-700 bg-[#090d18] overflow-hidden my-1';
+
+      const added = Number(meta.added || 0);
+      const removed = Number(meta.removed || 0);
+      const head = document.createElement('div');
+      head.className = 'flex items-center justify-between px-2.5 py-1.5 bg-[#0f172a] border-b border-slate-800 cursor-pointer select-none';
+      head.innerHTML = `
+        <span class="text-[11px] font-mono text-slate-300">📝 ${escapeHtml(String(meta.path || ''))}</span>
+        <span class="text-[10px] font-mono"><span class="text-emerald-400">+${added}</span> <span class="text-rose-400">-${removed}</span></span>`;
+
+      const body = document.createElement('div');
+      body.className = 'max-h-64 overflow-auto text-[11px] font-mono leading-relaxed';
+      if (meta.truncated) {
+        body.className += ' px-2.5 py-2 text-slate-500';
+        body.textContent = '变更过大，已省略逐行对比，请直接查看文件本身。';
+      } else {
+        const lines = Array.isArray(meta.lines) ? meta.lines : [];
+        body.innerHTML = lines.map((line) => {
+          const tint = line.type === 'add'
+            ? 'bg-emerald-950/40 text-emerald-200'
+            : line.type === 'del' ? 'bg-rose-950/40 text-rose-200' : 'text-slate-500';
+          const prefix = line.type === 'add' ? '+' : line.type === 'del' ? '-' : ' ';
+          return `<div class="${tint} px-2.5 whitespace-pre">${escapeHtml(`${prefix} ${line.text}`)}</div>`;
+        }).join('');
+      }
+
+      head.addEventListener('click', () => body.classList.toggle('hidden'));
+      card.appendChild(head);
+      card.appendChild(body);
+      return card;
+    }
+
+    function appendUserBubble(text, attachmentNames) {
+      const streamBox = document.getElementById('messages-stream-container');
+      const bubble = document.createElement('div');
+      bubble.className = 'p-3 rounded-lg bg-blue-950/40 border border-blue-800/40 text-xs text-white max-w-2xl ml-auto space-y-1 shadow-sm font-sans';
+      const names = Array.isArray(attachmentNames) ? attachmentNames : [];
+      const chips = names.length > 0
+        ? `<div class="pt-1 flex flex-wrap gap-1">${names.map((n) => `<span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-400">📄 ${escapeHtml(n)}</span>`).join('')}</div>`
+        : '';
+      bubble.innerHTML = `<div class="font-bold text-blue-300 text-[10px] font-mono">YOU</div><div class="whitespace-pre-wrap">${escapeHtml(text)}</div>${chips}`;
+      streamBox.appendChild(bubble);
+      streamBox.scrollTop = streamBox.scrollHeight;
+      return bubble;
+    }
+
+    // 6. 核心发送逻辑 (对齐 deepseek-harness: 0 门槛直发、流式响应、实时 Markdown)
+    async function handleSendMessage() {
+      hideErrorBanner();
+      const textarea = document.getElementById('composer-textarea');
+      const text = textarea.value.trim();
+      if (!text) {
+        if (pendingAttachments.length > 0) {
+          showErrorBanner('请补上一句指令，说明希望如何使用附件内容。');
+        }
+        return;
+      }
+      const modelId = document.getElementById('topbar-model-select').value || 'deepseek-chat';
+      const attachments = pendingAttachments.slice();
+
+      document.getElementById('chat-empty-state').classList.add('hidden');
+      const streamBox = document.getElementById('messages-stream-container');
+      streamBox.classList.remove('hidden');
+
+      appendUserBubble(text, attachments.map((a) => a.filename));
+      textarea.value = '';
+      pendingAttachments = [];
+      renderAttachmentChips();
+
+      const card = createAssistantCard(null, modelId, true);
+      streamBox.appendChild(card.el);
+      streamBox.scrollTop = streamBox.scrollHeight;
+
+      await runStream(text, modelId, card, attachments);
+    }
+
+    // 统一的流式调度：负责 SSE 解析、内容渲染与卡片状态更新
+    async function runStream(text, modelId, card, attachments) {
+      const streamBox = document.getElementById('messages-stream-container');
+      const wsPath = activeWorkspacePath || 'G:\\Projects\\Agent\\harness';
+      let hasContentStarted = false;
+      let accumulatedMd = '';
+
+      const appendToolBadge = (toolName, args) => {
+        const badge = document.createElement('div');
+        badge.className = 'text-[11px] font-mono text-amber-300/90 bg-amber-950/20 border border-amber-900/30 rounded px-2.5 py-1 my-1';
+        badge.textContent = `🔧 执行工具: ${toolName} ${JSON.stringify(args || {})}`;
+        card.toolsEl.appendChild(badge);
+        streamBox.scrollTop = streamBox.scrollHeight;
+      };
+
+      setRunningState(true);
+      activeAbortController = new AbortController();
+      // 回合期间由 chat/send 流独占推送，避免与长期订阅重复订阅
+      stopSessionWatch();
+
+      try {
+        const response = await fetch('/api/chat/send', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            sessionId: activeSessionId,
+            message: text,
+            workspacePath: wsPath,
+            modelId: modelId,
+            attachments: (attachments || []).map((a) => ({ filename: a.filename, content: a.content })),
+          }),
+          signal: activeAbortController.signal,
+        });
+
+        if (!response.ok) {
+          const errJson = await response.json().catch(() => ({}));
+          const errMsg = errJson.message || `HTTP ${response.status} 调度失败`;
+          card.contentEl.innerHTML = `<span class="text-rose-400 font-mono">❌ ${escapeHtml(errMsg)}</span>`;
+          showErrorBanner(errMsg);
+          return;
+        }
+
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() || '';
+
+          for (const frame of frames) {
+            if (!frame.trim() || frame.trim().startsWith(':')) continue;
+            let eventType = '';
+            let dataStr = '';
+            for (const line of frame.split('\n')) {
+              if (line.startsWith('event:')) eventType = line.slice(6).trim();
+              if (line.startsWith('data:')) dataStr = line.slice(5).trim();
+            }
+            if (!dataStr) continue;
+            let data = {};
+            try { data = JSON.parse(dataStr); } catch { continue; }
+
+            if (eventType === 'turn-start') {
+              lastTurnId = data.turnId;
+              card.setTurnId(data.turnId);
+              card.setModel(data.model);
+              if (data.sessionId && !activeSessionId) {
+                activeSessionId = data.sessionId;
+                loadSessionList();
+              }
+            } else if (eventType === 'reasoning') {
+              card.reasoningBox.classList.remove('hidden');
+              card.reasoningContent.textContent += (data.text || '');
+            } else if (eventType === 'content') {
+              if (!hasContentStarted) {
+                card.contentEl.innerHTML = '';
+                contentStartedReset(card);
+                hasContentStarted = true;
+              }
+              accumulatedMd += (data.text || '');
+              card.contentEl.innerHTML = renderMarkdown(accumulatedMd);
+              streamBox.scrollTop = streamBox.scrollHeight;
+            } else if (eventType === 'tool-call-start') {
+              // ask_user 由专用问答卡片呈现，避免重复渲染工具徽标
+              if (data.tool !== 'ask_user') appendToolBadge(data.tool, data.args);
+            } else if (eventType === 'question-request') {
+              card.toolsEl.appendChild(createQuestionCard(data, null));
+              streamBox.scrollTop = streamBox.scrollHeight;
+            } else if (eventType === 'approval-request') {
+              card.toolsEl.appendChild(createApprovalCard(data, null));
+              streamBox.scrollTop = streamBox.scrollHeight;
+            } else if (eventType === 'tool-result') {
+              const line = document.createElement('div');
+              line.className = `text-[11px] font-mono rounded px-2.5 py-1 my-0.5 ${data.isError ? 'text-rose-300 bg-rose-950/20 border border-rose-900/30' : 'text-emerald-300/90 bg-emerald-950/20 border border-emerald-900/30'}`;
+              line.textContent = `📥 工具输出 (${String(data.output || '').length} 字符)${data.isError ? ' [报错]' : ''}`;
+              card.toolsEl.appendChild(line);
+              if (data.meta && Array.isArray(data.meta.lines)) {
+                card.toolsEl.appendChild(createDiffCard(data.meta));
+              }
+              streamBox.scrollTop = streamBox.scrollHeight;
+            } else if (eventType === 'todo-update') {
+              renderTodoDock(data.todos);
+            } else if (eventType === 'turn-end') {
+              if (data.turnId) {
+                lastTurnId = data.turnId;
+                card.setTurnId(data.turnId);
+              }
+            } else if (eventType === 'done') {
+              document.getElementById('session-tokens').textContent = data.tokens || '0';
+              document.getElementById('session-cost').textContent = data.cost || '$0.000';
+              loadSessionList();
+            } else if (eventType === 'error') {
+              showErrorBanner(data.message || '模型通信故障');
+            }
+          }
+        }
+      } catch (err) {
+        if (err.name === 'AbortError') {
+          card.contentEl.innerHTML += '<div class="text-rose-400 text-[11px] font-mono pt-1">⏹ 回合已被用户手动中止 (Aborted)。</div>';
+        } else {
+          card.contentEl.innerHTML = `<span class="text-rose-400 font-mono">❌ 异常: ${escapeHtml(err.message)}</span>`;
+          showErrorBanner(err.message);
+        }
+      } finally {
+        setRunningState(false);
+        // 回合结束回到空闲态，恢复长期订阅以承接后台/跨标签的新事件
+        if (activeSessionId) startSessionWatch(activeSessionId);
+      }
+    }
+
+    function contentStartedReset(card) {
+      card.contentEl.className = 'prose-dark leading-relaxed font-sans';
+    }
+    // 7. 键盘事件监听 (Enter 立即发送，Shift+Enter 自由换行)
+    function setupKeyboardListener() {
+      const textarea = document.getElementById('composer-textarea');
+      textarea.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          if (!isRunning) {
+            handleSendMessage();
+          }
+        }
+      });
+    }
+
+    // 8. 单回合 Git 原子撤销 (Revert Turn)
+    async function triggerRevertTurn() {
+      if (!activeSessionId || !lastTurnId) {
+        showErrorBanner('当前暂无可撤销的回合检查点。');
+        return;
+      }
+      if (!confirm('确定要撤销本回合涉及的所有代码修改吗？\n\n系统将原子复原至回合前基线，用户原有的手写未提交代码受到隔离保护，绝不误伤。')) return;
+
+      try {
+        const res = await fetch(`/api/sessions/${activeSessionId}/revert`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ turnId: lastTurnId }),
+        });
+        const result = await res.json();
+        if (result.code === 0) {
+          alert(`✓ Revert Turn 成功！已撤销文件清单：\n${(result.data.revertedFiles || []).join('\n') || '(无物理文件改动)'}`);
+        } else {
+          showErrorBanner('撤销失败: ' + result.message);
+        }
+      } catch (err) {
+        showErrorBanner('撤销请求异常: ' + err.message);
+      }
+    }
+
+    // 9. 中止当前回合 (Abort)
+    async function triggerAbort() {
+      if (activeAbortController) {
+        activeAbortController.abort();
+      }
+      if (activeSessionId) {
+        try {
+          await fetch(`/api/sessions/${activeSessionId}/abort`, { method: 'POST' });
+        } catch {}
+      }
+      setRunningState(false);
+    }
+
+    // 10. 手动压缩上下文 (/compact)
+    async function triggerCompact() {
+      if (isRunning) {
+        showErrorBanner('请先等待当前回合结束或中止后再压缩上下文。');
+        return;
+      }
+      if (!activeSessionId) {
+        showErrorBanner('当前会话尚无上下文可压缩。');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/sessions/${activeSessionId}/compact`, { method: 'POST' });
+        const result = await res.json();
+        if (result.code !== 0) {
+          showInfoBanner(result.message || '当前上下文较短，无需压缩。');
+          return;
+        }
+        showInfoBanner(`✓ 上下文已压缩：压缩前 ${result.data.before} 条消息，后续对话将从摘要基线（seq ${result.data.baselineSeq}）继续。`);
+        await switchSession(activeSessionId);
+      } catch (err) {
+        showErrorBanner('压缩请求异常: ' + err.message);
+      }
+    }
+
+    // ================= 首次启动破冰向导 (WBS-01-08-04 / D57) =================
+    function wizardStatus(text) {
+      const el = document.getElementById('wizard-status');
+      if (el) el.textContent = text;
+    }
+
+    function wizardGoStep(step) {
+      document.getElementById('wizard-step-1').classList.toggle('hidden', step !== 1);
+      document.getElementById('wizard-step-2').classList.toggle('hidden', step !== 2);
+      document.getElementById('wizard-step-badge').textContent = `步骤 ${step} / 2`;
+      wizardStatus('');
+    }
+
+    /** 冷启动检测：任一侧（模型 / 工作区）缺失且未显式跳过时弹出向导。 */
+    async function checkBootstrap() {
+      try {
+        const res = await fetch('/api/bootstrap/status');
+        const result = await res.json();
+        if (result.code === 0 && result.data && result.data.needsWizard) {
+          document.getElementById('wizard-modal').classList.remove('hidden');
+          wizardGoStep(1);
+        }
+      } catch (err) {
+        console.warn('Bootstrap status failed:', err);
+      }
+    }
+
+    async function wizardProbeModels() {
+      const btn = document.getElementById('wizard-probe-btn');
+      const baseUrl = document.getElementById('wizard-provider-baseurl').value.trim();
+      const apiKey = document.getElementById('wizard-provider-key').value.trim();
+      if (!baseUrl) { wizardStatus('请先填写 Base URL'); return; }
+      if (!apiKey) { wizardStatus('请先填写 API Key'); return; }
+
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '探测中…';
+      try {
+        const res = await fetch('/api/providers/models', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ protocol: 'openai-compatible', baseUrl, apiKey }),
+        });
+        const result = await res.json();
+        const models = (result.data && result.data.models) || [];
+        const select = document.getElementById('wizard-model-select');
+        select.innerHTML = '';
+        if (models.length === 0) {
+          select.innerHTML = '<option value="">未探测到模型（可稍后在资产池配置）</option>';
+          wizardStatus(result.message || '未探测到模型');
+          return;
+        }
+        models.forEach((model) => {
+          const opt = document.createElement('option');
+          opt.value = model.id;
+          opt.textContent = model.id;
+          select.appendChild(opt);
+        });
+        wizardStatus(`✓ 探测到 ${models.length} 个模型`);
+      } catch (err) {
+        wizardStatus('探测失败: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    async function wizardSaveProvider() {
+      const name = document.getElementById('wizard-provider-name').value.trim() || '默认 Provider';
+      const baseUrl = document.getElementById('wizard-provider-baseurl').value.trim();
+      const apiKey = document.getElementById('wizard-provider-key').value.trim();
+      const modelId = document.getElementById('wizard-model-select').value;
+      if (!baseUrl) { wizardStatus('请填写 Base URL'); return; }
+      if (!apiKey) { wizardStatus('请填写 API Key'); return; }
+
+      wizardStatus('正在保存…');
+      try {
+        const res = await fetch('/api/providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: `provider-${Date.now()}`,
+            name,
+            protocol: 'openai-compatible',
+            baseUrl,
+            apiKey,
+            models: modelId ? [{ id: modelId, name: modelId, contextWindow: 65536 }] : [],
+          }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.code !== 0) {
+          wizardStatus('保存失败: ' + (result.message || res.status));
+          return;
+        }
+        await loadModels();
+        wizardGoStep(2);
+      } catch (err) {
+        wizardStatus('保存异常: ' + err.message);
+      }
+    }
+
+    async function wizardBrowseFolder() {
+      const btn = document.getElementById('wizard-browse-btn');
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '唤起中…';
+      try {
+        const res = await fetch('/api/workspaces/select-folder', { method: 'POST' });
+        const result = await res.json();
+        if (result.code === 0 && result.path) {
+          document.getElementById('wizard-ws-path').value = result.path;
+          wizardStatus('✓ 已选择目录');
+        } else {
+          wizardStatus(result.message || '未选择目录');
+        }
+      } catch (err) {
+        wizardStatus('目录选择失败: ' + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    async function markWizardDone() {
+      try {
+        await fetch('/api/settings/section', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: 'wizardCompleted', data: true }),
+        });
+      } catch {
+        // 标记失败不阻断主流程
+      }
+    }
+
+    async function wizardFinish() {
+      const wsPath = document.getElementById('wizard-ws-path').value.trim();
+      if (!wsPath) { wizardStatus('请填写或选择本地项目目录'); return; }
+
+      wizardStatus('正在登记工作区…');
+      try {
+        const res = await fetch('/api/workspaces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: wsPath }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.code !== 0) {
+          wizardStatus('登记失败: ' + (result.message || res.status));
+          return;
+        }
+        await markWizardDone();
+        document.getElementById('wizard-modal').classList.add('hidden');
+        await loadWorkspaces();
+        await loadModels();
+        await loadSessionList();
+      } catch (err) {
+        wizardStatus('登记异常: ' + err.message);
+      }
+    }
+
+    async function skipWizard() {
+      await markWizardDone();
+      document.getElementById('wizard-modal').classList.add('hidden');
+    }
+
+    // ============ SSE 长期订阅与半开断链重连 (D69 / TC-01-08-002) ============
+    const HEARTBEAT_TIMEOUT_MS = 30000;
+    let lastKnownSeq = 0;
+    const streamWatch = {
+      sessionId: null,
+      lastSeq: 0,
+      lastHeartbeatAt: 0,
+      controller: null,
+      watchdog: null,
+      reconnectTimer: null,
+      closed: true,
+    };
+
+    function stopSessionWatch() {
+      streamWatch.closed = true;
+      if (streamWatch.controller) {
+        try { streamWatch.controller.abort(); } catch { /* 已关闭 */ }
+        streamWatch.controller = null;
+      }
+      if (streamWatch.watchdog) { clearInterval(streamWatch.watchdog); streamWatch.watchdog = null; }
+      if (streamWatch.reconnectTimer) { clearTimeout(streamWatch.reconnectTimer); streamWatch.reconnectTimer = null; }
+    }
+
+    /** 空闲态开启长期订阅：接收跨标签/后台产生的新事件，并靠心跳探测半开死链。 */
+    function startSessionWatch(sessionId) {
+      stopSessionWatch();
+      if (!sessionId) return;
+      streamWatch.sessionId = sessionId;
+      streamWatch.closed = false;
+      streamWatch.lastSeq = lastKnownSeq;
+      streamWatch.lastHeartbeatAt = Date.now();
+      void openSessionStream();
+
+      streamWatch.watchdog = setInterval(() => {
+        if (streamWatch.closed) return;
+        if (Date.now() - streamWatch.lastHeartbeatAt > HEARTBEAT_TIMEOUT_MS) {
+          console.warn('[PGH] 超过 30s 未收到心跳，判定半开断链，正在重连并拉齐…');
+          void reconnectSessionStream();
+        }
+      }, 5000);
+    }
+
+    async function reconnectSessionStream() {
+      if (streamWatch.closed || !streamWatch.sessionId) return;
+      if (streamWatch.controller) {
+        try { streamWatch.controller.abort(); } catch { /* 已关闭 */ }
+        streamWatch.controller = null;
+      }
+      // 携带持有的最新 seq 重新拉齐，断网期间的事件帧会被全量补发
+      await switchSession(streamWatch.sessionId);
+      await openSessionStream();
+    }
+
+    function scheduleStreamReconnect() {
+      if (streamWatch.closed || streamWatch.reconnectTimer) return;
+      streamWatch.reconnectTimer = setTimeout(() => {
+        streamWatch.reconnectTimer = null;
+        void reconnectSessionStream();
+      }, 2000);
+    }
+
+    async function openSessionStream() {
+      if (streamWatch.closed || !streamWatch.sessionId) return;
+      const controller = new AbortController();
+      streamWatch.controller = controller;
+      streamWatch.lastHeartbeatAt = Date.now();
+      try {
+        const res = await fetch(`/api/sessions/${streamWatch.sessionId}/stream?after=${streamWatch.lastSeq}`, {
+          signal: controller.signal,
+        });
+        if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let buffer = '';
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const frames = buffer.split('\n\n');
+          buffer = frames.pop() || '';
+
+          for (const frame of frames) {
+            const trimmed = frame.trim();
+            if (trimmed === '') continue;
+            // 注释帧即心跳：刷新看门狗
+            if (trimmed.startsWith(':')) {
+              streamWatch.lastHeartbeatAt = Date.now();
+              continue;
+            }
+            let eventType = '';
+            let dataStr = '';
+            for (const line of frame.split('\n')) {
+              if (line.startsWith('event:')) eventType = line.slice(6).trim();
+              if (line.startsWith('data:')) dataStr = line.slice(5).trim();
+            }
+            if (!dataStr) continue;
+            let data = {};
+            try { data = JSON.parse(dataStr); } catch { continue; }
+            if (typeof data.seq === 'number') {
+              streamWatch.lastSeq = Math.max(streamWatch.lastSeq, data.seq);
+              lastKnownSeq = Math.max(lastKnownSeq, data.seq);
+            }
+            if (eventType === 'stream-ready') streamWatch.lastHeartbeatAt = Date.now();
+          }
+        }
+        if (!streamWatch.closed) scheduleStreamReconnect();
+      } catch (err) {
+        if (err.name === 'AbortError') return;
+        if (!streamWatch.closed) scheduleStreamReconnect();
+      }
+    }
+
+    // 息屏/休眠后切回前台：立即重连并拉齐（不等 30s 看门狗）
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState !== 'visible') return;
+      if (streamWatch.closed || !streamWatch.sessionId) return;
+      console.info('[PGH] 切回前台，主动校验 SSE 连接…');
+      void reconnectSessionStream();
+    });
+
+    // 页面就绪入口
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadWorkspaces();
+      await loadModels();
+      await loadSessionList();
+      setupKeyboardListener();
+      await checkBootstrap();
+    });
+  </script>
+</body>
+</html>

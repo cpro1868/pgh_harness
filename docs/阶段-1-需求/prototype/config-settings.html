@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>系统全局设置 - Harness Settings</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .tab-btn.active {
+      background-color: #1e293b;
+      color: #38bdf8;
+      border-color: #0284c7;
+    }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden">
+
+  <!-- 1. 全局最左侧极窄活动栏 (VS Code 风格，精简后规范形态) -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition" title="返回原型大屏">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+
+    <!-- 运行态 -->
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
+    <a href="run-workflow.html" class="activity-btn" title="BPMN 业务工作流 (Workflow)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></a>
+    <a href="run-terminal.html" class="activity-btn" title="终端与长任务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></a>
+    <a href="run-trajectory.html" class="activity-btn" title="事件轨迹审计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></a>
+
+        <div class="my-3 w-6 border-b border-slate-800"></div>
+
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-knowledge.html" class="activity-btn" title="独立知识库中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn active mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 二级导航与主内容区 -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    
+    <!-- 顶栏 -->
+    <header class="h-12 bg-[#090d18] border-b border-[#1a2333] px-6 flex items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center space-x-3">
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60 font-mono">全局基础设施</span>
+        <h1 class="text-sm font-bold text-white">系统设置中心 (System Settings)</h1>
+      </div>
+
+      <div class="flex items-center space-x-2 text-xs font-mono">
+        <button onclick="alert('系统运行参数已保存生效！');" class="px-3.5 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center space-x-1 shadow transition">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+          <span>保存全部设置</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- 主体：左侧 Tab 导航 + 右侧内容面板 -->
+    <div class="flex-1 flex overflow-hidden">
+      
+      <!-- 设置导航菜单 (Secondary Sidebar) -->
+      <div class="w-56 bg-[#0c101c] border-r border-[#1a2333] p-3 space-y-1 text-xs font-sans">
+        <div class="px-2 py-1 text-[10px] font-mono text-slate-500 uppercase tracking-wider">系统与偏好</div>
+        
+        <button onclick="switchTab('general')" id="tab-general" class="tab-btn w-full text-left px-3 py-2 rounded-lg text-white font-medium flex items-center space-x-2 active transition">
+          <span>⚙️</span>
+          <span>基础运行与端口</span>
+        </button>
+
+        <button onclick="switchTab('appearance')" id="tab-appearance" class="tab-btn w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2 transition">
+          <span>🎨</span>
+          <span>外观主题与字体</span>
+        </button>
+
+        <div class="px-2 pt-3 pb-1 text-[10px] font-mono text-slate-500 uppercase tracking-wider">底层架构</div>
+
+        <button onclick="switchTab('permissions')" id="tab-permissions" class="tab-btn w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2 transition">
+          <span>🛡️</span>
+          <span>安全权限与沙箱</span>
+        </button>
+
+        <button onclick="switchTab('plugins')" id="tab-plugins" class="tab-btn w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2 transition">
+          <span>🔌</span>
+          <span>内核插件编排 (10)</span>
+        </button>
+      </div>
+
+      <!-- 右侧设置表单内容区 (纵向滚动) -->
+      <main class="flex-1 p-8 overflow-y-auto space-y-8 max-w-4xl">
+        
+        <!-- Tab 1: 基础运行与网络端口 -->
+        <section id="panel-general" class="space-y-6">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center">
+              <span>网络监听、端口与工作区数据根目录</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">控制 Harness HTTP/SSE 服务绑定的端口、访问令牌与本地数据库持久化路径。</p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 text-xs font-sans shadow-lg">
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">服务监听端口 (Port)：</label>
+                <div class="flex items-center space-x-2">
+                  <input type="number" value="3000" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono focus:outline-none focus:border-blue-500">
+                  <span class="text-[10px] text-slate-500 font-mono whitespace-nowrap">冲突时顺延+1</span>
+                </div>
+              </div>
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">监听地址绑定 (Host Binding)：</label>
+                <select class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono">
+                  <option selected>127.0.0.1 (本地回环 · 默认安全)</option>
+                  <option>0.0.0.0 (局域网/公网暴露 · 强制要求 Token)</option>
+                </select>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">访问安全令牌 (HARNESS_ACCESS_TOKEN)：</label>
+              <input type="password" value="harness_sec_token_98f4a1" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 font-mono">
+              <span class="text-[10px] text-slate-500 mt-1 block font-sans">当绑定 0.0.0.0 时强制启用，外部请求必须携带 Authorization: Bearer 头。</span>
+            </div>
+
+            <div class="border-t border-slate-800/80 pt-3">
+              <label class="block text-slate-300 font-medium mb-1">系统全局数据持久化主目录 (Data Directory)：</label>
+              <div class="flex items-center space-x-2">
+                <input type="text" value="~/.harness" class="flex-1 bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 font-mono">
+                <button class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">浏览目录...</button>
+              </div>
+              <span class="text-[10px] text-slate-500 mt-1 block font-sans">用于存放物化会话事件日志、公共 SQLite 索引数据库与全局技能包。</span>
+            </div>
+
+            <!-- 全局网络代理配置卡片 (真实读写 API 联动) -->
+            <div class="border-t border-slate-800/80 pt-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <div class="flex items-center space-x-2">
+                    <span class="text-sm">🌐</span>
+                    <span class="text-slate-200 font-semibold text-xs">系统全局网络代理 (Global Network Proxy)</span>
+                    <span id="proxy-status-badge" class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-950/80 border border-blue-800/60 text-blue-400">已启用</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-0.5">修改后点击下方保存，将通过真实 API 持久化落盘至底层 SQLite，并在后端实时生效。</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input id="proxy-enabled-toggle" type="checkbox" checked class="sr-only peer" onchange="handleProxyToggleChange(this.checked)">
+                  <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+
+              <div id="proxy-inputs-container" class="space-y-3">
+                <div class="grid grid-cols-12 gap-3 pt-1">
+                  <div class="col-span-3">
+                    <label class="block text-slate-400 text-[11px] mb-1">代理协议：</label>
+                    <select id="proxy-protocol" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+                      <option value="HTTP" selected>HTTP</option>
+                      <option value="HTTPS">HTTPS</option>
+                      <option value="SOCKS5">SOCKS5</option>
+                    </select>
+                  </div>
+                  <div class="col-span-6">
+                    <label class="block text-slate-400 text-[11px] mb-1">代理服务器地址 (Host / IP)：</label>
+                    <input id="proxy-host" type="text" value="127.0.0.1" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+                  </div>
+                  <div class="col-span-3">
+                    <label class="block text-slate-400 text-[11px] mb-1">端口 (Port)：</label>
+                    <input id="proxy-port" type="number" value="7890" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label class="block text-slate-400 text-[11px] mb-1">鉴权用户名 (可选)：</label>
+                    <input id="proxy-username" type="text" placeholder="留空为无鉴权" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+                  </div>
+                  <div>
+                    <label class="block text-slate-400 text-[11px] mb-1">鉴权密码 (可选)：</label>
+                    <input id="proxy-password" type="password" placeholder="••••••••" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-slate-400 text-[11px] mb-1">绕过地址名单 (Bypass List · NO_PROXY)：</label>
+                  <input id="proxy-bypass" type="text" value="localhost, 127.0.0.1, ::1, *.local, 192.168.*" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-300 font-mono text-xs">
+                  <span class="text-[10px] text-slate-500 mt-1 block">逗号分隔，命中白名单的本地服务与局域网调用将严格强制直连，避免回环死锁。</span>
+                </div>
+
+                <div class="flex items-center justify-between pt-2">
+                  <span id="proxy-save-status" class="text-[11px] text-emerald-400 font-medium"></span>
+                  <button onclick="saveProxySettingsToBackend()" class="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold shadow transition flex items-center space-x-1">
+                    <span>💾 保存全局代理设定</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+        </section>
+
+        <!-- Tab 2: 外观主题与字体 -->
+        <section id="panel-appearance" class="space-y-6 hidden">
+          <div>
+            <h2 class="text-base font-bold text-white flex items-center">
+              <span>界面外观、主题色系与代码排版</span>
+            </h2>
+            <p class="text-xs text-slate-400 mt-0.5">针对程序员日常深色高对比度开发环境定制，减少长时间阅读疲劳。</p>
+          </div>
+
+          <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-5 text-xs font-sans shadow-lg">
+            <div>
+              <label class="block text-slate-300 font-medium mb-2">主色系与对比度 (Theme Style)：</label>
+              <div class="grid grid-cols-3 gap-3">
+                <label class="p-3 rounded-lg bg-[#070b14] border-2 border-blue-500/80 cursor-pointer block">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-3.5 h-3.5 rounded-full bg-[#070a12] border border-slate-600"></span>
+                    <span class="font-bold text-white">暗色极客 (默认推荐)</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1">深黑背景 #070a12，高对比度代码荧光。</p>
+                </label>
+                <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 hover:border-slate-700 cursor-pointer block">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-3.5 h-3.5 rounded-full bg-[#0f172a] border border-slate-600"></span>
+                    <span class="font-bold text-white">Slate 深蓝调</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1">Tailwind Slate 现代工程师配色。</p>
+                </label>
+                <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 hover:border-slate-700 cursor-pointer block">
+                  <div class="flex items-center space-x-2">
+                    <span class="w-3.5 h-3.5 rounded-full bg-black border border-slate-600"></span>
+                    <span class="font-bold text-white">纯黑 OLED 模式</span>
+                  </div>
+                  <p class="text-[10px] text-slate-400 mt-1">纯零度黑色 #000000，极致省电与专注。</p>
+                </label>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">代码与等宽字体 (Editor Font Family)：</label>
+                <select class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono">
+                  <option selected>JetBrains Mono, SF Mono, Menlo</option>
+                  <option>Fira Code, Consolas</option>
+                  <option>Cascadia Code, Monaco</option>
+                </select>
+              </div>
+              <div>
+                <label class="block text-slate-300 font-medium mb-1">界面信息密度 (UI Density)：</label>
+                <select class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200">
+                  <option selected>紧凑模式 (Compact · 专为多代码窗口设计)</option>
+                  <option>标准模式 (Default)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 3: 权限规则与沙箱预设 (整合) -->
+        <section id="panel-permissions" class="space-y-6 hidden">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-white">安全权限策略与沙箱预设</h2>
+              <p class="text-xs text-slate-400 mt-0.5">严格遵循 Fail-Closed 原则，控制 Agent 读写文件与执行终端的许可边界。</p>
+            </div>
+            <a href="config-permissions.html" class="text-xs text-blue-400 hover:text-blue-300 font-mono">查看细粒度规则表 &rarr;</a>
+          </div>
+
+          <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 text-xs font-sans shadow-lg">
+            <div class="grid grid-cols-3 gap-3">
+              <div class="p-3.5 rounded-lg bg-[#090d18] border border-slate-800 space-y-1">
+                <span class="text-xs font-bold text-slate-300">只读预设 (Read-Only)</span>
+                <p class="text-[10px] text-slate-400">仅开放 read_file、grep 等工具，禁止写文件与执行 Shell。</p>
+              </div>
+              <div class="p-3.5 rounded-lg bg-[#090d18] border-2 border-blue-500/80 space-y-1">
+                <span class="text-xs font-bold text-blue-400">标准开发 (Edit Mode · 默认)</span>
+                <p class="text-[10px] text-slate-400">写文件需先读，危险 Shell（rm -rf 等）触发弹窗人机审批。</p>
+              </div>
+              <div class="p-3.5 rounded-lg bg-[#090d18] border border-slate-800 space-y-1">
+                <span class="text-xs font-bold text-rose-400">全权受托 (Full Autonomous)</span>
+                <p class="text-[10px] text-slate-400">非危险指令全部免审，仅隔离沙箱保护。</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Tab 4: 内核插件编排 (完整详情大表嵌入) -->
+        <section id="panel-plugins" class="space-y-6 hidden">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-base font-bold text-white flex items-center">
+                <span>内核插件依赖与服务装配拓扑</span>
+                <span class="ml-2 text-[10px] px-2 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">10/10 装配正常</span>
+              </h2>
+              <p class="text-xs text-slate-400 mt-0.5">对齐 Cordis 插件总线，按拓扑严格加载。任何被注入服务缺失立即触发 Fail-Fast 保护退出。</p>
+            </div>
+            <a href="config-plugins.html" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 font-mono text-xs flex items-center space-x-1 shadow transition">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+              <span>在独立全屏页面查看 &rarr;</span>
+            </a>
+          </div>
+
+          <!-- 完整嵌入 10 大核心插件清单大表 -->
+          <div class="border border-slate-800 rounded-xl bg-[#0c1220] overflow-hidden shadow-xl">
+            <div class="p-3.5 bg-[#090d18] border-b border-slate-800 flex items-center justify-between text-xs font-mono">
+              <span class="text-slate-300 font-bold">harness.yml 核心插件拓扑流水线</span>
+              <span class="text-slate-500 text-[10px]">纯 TypeScript · 零 Native C++ 扩展</span>
+            </div>
+
+            <table class="w-full text-left border-collapse text-xs font-mono">
+              <thead>
+                <tr class="border-b border-slate-800 text-slate-400 bg-[#070b14] text-[11px]">
+                  <th class="py-2.5 px-3.5">顺序</th>
+                  <th class="py-2.5 px-3.5">插件标识</th>
+                  <th class="py-2.5 px-3.5">提供服务 (ctx.provide)</th>
+                  <th class="py-2.5 px-3.5">依赖注入 (ctx.inject)</th>
+                  <th class="py-2.5 px-3.5">职责类别</th>
+                  <th class="py-2.5 px-3.5 text-right">状态</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-800/60 text-slate-300 text-[11px]">
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#1</td>
+                  <td class="py-2 px-3.5 font-bold text-white">storage-sqlite</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.database</td>
+                  <td class="py-2 px-3.5 text-slate-600">-</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">基础设施</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#2</td>
+                  <td class="py-2 px-3.5 font-bold text-white">session-log</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.sessions</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.database</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">会话真相</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#3</td>
+                  <td class="py-2 px-3.5 font-bold text-white">credentials</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.credentials</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.database</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">密钥加密</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#4</td>
+                  <td class="py-2 px-3.5 font-bold text-white">permissions</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.permissions</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.database</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">安全防线</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#5</td>
+                  <td class="py-2 px-3.5 font-bold text-white">model-provider</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.models</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.credentials</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">模型接入</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#6</td>
+                  <td class="py-2 px-3.5 font-bold text-white">tools-core</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.tools</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.permissions</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">工具执行</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#7</td>
+                  <td class="py-2 px-3.5 font-bold text-white">context-governance</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.contextGovernor</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.models, ctx.database</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">上下文治理</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#8</td>
+                  <td class="py-2 px-3.5 font-bold text-white">agent-loop</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.agent</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.tools, ctx.contextGovernor</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">核心调度</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#9</td>
+                  <td class="py-2 px-3.5 font-bold text-white">workflow-bpmn</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.workflows</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.agent</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">流程引擎</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+                <tr class="hover:bg-slate-800/20">
+                  <td class="py-2 px-3.5 text-slate-500 font-bold">#10</td>
+                  <td class="py-2 px-3.5 font-bold text-white">memory-engine</td>
+                  <td class="py-2 px-3.5 text-emerald-400 font-bold">ctx.memory</td>
+                  <td class="py-2 px-3.5 text-blue-300">ctx.database, ctx.models</td>
+                  <td class="py-2 px-3.5 text-slate-400 font-sans">经验反思</td>
+                  <td class="py-2 px-3.5 text-right"><span class="text-emerald-400 bg-emerald-950 px-1.5 py-0.2 rounded text-[10px]">Active</span></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+      </main>
+    </div>
+
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+      document.getElementById('tab-' + tabId).classList.add('active');
+
+      ['general', 'appearance', 'permissions', 'plugins'].forEach(id => {
+        const panel = document.getElementById('panel-' + id);
+        if (id === tabId) {
+          panel.classList.remove('hidden');
+        } else {
+          panel.classList.add('hidden');
+        }
+      });
+    }
+
+    // 真实与后端 REST API 交互
+    async function loadProxySettingsFromBackend() {
+      try {
+        const res = await fetch('/api/settings/proxy');
+        if (!res.ok) return;
+        const result = await res.json();
+        if (result.code === 0 && result.data) {
+          const cfg = result.data;
+          document.getElementById('proxy-enabled-toggle').checked = !!cfg.enabled;
+          document.getElementById('proxy-protocol').value = cfg.protocol || 'HTTP';
+          document.getElementById('proxy-host').value = cfg.host || '127.0.0.1';
+          document.getElementById('proxy-port').value = cfg.port || 7890;
+          document.getElementById('proxy-username').value = cfg.username || '';
+          document.getElementById('proxy-password').value = cfg.password || '';
+          document.getElementById('proxy-bypass').value = cfg.bypassList || 'localhost, 127.0.0.1';
+          updateProxyBadge(!!cfg.enabled);
+        }
+      } catch (err) {
+        console.warn('Backend API not reachable, running in offline mode:', err.message);
+      }
+    }
+
+    function updateProxyBadge(enabled) {
+      const badge = document.getElementById('proxy-status-badge');
+      if (enabled) {
+        badge.textContent = '已启用';
+        badge.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-950/80 border border-blue-800/60 text-blue-400';
+      } else {
+        badge.textContent = '强制直连 (已关闭)';
+        badge.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700';
+      }
+    }
+
+    function handleProxyToggleChange(checked) {
+      updateProxyBadge(checked);
+    }
+
+    async function saveProxySettingsToBackend() {
+      const payload = {
+        enabled: document.getElementById('proxy-enabled-toggle').checked,
+        protocol: document.getElementById('proxy-protocol').value,
+        host: document.getElementById('proxy-host').value.trim(),
+        port: parseInt(document.getElementById('proxy-port').value, 10) || 7890,
+        username: document.getElementById('proxy-username').value.trim() || undefined,
+        password: document.getElementById('proxy-password').value || undefined,
+        bypassList: document.getElementById('proxy-bypass').value.trim(),
+      };
+
+      const statusEl = document.getElementById('proxy-save-status');
+      statusEl.textContent = '正在保存至 SQLite...';
+
+      try {
+        const res = await fetch('/api/settings/proxy', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await res.json();
+        if (result.code === 0) {
+          statusEl.textContent = '✓ 已成功持久化落盘至数据库并实时生效！';
+          setTimeout(() => { statusEl.textContent = ''; }, 3000);
+        } else {
+          statusEl.textContent = '保存失败: ' + result.message;
+        }
+      } catch (err) {
+        statusEl.textContent = '请求异常: ' + err.message;
+      }
+    }
+
+    // 页面加载自动拉取数据库
+    window.addEventListener('DOMContentLoaded', () => {
+      loadProxySettingsFromBackend();
+    });
+  </script>
+
+</body>
+</html>
+
+
+

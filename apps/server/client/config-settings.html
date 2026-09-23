@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>系统设置中心 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans">
+
+  <!-- 统一 40px 顶栏 -->
+  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-6 h-6 rounded bg-purple-600 flex items-center justify-center font-bold text-white text-[11px] font-mono shadow-sm">PG</div>
+      <span class="font-bold text-white tracking-wide text-xs">Purple Grapes Harness</span>
+      <span class="text-slate-600">/</span>
+      <span class="text-slate-400 font-medium">系统基础设施与偏好控制台</span>
+    </div>
+    <span id="global-save-status" class="text-xs font-mono text-emerald-400 font-medium"></span>
+  </header>
+
+  <!-- 主体区域：左侧 48px 一级侧边栏 + 二级 Tab 栏 + 右侧主内容区 -->
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+    
+    <!-- 全系统严格一致的 48px 一级侧边栏 -->
+    <aside class="activity-bar">
+      <a href="run-chat.html" class="activity-btn" title="主会话工作台 (Chat)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      </a>
+      <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则 (Workspaces)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn" title="Provider 资产池">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <div class="flex-1"></div>
+      <a href="config-settings.html" class="activity-btn active" title="系统设置中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </a>
+    </aside>
+
+    <!-- 二级设置菜单栏 (220px 宽度，与会话侧栏完全等宽) -->
+    <div class="w-56 bg-[#0c101c] border-r border-[#1a2333] p-3 space-y-1 text-xs font-sans shrink-0">
+      <div class="px-2 py-1 text-[10px] font-mono text-slate-500 uppercase tracking-wider">系统与偏好</div>
+      <button onclick="switchTab('general')" id="tab-general" class="w-full text-left px-3 py-2 rounded-lg text-white font-medium flex items-center space-x-2 bg-blue-600/20 text-blue-400 border border-blue-500/30">
+        <span>⚙️</span>
+        <span>基础运行与网络代理</span>
+      </button>
+      <button onclick="switchTab('appearance')" id="tab-appearance" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2">
+        <span>🎨</span>
+        <span>外观主题与代码字体</span>
+      </button>
+      <div class="px-2 pt-3 pb-1 text-[10px] font-mono text-slate-500 uppercase tracking-wider">底层安全与架构</div>
+      <button onclick="switchTab('permissions')" id="tab-permissions" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2">
+        <span>🛡️</span>
+        <span>安全权限与沙箱防线</span>
+      </button>
+      <button onclick="switchTab('plugins')" id="tab-plugins" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2">
+        <span>🔌</span>
+        <span>内核插件编排拓扑 (10)</span>
+      </button>
+    </div>
+
+    <!-- 右侧内容主面板 -->
+    <main class="flex-1 p-8 overflow-y-auto space-y-6 max-w-4xl text-xs font-sans">
+      
+      <!-- 板块 1: 基础运行与网络代理 -->
+      <section id="panel-general" class="space-y-6">
+        <div>
+          <h2 class="text-base font-bold text-white">基础服务、端口与全局代理</h2>
+          <p class="text-xs text-slate-400 mt-0.5">控制后端服务监听的端口、Token 访问控制、SQLite 数据库根目录与全网代理通道。</p>
+        </div>
+
+        <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg">
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">服务监听端口 (Port)：</label>
+              <input id="general-port" type="number" value="3210" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">监听地址绑定 (Host Binding)：</label>
+              <select id="general-host" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+                <option value="127.0.0.1" selected>127.0.0.1 (本地回环 · 默认安全)</option>
+                <option value="0.0.0.0">0.0.0.0 (局域网/公网暴露 · 强制要求 Token)</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">访问安全令牌 (HARNESS_ACCESS_TOKEN)：</label>
+            <input id="general-token" type="password" placeholder="绑定 0.0.0.0 时强制要求填入" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-medium mb-1">系统全局数据持久化主目录 (Data Directory)：</label>
+            <input id="general-datadir" type="text" value="~/.pg_harness" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 font-mono text-xs">
+          </div>
+
+          <div class="border-t border-slate-800 pt-4 space-y-3">
+            <div class="flex items-center justify-between">
+              <div>
+                <span class="text-slate-200 font-bold text-xs">🌐 系统全局网络代理 (Global Network Proxy)</span>
+                <span id="proxy-status-badge" class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700">已关闭</span>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input id="proxy-enabled" type="checkbox" class="sr-only peer" onchange="handleProxyToggleChange(this.checked)">
+                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            <div class="grid grid-cols-12 gap-3">
+              <div class="col-span-3">
+                <select id="proxy-protocol" class="w-full bg-[#090d18] border border-slate-700 rounded px-2 py-1.5 text-slate-200 font-mono text-xs">
+                  <option value="HTTP">HTTP</option>
+                  <option value="HTTPS">HTTPS</option>
+                  <option value="SOCKS5">SOCKS5</option>
+                </select>
+              </div>
+              <div class="col-span-6">
+                <input id="proxy-host" type="text" value="127.0.0.1" placeholder="Host" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs">
+              </div>
+              <div class="col-span-3">
+                <input id="proxy-port" type="number" value="7890" placeholder="Port" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs">
+              </div>
+            </div>
+
+            <input id="proxy-bypass" type="text" value="localhost, 127.0.0.1, ::1, *.local" placeholder="Bypass NO_PROXY" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-300 font-mono text-xs">
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button onclick="saveGeneralAndProxy()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-semibold shadow">
+              💾 保存基础与代理设定
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 板块 2: 外观主题与字体 -->
+      <section id="panel-appearance" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-base font-bold text-white">界面外观、主题色系与代码排版</h2>
+          <p class="text-xs text-slate-400 mt-0.5">针对程序员日常深色高对比度开发环境定制，设置持久化在数据库中。</p>
+        </div>
+
+        <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg">
+          <div>
+            <label class="block text-slate-300 font-medium mb-2">主色系与对比度 (Theme Style)：</label>
+            <div class="grid grid-cols-3 gap-3">
+              <label class="p-3 rounded-lg bg-[#070b14] border-2 border-blue-500/80 cursor-pointer block">
+                <input type="radio" name="app_theme" value="dark-geek" checked class="mr-1">
+                <span class="font-bold text-white">暗色极客 (默认)</span>
+                <p class="text-[10px] text-slate-400 mt-1">深黑背景 #070a12，高对比代码荧光。</p>
+              </label>
+              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block">
+                <input type="radio" name="app_theme" value="slate-blue" class="mr-1">
+                <span class="font-bold text-white">Slate 深蓝调</span>
+                <p class="text-[10px] text-slate-400 mt-1">Tailwind Slate 现代工程师配色。</p>
+              </label>
+              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block">
+                <input type="radio" name="app_theme" value="oled-black" class="mr-1">
+                <span class="font-bold text-white">纯黑 OLED 模式</span>
+                <p class="text-[10px] text-slate-400 mt-1">极致纯黑，专注降噪。</p>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">代码与等宽字体 (Font Family)：</label>
+              <select id="appearance-font" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+                <option value="JetBrains Mono, SF Mono, Menlo" selected>JetBrains Mono, Menlo</option>
+                <option value="Fira Code, Consolas">Fira Code, Consolas</option>
+                <option value="Cascadia Code, Monaco">Cascadia Code, Monaco</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">界面信息密度 (UI Density)：</label>
+              <select id="appearance-density" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs">
+                <option value="compact" selected>紧凑模式 (Compact · 专为多代码窗口设计)</option>
+                <option value="default">标准模式 (Default)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button onclick="saveAppearance()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-semibold shadow">
+              💾 保存外观偏好
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 板块 3: 安全权限与沙箱 -->
+      <section id="panel-permissions" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-base font-bold text-white">安全权限预设与沙箱规则</h2>
+          <p class="text-xs text-slate-400 mt-0.5">本预设已在**工具执行前强制生效**（判定顺序 deny &gt; ask &gt; allow）；下列硬性红线在任何预设下都拒绝执行。</p>
+        </div>
+
+        <div class="p-4 rounded-xl bg-rose-950/20 border border-rose-900/40 text-[11px] font-mono text-rose-200/90 leading-relaxed">
+          <div class="font-sans font-semibold text-rose-300 mb-1">硬性红线（不可通过配置放宽）</div>
+          <div>· <code>git push</code> / 强制推送 —— 版本控制红线（D56）</div>
+          <div>· <code>shutdown</code> / <code>reboot</code> / <code>diskpart</code> / 格式化磁盘 —— 破坏宿主</div>
+          <div>· <code>rm -rf /</code> —— 递归删除根路径</div>
+          <div>· 读取 <code>.env</code> / <code>*.pem</code> / <code>*.key</code> / <code>id_rsa</code> —— 敏感凭据拦截（D48）</div>
+        </div>
+
+        <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg">
+          <div>
+            <label class="block text-slate-300 font-medium mb-2">全局默认安全预设 (Global Preset)：</label>
+            <div class="grid grid-cols-3 gap-3">
+              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block">
+                <input type="radio" name="perm_preset" value="readonly" class="mr-1">
+                <span class="font-bold text-emerald-400">只读分析模式 (Read-Only)</span>
+                <p class="text-[10px] text-slate-400 mt-1">严禁修改任何文件与执行命令。</p>
+              </label>
+              <label class="p-3 rounded-lg bg-[#070b14] border-2 border-blue-500/80 cursor-pointer block">
+                <input type="radio" name="perm_preset" value="edit" checked class="mr-1">
+                <span class="font-bold text-blue-400">标准编辑模式 (Edit · 默认)</span>
+                <p class="text-[10px] text-slate-400 mt-1">放行工作区代码改写，高危动作审批。</p>
+              </label>
+              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block">
+                <input type="radio" name="perm_preset" value="full" class="mr-1">
+                <span class="font-bold text-rose-400">全权模式 (Full Access)</span>
+                <p class="text-[10px] text-slate-400 mt-1">免问放行命令，仅受黑名单拦截。</p>
+              </label>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-4">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">单命令硬超时限制 (秒)：</label>
+              <input id="perm-timeout" type="number" value="120" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">版本控制安全红线：</label>
+              <div class="pt-1.5 text-slate-300">
+                <label class="flex items-center space-x-2">
+                  <input id="perm-git-push" type="checkbox" checked class="rounded bg-slate-900 border-slate-700 text-blue-500">
+                  <span>严禁智能体自主静默 git push</span>
+                </label>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2 flex justify-end">
+            <button onclick="savePermissions()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-semibold shadow">
+              💾 保存权限与沙箱设定
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- 板块 4: 运行时组件接入状态（如实反映代码现状） -->
+      <section id="panel-plugins" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-base font-bold text-white">运行时组件接入状态</h2>
+          <p class="text-xs text-slate-400 mt-0.5">
+            如实反映当前代码现状：<span class="text-emerald-400 font-mono">Active</span> 表示真实接入并在本进程生效；
+            <span class="text-amber-400 font-mono">NotWired</span> 表示代码或设计已存在但**尚未接入运行链路**，不产生实际效果。
+          </p>
+        </div>
+
+        <div class="border border-slate-800 rounded-xl bg-[#0c1220] overflow-hidden shadow-lg">
+          <table class="w-full text-left border-collapse text-xs font-mono">
+            <thead>
+              <tr class="border-b border-slate-800 text-slate-400 bg-[#090d16]">
+                <th class="py-2.5 px-3.5 font-semibold">#</th>
+                <th class="py-2.5 px-3.5 font-semibold">组件</th>
+                <th class="py-2.5 px-3.5 font-semibold">提供能力</th>
+                <th class="py-2.5 px-3.5 font-semibold">接入状态</th>
+                <th class="py-2.5 px-3.5 font-semibold font-sans">说明</th>
+              </tr>
+            </thead>
+            <tbody id="plugins-table-tbody" class="divide-y divide-slate-800/60 text-slate-300">
+              <!-- 由 API 渲染 -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script>
+    function switchTab(tabId) {
+      ['general', 'appearance', 'permissions', 'plugins'].forEach(id => {
+        const btn = document.getElementById('tab-' + id);
+        const panel = document.getElementById('panel-' + id);
+        if (id === tabId) {
+          btn.className = 'w-full text-left px-3 py-2 rounded-lg text-white font-medium flex items-center space-x-2 bg-blue-600/20 text-blue-400 border border-blue-500/30';
+          panel.classList.remove('hidden');
+        } else {
+          btn.className = 'w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2';
+          panel.classList.add('hidden');
+        }
+      });
+    }
+
+    async function loadAllSettings() {
+      try {
+        const res = await fetch('/api/settings/all');
+        if (!res.ok) return;
+        const result = await res.json();
+        if (result.code === 0 && result.data) {
+          const { general, proxy, appearance, permissions, plugins } = result.data;
+          
+          if (general) {
+            document.getElementById('general-port').value = general.port || 3210;
+            document.getElementById('general-host').value = general.hostBinding || '127.0.0.1';
+            document.getElementById('general-token').value = general.accessToken || '';
+            document.getElementById('general-datadir').value = general.dataDir || '~/.pg_harness';
+          }
+
+          if (proxy) {
+            document.getElementById('proxy-enabled').checked = !!proxy.enabled;
+            document.getElementById('proxy-protocol').value = proxy.protocol || 'HTTP';
+            document.getElementById('proxy-host').value = proxy.host || '127.0.0.1';
+            document.getElementById('proxy-port').value = proxy.port || 7890;
+            document.getElementById('proxy-bypass').value = proxy.bypassList || 'localhost, 127.0.0.1';
+            updateProxyBadge(!!proxy.enabled);
+          }
+
+          if (appearance) {
+            document.getElementById('appearance-font').value = appearance.editorFontFamily;
+            document.getElementById('appearance-density').value = appearance.uiDensity;
+          }
+
+          if (permissions) {
+            document.getElementById('perm-timeout').value = permissions.shellTimeoutSeconds || 120;
+            document.getElementById('perm-git-push').checked = permissions.interceptGitPush !== false;
+            // 如实回显当前生效预设，避免界面与后端实际判定不一致
+            const preset = permissions.globalPreset || 'edit';
+            const radio = document.querySelector(`input[name="perm_preset"][value="${preset}"]`);
+            if (radio) radio.checked = true;
+          }
+
+          if (plugins && Array.isArray(plugins)) {
+            renderPluginsTable(plugins);
+          }
+        }
+      } catch (err) {
+        console.warn('Load settings failed:', err.message);
+      }
+    }
+
+    function updateProxyBadge(enabled) {
+      const badge = document.getElementById('proxy-status-badge');
+      if (enabled) {
+        badge.textContent = '已开启';
+        badge.className = 'ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono bg-blue-950/80 border border-blue-800/60 text-blue-400';
+      } else {
+        badge.textContent = '已关闭';
+        badge.className = 'ml-2 px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400 border border-slate-700';
+      }
+    }
+
+    function handleProxyToggleChange(checked) {
+      updateProxyBadge(checked);
+    }
+
+    function renderPluginsTable(plugins) {
+      const tbody = document.getElementById('plugins-table-tbody');
+      tbody.innerHTML = '';
+      plugins.forEach((p, idx) => {
+        const isActive = p.status === 'Active';
+        const badge = isActive
+          ? 'text-emerald-400 bg-emerald-950 border border-emerald-800/50'
+          : 'text-amber-400 bg-amber-950 border border-amber-800/50';
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/20';
+        tr.innerHTML = `
+          <td class="py-2 px-3.5 text-slate-500 font-bold">#${idx + 1}</td>
+          <td class="py-2 px-3.5 font-bold text-white">${p.name}</td>
+          <td class="py-2 px-3.5 text-emerald-400">${p.provide}</td>
+          <td class="py-2 px-3.5"><span class="${badge} px-1.5 py-0.5 rounded text-[10px] font-bold">${p.status}</span></td>
+          <td class="py-2 px-3.5 text-slate-400 font-sans leading-relaxed">${p.note || ''}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function saveSection(section, data) {
+      const statusEl = document.getElementById('global-save-status');
+      statusEl.textContent = '正在保存至 SQLite...';
+      try {
+        const res = await fetch('/api/settings/section', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section, data }),
+        });
+        const result = await res.json();
+        if (result.code === 0) {
+          statusEl.textContent = `✓ [${section}] 已成功持久化落盘！`;
+          setTimeout(() => { statusEl.textContent = ''; }, 2500);
+        }
+      } catch (err) {
+        statusEl.textContent = `保存失败: ${err.message}`;
+      }
+    }
+
+    async function saveGeneralAndProxy() {
+      const generalData = {
+        port: parseInt(document.getElementById('general-port').value, 10) || 3210,
+        hostBinding: document.getElementById('general-host').value,
+        accessToken: document.getElementById('general-token').value.trim(),
+        dataDir: document.getElementById('general-datadir').value.trim(),
+      };
+      const proxyData = {
+        enabled: document.getElementById('proxy-enabled').checked,
+        protocol: document.getElementById('proxy-protocol').value,
+        host: document.getElementById('proxy-host').value.trim(),
+        port: parseInt(document.getElementById('proxy-port').value, 10) || 7890,
+        bypassList: document.getElementById('proxy-bypass').value.trim(),
+      };
+
+      await saveSection('general', generalData);
+      await saveSection('proxy', proxyData);
+    }
+
+    async function saveAppearance() {
+      const theme = document.querySelector('input[name="app_theme"]:checked').value;
+      const font = document.getElementById('appearance-font').value;
+      const density = document.getElementById('appearance-density').value;
+      await saveSection('appearance', { themeStyle: theme, editorFontFamily: font, uiDensity: density });
+    }
+
+    async function savePermissions() {
+      const preset = document.querySelector('input[name="perm_preset"]:checked').value;
+      const timeout = parseInt(document.getElementById('perm-timeout').value, 10) || 120;
+      const gitPush = document.getElementById('perm-git-push').checked;
+      await saveSection('permissions', { globalPreset: preset, shellTimeoutSeconds: timeout, interceptGitPush: gitPush });
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadAllSettings();
+    });
+  </script>
+</body>
+</html>

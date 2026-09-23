@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BPMN 业务工作流执行中心 - Harness Workflow Engine</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+</head>
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex">
+
+  <!-- 1. 全局活动栏 -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+
+    <!-- 运行态 (Run-time) -->
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
+    <a href="run-workflow.html" class="activity-btn active" title="BPMN 业务工作流 (Workflow)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></a>
+    <a href="run-terminal.html" class="activity-btn" title="终端与长任务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></a>
+    <a href="run-trajectory.html" class="activity-btn" title="事件轨迹审计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></a>
+
+            <div class="my-3 w-6 border-b border-slate-800"></div>
+
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-knowledge.html" class="activity-btn" title="独立知识库中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 主内容区 (纯粹的流程实例清单大表) -->
+  <div class="flex-1 flex flex-col overflow-y-auto">
+    
+    <!-- 顶栏 -->
+    <header class="h-12 bg-[#090d18] border-b border-[#1a2333] px-6 flex items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center space-x-3">
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-mono">模式C · 运行中心</span>
+        <h1 class="text-sm font-bold text-white">BPMN 业务工作流实例列表 (Workflow Instances)</h1>
+      </div>
+
+      <div class="flex items-center space-x-3 text-xs">
+        <a href="config-workflows.html" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+          <span>BPMN 流程定义库</span>
+        </a>
+        <button onclick="document.getElementById('new-workflow-modal').classList.remove('hidden')" class="px-3.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center space-x-1.5 shadow">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          <span>启动新工作流实例</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="flex-1 p-8 space-y-6 max-w-6xl w-full mx-auto">
+      
+      <!-- 统计指标 -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+          <div class="text-xs text-slate-400">总并发流程实例</div>
+          <div class="text-2xl font-extrabold text-white font-mono">3 <span class="text-xs text-slate-500 font-normal">个实例</span></div>
+        </div>
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+          <div class="text-xs text-amber-400 font-medium flex items-center"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5 animate-pulse"></span>网关评估中</div>
+          <div class="text-2xl font-extrabold text-amber-300 font-mono">1 <span class="text-xs text-slate-500 font-normal">Evaluating</span></div>
+        </div>
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+          <div class="text-xs text-emerald-400 font-medium flex items-center">Agent 节点执行中</div>
+          <div class="text-2xl font-extrabold text-emerald-400 font-mono">1 <span class="text-xs text-slate-500 font-normal">Running</span></div>
+        </div>
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+          <div class="text-xs text-slate-400">挂起等待人工干预</div>
+          <div class="text-2xl font-extrabold text-slate-300 font-mono">1 <span class="text-xs text-slate-500 font-normal">Suspended</span></div>
+        </div>
+      </div>
+
+      <!-- 全量工作流实例大表格 -->
+      <div class="rounded-xl bg-[#0c1220] border border-slate-800 overflow-hidden shadow-2xl">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <h2 class="text-sm font-bold text-white">BPMN 业务工作流实例清单 (Instances List)</h2>
+            <span class="text-xs text-slate-500">点击「进入实例监控」穿透进入专属独立 SVG 拓扑与干预对话窗口</span>
+          </div>
+          <div class="flex items-center space-x-2 text-xs font-mono">
+            <span class="text-slate-500">过滤模型:</span>
+            <button class="px-2.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-semibold">全部 (3)</button>
+            <button class="px-2.5 py-0.5 rounded text-slate-400 hover:text-white">PR评审与部署</button>
+            <button class="px-2.5 py-0.5 rounded text-slate-400 hover:text-white">合约双盲审查</button>
+          </div>
+        </div>
+
+        <table class="w-full text-left text-xs font-sans">
+          <thead class="bg-[#090e1a] text-slate-400 uppercase text-[10px] font-mono border-b border-slate-800">
+            <tr>
+              <th class="py-3.5 px-4">实例 ID / 业务触发源</th>
+              <th class="py-3.5 px-4">所属 BPMN 流程定义</th>
+              <th class="py-3.5 px-4">绑定工作区</th>
+              <th class="py-3.5 px-4">当前活跃 Token 节点</th>
+              <th class="py-3.5 px-4">耗时</th>
+              <th class="py-3.5 px-4">状态</th>
+              <th class="py-3.5 px-4 text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/80 text-slate-300">
+            
+            <!-- 实例 1 -->
+            <tr class="hover:bg-slate-800/40 transition bg-emerald-950/10 border-l-2 border-l-emerald-500">
+              <td class="py-3.5 px-4">
+                <div class="font-mono text-emerald-300 font-bold">inst_901a</div>
+                <div class="text-white text-xs font-medium mt-0.5">Webhook: PR #482 (alex/fix-overflow)</div>
+                <div class="text-[10px] text-slate-500 font-mono mt-0.5">触发于 18:40:02</div>
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="font-medium text-slate-200">GitHub PR 智能评审与自动部署链路</span>
+              </td>
+              <td class="py-3.5 px-4 font-mono text-[11px] text-slate-300">
+                🔒 auth-service
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="flex items-center space-x-1.5 font-mono text-[11px] text-amber-300 font-semibold">
+                  <span class="w-1.5 h-1.5 rounded-full bg-amber-400 animate-pulse"></span>
+                  <span>Gateway_CoverageCheck</span>
+                </div>
+                <div class="text-[10px] text-slate-500 mt-0.5">ExclusiveGateway (排他网关)</div>
+              </td>
+              <td class="py-3.5 px-4 font-mono text-slate-400">
+                1m 02s
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/60 font-mono text-[10px] flex items-center w-max">
+                  网关计算中
+                </span>
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <a href="run-workflow-detail.html" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] inline-flex items-center space-x-1 shadow">
+                  <span>进入实例监控 &rarr;</span>
+                </a>
+              </td>
+            </tr>
+
+            <!-- 实例 2 -->
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="py-3.5 px-4">
+                <div class="font-mono text-slate-400">inst_902b</div>
+                <div class="text-white text-xs font-medium mt-0.5">Webhook: PR #481 (sarah/refactor-router)</div>
+                <div class="text-[10px] text-slate-500 font-mono mt-0.5">触发于 18:15:30</div>
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="text-slate-300">GitHub PR 智能评审与自动部署链路</span>
+              </td>
+              <td class="py-3.5 px-4 font-mono text-[11px] text-slate-300">
+                🔒 auth-service
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="font-mono text-[11px] text-blue-300">
+                  Task_DeployPreview
+                </div>
+                <div class="text-[10px] text-slate-500 mt-0.5">Agent: DevOps Runner</div>
+              </td>
+              <td class="py-3.5 px-4 font-mono text-slate-400">
+                3m 45s
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/60 font-mono text-[10px] flex items-center w-max">
+                  发布中
+                </span>
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <a href="run-workflow-detail.html" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium text-[11px] inline-flex items-center space-x-1 border border-slate-700">
+                  <span>查看监控 &rarr;</span>
+                </a>
+              </td>
+            </tr>
+
+            <!-- 实例 3 -->
+            <tr class="hover:bg-slate-800/40 transition">
+              <td class="py-3.5 px-4">
+                <div class="font-mono text-slate-400">inst_880x</div>
+                <div class="text-white text-xs font-medium mt-0.5">Manual: 企业智能合约与合规性双盲审查</div>
+                <div class="text-[10px] text-slate-500 font-mono mt-0.5">触发于 16:20:00</div>
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="text-slate-300">企业智能合约与合规性双盲审查</span>
+              </td>
+              <td class="py-3.5 px-4 font-mono text-[11px] text-slate-300">
+                🔒 gateway-proxy
+              </td>
+              <td class="py-3.5 px-4">
+                <div class="font-mono text-[11px] text-rose-300">
+                  Gateway_CrossVerify (分歧挂起)
+                </div>
+                <div class="text-[10px] text-slate-500 mt-0.5">法务与审计 Agent 意见不一致</div>
+              </td>
+              <td class="py-3.5 px-4 font-mono text-slate-400">
+                8m 10s
+              </td>
+              <td class="py-3.5 px-4">
+                <span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800/60 font-mono text-[10px] flex items-center w-max">
+                  挂起 (待人工)
+                </span>
+              </td>
+              <td class="py-3.5 px-4 text-right">
+                <a href="run-workflow-detail.html" class="px-3 py-1 rounded bg-amber-600 hover:bg-amber-500 text-white font-medium text-[11px] inline-flex items-center space-x-1">
+                  <span>人工干预 &rarr;</span>
+                </a>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- 启动新工作流实例模态弹窗 (启动入口向导) -->
+  <div id="new-workflow-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#0e1424] border border-emerald-500/40 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center">
+          <svg class="w-4 h-4 text-emerald-400 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          启动新 BPMN 业务工作流实例 (New Workflow Instance)
+        </h3>
+        <button onclick="document.getElementById('new-workflow-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">选择已定义的 BPMN 流程模型：</label>
+          <select class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+            <option value="wf_pr_review_deploy">GitHub PR 智能评审与自动部署链路 (workflows/pr-review-flow.bpmn)</option>
+            <option value="wf_contract_audit">企业智能合约与合规性双盲审查 (workflows/contract-audit.bpmn)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">绑定目标工作区目录 (Workspace)：</label>
+          <div class="flex items-center space-x-2">
+            <input type="text" value="G:\Projects\auth-service" class="flex-1 bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-[11px]">
+            <button class="px-2.5 py-1.5 rounded bg-slate-800 text-slate-200 border border-slate-700">浏览...</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">业务触发源类型 (Trigger Source)：</label>
+          <select class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-[11px]">
+            <option>Manual (人工手动触发测试)</option>
+            <option>Webhook (模拟 GitHub PR / GitLab MR 事件)</option>
+            <option>Cron Schedule (模拟定时巡检)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">初始输入参数字典 (JSON Payload)：</label>
+          <textarea rows="3" class="w-full bg-[#090d18] border border-slate-700 rounded p-2 text-emerald-400 font-mono text-[11px] focus:outline-none">{ "prId": "#483", "branch": "feat/payment-gateway", "targetBranch": "main" }</textarea>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
+        <button onclick="document.getElementById('new-workflow-modal').classList.add('hidden')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">取消</button>
+        <a href="run-workflow-detail.html" class="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow">启动流程实例</a>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+
+
+
+

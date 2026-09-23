@@ -1,0 +1,586 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>多模型与 Provider 端点资产管理 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans">
+
+  <!-- 统一 40px 顶栏 -->
+  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-6 h-6 rounded bg-purple-600 flex items-center justify-center font-bold text-white text-[11px] font-mono shadow-sm">PG</div>
+      <span class="font-bold text-white tracking-wide text-xs">Purple Grapes Harness</span>
+      <span class="text-slate-600">/</span>
+      <span class="text-slate-400 font-medium">Provider 资产中心</span>
+    </div>
+
+    <button onclick="openNewProviderModal()" class="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+      <span>+ 添加 Provider 端点</span>
+    </button>
+  </header>
+
+  <!-- 主体区域：左侧 48px 一级侧边栏 + 右侧内容区 -->
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+    
+    <!-- 全系统严格一致的 48px 一级侧边栏 -->
+    <aside class="activity-bar">
+      <a href="run-chat.html" class="activity-btn" title="主会话工作台 (Chat)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      </a>
+      <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则 (Workspaces)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn active" title="Provider 资产池">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <div class="flex-1"></div>
+      <a href="config-settings.html" class="activity-btn" title="系统设置中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </a>
+    </aside>
+
+    <!-- 右侧内容主面板 -->
+    <main class="flex-1 p-8 max-w-5xl w-full mx-auto space-y-8 overflow-y-auto">
+      <div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">多模型与 Provider 端点资产管理</h1>
+        <p class="text-xs text-slate-400 mt-1">系统支持同时配置多个商用与私有模型端点。配置后将在主工作台顶栏提供即时秒切与能力感知。</p>
+      </div>
+
+      <!-- 板块 1：Provider 端点卡片列表 (真实从数据库拉取) -->
+      <section class="space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-xs font-bold text-slate-400 uppercase tracking-wider font-mono">已配置的 Provider 端点 (<span id="provider-count-badge">0</span> 个)</h2>
+        </div>
+
+        <div id="providers-card-list" class="grid grid-cols-1 md:grid-cols-3 gap-4 font-mono text-xs">
+          <!-- 动态从后端 /api/providers 拉取并渲染真实卡片 -->
+        </div>
+      </section>
+
+      <!-- 板块 2：全量可用模型资产表 (完全依据已配置 Provider 动态汇总，零静态假数据) -->
+      <section class="border border-slate-800 rounded-xl bg-[#0f1523] overflow-hidden shadow-xl">
+        <div class="p-4 bg-[#131b2e] border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-white">模型资产总库 (Model Inventory)</h2>
+            <p class="text-[11px] text-slate-400 mt-0.5">从上方已成功配置的 Provider 中动态汇总的真实可用模型。可在主对话顶栏即时选用。</p>
+          </div>
+          <button onclick="loadProvidersFromBackend()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 font-mono">
+            刷新模型清单
+          </button>
+        </div>
+
+        <table class="w-full text-left border-collapse text-xs font-mono">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 bg-[#090d16]">
+              <th class="py-3 px-4 font-semibold">模型 ID</th>
+              <th class="py-3 px-4 font-semibold">所属 Provider</th>
+              <th class="py-3 px-4 font-semibold">上下文物理窗口 (D51)</th>
+              <th class="py-3 px-4 font-semibold">能力标签</th>
+              <th class="py-3 px-4 text-right">会话中状态</th>
+            </tr>
+          </thead>
+          <tbody id="models-inventory-tbody" class="divide-y divide-slate-800/60 text-slate-300">
+            <!-- 动态由 renderModelsInventory() 真实填入 -->
+          </tbody>
+        </table>
+      </section>
+    </main>
+
+  </div>
+
+  <!-- 模态弹窗：新增 / 编辑 Provider -->
+  <div id="provider-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="max-w-xl w-full rounded-xl bg-[#0f1523] border border-slate-700 shadow-2xl overflow-hidden flex flex-col">
+      <div class="px-6 py-4 bg-[#131b2e] border-b border-slate-800 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white">配置 Provider 端点信息</h3>
+        <button onclick="document.getElementById('provider-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs font-mono max-h-[75vh] overflow-y-auto">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-slate-300 block mb-1 font-sans font-medium">Provider 名称：</label>
+            <input id="modal-provider-name" type="text" placeholder="例如: DeepSeek 官方" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500 font-sans">
+          </div>
+          <div>
+            <label class="text-slate-300 block mb-1 font-sans font-medium">接口协议类型 (API Protocol)：</label>
+            <select id="modal-provider-protocol" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-blue-300 font-sans focus:outline-none focus:border-blue-500">
+              <option value="openai-compatible" selected>OpenAI Compatible (通用聚合/DeepSeek/Ollama)</option>
+              <option value="anthropic-native">Anthropic Native (/v1/messages · 支持提示词缓存/原生思考)</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="text-slate-300 block mb-1 font-sans font-medium">API Base URL (端点)：</label>
+          <input id="modal-provider-url" type="text" placeholder="https://api.deepseek.com/v1" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="text-slate-300 font-medium block mb-1 font-sans">API Key (密钥凭据)：</label>
+          <div class="relative flex items-center">
+            <input id="modal-provider-key" type="password" placeholder="sk-..." class="w-full bg-[#080d1a] border border-slate-700 rounded-lg pl-3 pr-10 py-2 text-white focus:outline-none focus:border-blue-500 font-mono">
+            <button type="button" onclick="toggleKeyVisibility()" class="absolute right-2.5 p-1 text-slate-400 hover:text-white transition" title="明文/密文切换">
+              <svg id="eye-icon" class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+            </button>
+          </div>
+          <span class="text-[10px] text-slate-500 font-sans mt-1 block">保存后将自动以 AES-256-GCM 独立加密落盘，内存按需解析。</span>
+        </div>
+
+        <!-- LLM 专项网络代理配置 -->
+        <div class="pt-3 border-t border-slate-800 space-y-3 font-sans">
+          <div class="flex items-center justify-between">
+            <span class="text-slate-300 font-medium">LLM 网络代理配置 (Provider Proxy)：</span>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="modal-proxy-toggle" type="checkbox" checked class="sr-only peer" onchange="toggleModalProxyInputs(this.checked)">
+              <div class="w-8 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          <div id="modal-proxy-details" class="space-y-3">
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <label class="p-2.5 rounded-lg bg-[#080d1a] border border-blue-500/80 cursor-pointer block">
+                <input type="radio" name="provider-proxy-mode" value="inherit" checked onchange="handleProxyModeChange('inherit')" class="mr-1.5">
+                <span class="text-white font-medium">继承系统全局代理</span>
+                <p class="text-[10px] text-slate-500 mt-0.5">跟随系统全局已配置的代理通道</p>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#080d1a] border border-slate-800 hover:border-slate-700 cursor-pointer block">
+                <input type="radio" name="provider-proxy-mode" value="custom" onchange="handleProxyModeChange('custom')" class="mr-1.5">
+                <span class="text-slate-200">独立自定义代理</span>
+                <p class="text-[10px] text-slate-500 mt-0.5">为本 Provider 指定专用代理通道</p>
+              </label>
+            </div>
+
+            <!-- 自定义独立代理参数输入表单 -->
+            <div id="modal-custom-proxy-form" class="hidden p-3 rounded-lg bg-[#080d1a] border border-slate-800 space-y-2.5 text-xs font-mono">
+              <div class="grid grid-cols-12 gap-2">
+                <div class="col-span-3">
+                  <label class="block text-[10px] text-slate-400 mb-0.5">协议</label>
+                  <select id="modal-custom-proto" class="w-full bg-[#050811] border border-slate-700 rounded px-2 py-1 text-slate-200 text-xs">
+                    <option value="HTTP">HTTP</option>
+                    <option value="HTTPS">HTTPS</option>
+                    <option value="SOCKS5">SOCKS5</option>
+                  </select>
+                </div>
+                <div class="col-span-6">
+                  <label class="block text-[10px] text-slate-400 mb-0.5">代理服务器地址 (Host)</label>
+                  <input id="modal-custom-host" type="text" value="127.0.0.1" placeholder="127.0.0.1" class="w-full bg-[#050811] border border-slate-700 rounded px-2 py-1 text-blue-300 text-xs">
+                </div>
+                <div class="col-span-3">
+                  <label class="block text-[10px] text-slate-400 mb-0.5">端口 (Port)</label>
+                  <input id="modal-custom-port" type="number" value="7890" placeholder="7890" class="w-full bg-[#050811] border border-slate-700 rounded px-2 py-1 text-blue-300 text-xs">
+                </div>
+              </div>
+              <div class="grid grid-cols-2 gap-2">
+                <div>
+                  <input id="modal-custom-user" type="text" placeholder="用户名(可选)" class="w-full bg-[#050811] border border-slate-700 rounded px-2 py-1 text-slate-300 text-xs">
+                </div>
+                <div>
+                  <input id="modal-custom-pwd" type="password" placeholder="密码(可选)" class="w-full bg-[#050811] border border-slate-700 rounded px-2 py-1 text-slate-300 text-xs">
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 模型获取 -->
+        <div class="pt-3 border-t border-slate-800 space-y-3 font-sans">
+          <div class="flex items-center justify-between">
+            <label class="text-slate-300 font-medium">可用模型选择 (Models)：</label>
+            <button onclick="detectProviderModels()" class="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/40 text-[11px] font-sans flex items-center space-x-1 transition shadow-sm">
+              <span>获取模型列表 (GET /models)</span>
+            </button>
+          </div>
+
+          <select id="model-select-dropdown" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
+            <option value="">点击右侧按钮探测拉取可用模型...</option>
+          </select>
+          <div id="detect-status-alert" class="text-[11px] text-slate-400"></div>
+        </div>
+      </div>
+
+      <div class="px-6 py-3.5 bg-[#090d18] border-t border-slate-800 flex justify-between items-center font-sans text-xs">
+        <span id="provider-save-status" class="text-emerald-400 font-medium"></span>
+        <div class="flex space-x-2">
+          <button onclick="document.getElementById('provider-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">取消</button>
+          <button onclick="saveProviderToBackend()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold shadow-sm">保存并落盘 Provider</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentEditingProviderId = null;
+    let localProvidersCache = [];
+
+    async function loadProvidersFromBackend() {
+      try {
+        const res = await fetch('/api/providers');
+        if (!res.ok) return;
+        const result = await res.json();
+        if (result.code === 0 && Array.isArray(result.data)) {
+          localProvidersCache = result.data;
+          renderProviderCards(result.data);
+        }
+      } catch (err) {
+        console.warn('Backend error:', err.message);
+      }
+    }
+
+    function renderProviderCards(providers) {
+      document.getElementById('provider-count-badge').textContent = providers.length;
+      const container = document.getElementById('providers-card-list');
+      container.innerHTML = '';
+
+      if (providers.length === 0) {
+        container.innerHTML = `
+          <div class="col-span-3 p-8 rounded-xl bg-[#090d16] border border-dashed border-slate-800 text-center space-y-3">
+            <span class="text-3xl block">🔌</span>
+            <div class="text-slate-300 font-bold text-sm">暂无已配置的 Provider 端点</div>
+            <p class="text-xs text-slate-500 max-w-md mx-auto">系统处于全新就绪状态，无任何预置脏数据。请点击右上角「+ 添加 Provider 端点」配置并连接您的首个模型服务。</p>
+            <button onclick="openNewProviderModal()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold shadow">
+              立即配置首个 Provider
+            </button>
+          </div>
+        `;
+        renderModelsInventory([]);
+        return;
+      }
+
+      providers.forEach((p) => {
+        const isProxyOn = p.proxy && p.proxy.enabled;
+        const proxyBadgeText = isProxyOn
+          ? (p.proxy.mode === 'inherit' ? '继承全局' : `${p.proxy.customConfig?.host || '127.0.0.1'}:${p.proxy.customConfig?.port || 7890}`)
+          : '强制直连';
+        const proxyBadgeClass = isProxyOn
+          ? 'text-emerald-400 bg-emerald-950/60 border-emerald-800/40'
+          : 'text-slate-400 bg-slate-800/60 border-slate-700/50';
+
+        const protocolBadge = p.protocol === 'anthropic-native'
+          ? '<span class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-purple-950 border border-purple-800 text-purple-400">Anthropic 原生</span>'
+          : '<span class="px-1.5 py-0.2 rounded text-[10px] font-mono bg-blue-950 border border-blue-800 text-blue-400">OpenAI 协议</span>';
+
+        const card = document.createElement('div');
+        card.className = 'p-4 rounded-xl bg-[#0f1523] border border-slate-800 shadow-sm space-y-2 flex flex-col justify-between hover:border-slate-700 transition';
+        card.innerHTML = `
+          <div>
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5">
+                <span class="font-bold text-white text-sm truncate max-w-[140px]">${p.name}</span>
+                ${protocolBadge}
+              </div>
+              <span class="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded">在线</span>
+            </div>
+            <div class="text-[11px] text-slate-400 truncate mt-1">${p.baseUrl}</div>
+            <div class="text-[10px] text-slate-500 mt-0.5 font-mono">凭据: ${p.apiKeyCipher ? p.apiKeyCipher.slice(0, 14) + '...' : '免密'}</div>
+
+            <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between font-sans">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[11px] text-slate-400">网络代理:</span>
+                <span class="text-[10px] font-mono px-1.5 py-0.5 rounded border ${proxyBadgeClass}">${proxyBadgeText}</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[10px] ${isProxyOn ? 'text-slate-300' : 'text-slate-500'}">${isProxyOn ? '已开启' : '已关闭'}</span>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" ${isProxyOn ? 'checked' : ''} class="sr-only peer" onchange="handleCardProxyToggle('${p.id}', this.checked)">
+                  <div class="w-7 h-4 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-3 after:w-3 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
+          <div class="pt-3 border-t border-slate-800 flex justify-between items-center text-[11px] font-sans">
+            <span class="text-blue-400">已导入 ${p.models ? p.models.length : 0} 个模型</span>
+            <div class="flex space-x-1.5">
+              <button onclick="editProvider('${p.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded border border-slate-700">配置与编辑</button>
+              <button onclick="deleteProvider('${p.id}')" class="px-2 py-1 hover:bg-rose-950/40 text-rose-400 rounded border border-rose-900/40">删除</button>
+            </div>
+          </div>
+        `;
+        container.appendChild(card);
+      });
+
+      renderModelsInventory(providers);
+    }
+
+    function renderModelsInventory(providers) {
+      const tbody = document.getElementById('models-inventory-tbody');
+      tbody.innerHTML = '';
+
+      const allModels = [];
+      providers.forEach((p) => {
+        if (p.models && Array.isArray(p.models)) {
+          p.models.forEach((m) => {
+            allModels.push({ ...m, providerName: p.name });
+          });
+        }
+      });
+
+      if (allModels.length === 0) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5" class="py-6 text-center text-slate-500 font-sans text-xs">
+              暂无可用的模型资产。请先在上方添加 Provider 端点并获取模型列表。
+            </td>
+          </tr>
+        `;
+        return;
+      }
+
+      allModels.forEach((m) => {
+        const tr = document.createElement('tr');
+        tr.className = 'hover:bg-slate-800/20';
+        tr.innerHTML = `
+          <td class="py-3 px-4 font-bold text-blue-300">${m.id}</td>
+          <td class="py-3 px-4 text-slate-400">${m.providerName}</td>
+          <td class="py-3 px-4">${m.contextWindow ? (m.contextWindow / 1024) + 'k' : '64k'}</td>
+          <td class="py-3 px-4">
+            ${m.supportsTools ? '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 mr-1">Tools</span>' : ''}
+            ${m.supportsReasoning ? '<span class="px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-300">Reasoning</span>' : ''}
+          </td>
+          <td class="py-3 px-4 text-right"><span class="text-emerald-400 font-bold">已就绪</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    async function handleCardProxyToggle(id, enabled) {
+      try {
+        const res = await fetch(`/api/providers/${id}/proxy-toggle`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled }),
+        });
+        if (res.ok) {
+          await loadProvidersFromBackend();
+        }
+      } catch (err) {
+        console.error('Failed to toggle proxy:', err);
+      }
+    }
+
+    function toggleKeyVisibility() {
+      const input = document.getElementById('modal-provider-key');
+      const icon = document.getElementById('eye-icon');
+      if (input.type === 'password') {
+        input.type = 'text';
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"></path>';
+      } else {
+        input.type = 'password';
+        icon.innerHTML = '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>';
+      }
+    }
+
+    function toggleModalProxyInputs(enabled) {
+      const details = document.getElementById('modal-proxy-details');
+      if (enabled) {
+        details.style.opacity = '1';
+        details.style.pointerEvents = 'auto';
+      } else {
+        details.style.opacity = '0.35';
+        details.style.pointerEvents = 'none';
+      }
+    }
+
+    function handleProxyModeChange(mode) {
+      const customForm = document.getElementById('modal-custom-proxy-form');
+      if (mode === 'custom') {
+        customForm.classList.remove('hidden');
+      } else {
+        customForm.classList.add('hidden');
+      }
+    }
+
+    function openNewProviderModal() {
+      currentEditingProviderId = null;
+      document.getElementById('modal-provider-name').value = '';
+      document.getElementById('modal-provider-url').value = 'https://api.deepseek.com/v1';
+      document.getElementById('modal-provider-key').value = '';
+      document.getElementById('model-select-dropdown').innerHTML = '<option value="">点击右侧按钮探测拉取可用模型...</option>';
+      document.getElementById('detect-status-alert').innerHTML = '';
+      document.getElementById('provider-modal').classList.remove('hidden');
+    }
+
+    function editProvider(id) {
+      const p = localProvidersCache.find((item) => item.id === id);
+      if (!p) return;
+      currentEditingProviderId = id;
+      document.getElementById('modal-provider-name').value = p.name;
+      document.getElementById('modal-provider-url').value = p.baseUrl;
+      document.getElementById('modal-provider-protocol').value = p.protocol;
+      document.getElementById('modal-provider-key').value = '';
+      document.getElementById('modal-proxy-toggle').checked = !!(p.proxy && p.proxy.enabled);
+      
+      const dropdown = document.getElementById('model-select-dropdown');
+      dropdown.innerHTML = '';
+      if (p.models && p.models.length > 0) {
+        p.models.forEach((m) => {
+          const opt = document.createElement('option');
+          opt.value = m.id;
+          opt.textContent = m.name;
+          dropdown.appendChild(opt);
+        });
+      }
+      document.getElementById('provider-modal').classList.remove('hidden');
+    }
+
+    async function deleteProvider(id) {
+      if (!confirm('确定要删除该 Provider 资产吗？')) return;
+      try {
+        await fetch(`/api/providers/${id}`, { method: 'DELETE' });
+        await loadProvidersFromBackend();
+      } catch (err) {
+        console.error('Delete failed:', err);
+      }
+    }
+
+    async function detectProviderModels() {
+      const btn = event.currentTarget;
+      btn.innerHTML = '<span>⏳ 真实网络探测中...</span>';
+      const statusAlert = document.getElementById('detect-status-alert');
+
+      const protocol = document.getElementById('modal-provider-protocol').value;
+      const baseUrl = document.getElementById('modal-provider-url').value.trim();
+      const apiKey = document.getElementById('modal-provider-key').value.trim();
+      const proxyMode = document.querySelector('input[name="provider-proxy-mode"]:checked')?.value || 'inherit';
+      const proxyEnabled = document.getElementById('modal-proxy-toggle').checked;
+
+      let customConfig = undefined;
+      if (proxyMode === 'custom') {
+        customConfig = {
+          protocol: document.getElementById('modal-custom-proto').value,
+          host: document.getElementById('modal-custom-host').value.trim() || '127.0.0.1',
+          port: parseInt(document.getElementById('modal-custom-port').value, 10) || 7890,
+          username: document.getElementById('modal-custom-user').value.trim() || undefined,
+          password: document.getElementById('modal-custom-pwd').value || undefined,
+        };
+      }
+
+      try {
+        const res = await fetch('/api/providers/models', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            protocol,
+            baseUrl,
+            apiKey,
+            proxy: {
+              enabled: proxyEnabled,
+              mode: proxyMode,
+              customConfig,
+            }
+          }),
+        });
+
+        const result = await res.json();
+        btn.innerHTML = '<span>获取模型列表 (GET /models)</span>';
+
+        if (result.code === 0 && result.data && result.data.models && result.data.models.length > 0) {
+          const dropdown = document.getElementById('model-select-dropdown');
+          dropdown.innerHTML = '';
+          result.data.models.forEach((m) => {
+            const opt = document.createElement('option');
+            opt.value = m.id;
+            opt.textContent = `${m.name || m.id} (${m.contextWindow ? m.contextWindow / 1024 + 'k' : '64k'})`;
+            dropdown.appendChild(opt);
+          });
+          statusAlert.className = 'text-[11px] text-emerald-400 mt-1';
+          statusAlert.innerHTML = `✓ ${result.message}`;
+        } else {
+          statusAlert.className = 'text-[11px] text-rose-400 mt-1';
+          statusAlert.innerHTML = `✗ 探测失败 (${result.code}): ${result.message}`;
+        }
+      } catch (err) {
+        btn.innerHTML = '<span>获取模型列表 (GET /models)</span>';
+        statusAlert.className = 'text-[11px] text-rose-400 mt-1';
+        statusAlert.innerHTML = `✗ 网络请求错误: ${err.message}`;
+      }
+    }
+
+    async function saveProviderToBackend() {
+      const name = document.getElementById('modal-provider-name').value.trim();
+      const baseUrl = document.getElementById('modal-provider-url').value.trim();
+      const apiKey = document.getElementById('modal-provider-key').value.trim();
+      const protocol = document.getElementById('modal-provider-protocol').value;
+      const proxyMode = document.querySelector('input[name="provider-proxy-mode"]:checked')?.value || 'inherit';
+      const proxyEnabled = document.getElementById('modal-proxy-toggle').checked;
+      const statusEl = document.getElementById('provider-save-status');
+
+      if (!name || !baseUrl) {
+        alert('请填写 Provider 名称与端点 URL！');
+        return;
+      }
+
+      statusEl.textContent = '正在保存至 SQLite...';
+
+      let customConfig = undefined;
+      if (proxyMode === 'custom') {
+        customConfig = {
+          protocol: document.getElementById('modal-custom-proto').value,
+          host: document.getElementById('modal-custom-host').value.trim() || '127.0.0.1',
+          port: parseInt(document.getElementById('modal-custom-port').value, 10) || 7890,
+          username: document.getElementById('modal-custom-user').value.trim() || undefined,
+          password: document.getElementById('modal-custom-pwd').value || undefined,
+        };
+      }
+
+      const dropdown = document.getElementById('model-select-dropdown');
+      const models = [];
+      if (dropdown && dropdown.options.length > 0) {
+        for (let i = 0; i < dropdown.options.length; i++) {
+          const opt = dropdown.options[i];
+          if (opt.value) {
+            const isReasoner = opt.value.includes('reasoner') || opt.value.includes('r1');
+            models.push({
+              id: opt.value,
+              name: opt.textContent.split(' ')[0] || opt.value,
+              contextWindow: 65536,
+              supportsTools: !isReasoner,
+              supportsReasoning: isReasoner,
+            });
+          }
+        }
+      }
+
+      const payload = {
+        id: currentEditingProviderId || `provider-${Date.now()}`,
+        name,
+        protocol,
+        baseUrl,
+        apiKey: apiKey || 'none',
+        proxy: {
+          enabled: proxyEnabled,
+          mode: proxyMode,
+          customConfig,
+        },
+        models,
+      };
+
+      try {
+        const res = await fetch('/api/providers', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) {
+          statusEl.textContent = '✓ 已持久化落盘！';
+          setTimeout(() => {
+            statusEl.textContent = '';
+            document.getElementById('provider-modal').classList.add('hidden');
+          }, 600);
+          await loadProvidersFromBackend();
+        }
+      } catch (err) {
+        statusEl.textContent = '保存失败: ' + err.message;
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadProvidersFromBackend();
+    });
+  </script>
+</body>
+</html>

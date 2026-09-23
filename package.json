@@ -1,0 +1,24 @@
+{
+  "name": "harness-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pluggable Coding Agent Harness with Web Console (Node 22+ Zero-Native)",
+  "engines": {
+    "node": ">=22.0.0",
+    "pnpm": ">=9.0.0"
+  },
+  "scripts": {
+    "dev": "node --experimental-strip-types apps/server/src/index.ts",
+    "build": "echo \"[build] TypeScript ready\"",
+    "test": "node --experimental-strip-types --test packages/kernel/tests/kernel.test.ts apps/server/tests/instance-lock.test.ts apps/server/tests/crypto.test.ts apps/server/tests/proxy-dispatcher.test.ts packages/plugins/storage-sqlite/tests/database.test.ts packages/plugins/storage-sqlite/tests/spill.test.ts packages/plugins/storage-sqlite/tests/fts.test.ts packages/plugins/provider-openai/tests/provider-openai.test.ts packages/plugins/provider-anthropic/tests/provider-anthropic.test.ts packages/plugins/tools-coding/tests/file-tools.test.ts packages/plugins/tools-coding/tests/sandbox.test.ts packages/core/tests/git-rollback.test.ts packages/core/tests/context-governor.test.ts packages/core/tests/turn-loop.test.ts packages/core/tests/question-broker.test.ts packages/core/tests/approval-broker.test.ts packages/core/tests/permission-gate.test.ts packages/core/tests/line-diff.test.ts apps/server/tests/server-api.test.ts apps/server/tests/workspace-api.test.ts apps/server/tests/directory-browse.test.ts apps/server/tests/static-dir.test.ts apps/server/tests/chat-loop.test.ts apps/server/tests/agents-template.test.ts apps/server/tests/questions.test.ts apps/server/tests/permissions.test.ts apps/server/tests/bootstrap.test.ts apps/server/tests/todo-diff.test.ts apps/server/tests/sse-heartbeat.test.ts",
+
+    "check": "pnpm test",
+    "typecheck": "tsc --noEmit -b packages/protocol packages/kernel packages/core packages/plugins/* apps/*",
+    "lint": "echo \"[lint] checking code conventions...\""
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.6.0"
+  },
+  "packageManager": "pnpm@10.29.3+sha512.498e1fb4cca5aa06c1dcf2611e6fafc50972ffe7189998c409e90de74566444298ffe43e6cd2acdc775ba1aa7cc5e092a8b7054c811ba8c5770f84693d33d2dc"
+}

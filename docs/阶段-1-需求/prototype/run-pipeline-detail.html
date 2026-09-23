@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>流水线任务工作台 - run_pipe_101 - Harness</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+  <style>
+    .ide-top-bar {
+      height: 38px;
+      background: #090d18;
+      border-bottom: 1px solid #1a2333;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden">
+
+  <!-- 1. 全局最左侧活动栏 -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+
+    <!-- 运行态 (Run-time) -->
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn active" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
+    <a href="run-workflow.html" class="activity-btn" title="BPMN 业务工作流 (Workflow)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></a>
+    <a href="run-terminal.html" class="activity-btn" title="终端与长任务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></a>
+    <a href="run-trajectory.html" class="activity-btn" title="事件轨迹审计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></a>
+
+            <div class="my-3 w-6 border-b border-slate-800"></div>
+
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-knowledge.html" class="activity-btn" title="独立知识库中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 主体工作台 (全屏 IDE 布局) -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    
+    <!-- 顶栏：紧凑 38px，包含工作区绑定与返回列表 -->
+    <header class="ide-top-bar">
+      <div class="flex items-center space-x-2">
+        <a href="run-pipeline.html" class="text-slate-400 hover:text-white flex items-center pr-2 border-r border-slate-800">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          <span>返回任务列表</span>
+        </a>
+
+        <!-- 显眼绑定的工作区 (绝对路径锁定 🔒) -->
+        <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-slate-800/70 border border-slate-700/60 font-mono text-[11px]">
+          <span class="text-blue-400">🔒 工作区:</span>
+          <span class="text-slate-200 font-semibold">G:\Projects\auth-service</span>
+          <span class="text-slate-500 text-[10px]">(main)</span>
+        </div>
+
+        <span class="text-slate-600">/</span>
+        <span class="font-mono text-purple-300 font-bold">run_pipe_101</span>
+        <span class="text-slate-400 text-xs truncate max-w-xs">Issue #101: 支付网关签名防重放</span>
+      </div>
+
+      <div class="flex items-center space-x-3">
+        <div class="flex items-center space-x-1.5 text-slate-400 font-mono text-[11px]">
+          <span>当前角色:</span>
+          <span class="text-amber-300 font-bold bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-800/40">Senior Dev (Stage 3/4)</span>
+        </div>
+        <button class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] border border-slate-700 font-medium">暂停</button>
+        <button class="px-2.5 py-1 rounded bg-rose-600 hover:bg-rose-500 text-white text-[10px] font-medium">终止任务</button>
+      </div>
+    </header>
+
+    <!-- 四阶段水平状态条 (紧凑顶置) -->
+    <div class="px-4 py-2.5 bg-[#090e1c] border-b border-[#1a2333] flex items-center justify-between">
+      <div class="flex items-center space-x-3 w-full max-w-5xl">
+        <!-- Stage 1 -->
+        <div class="flex-1 flex items-center space-x-2 bg-emerald-950/30 border border-emerald-500/40 px-2.5 py-1 rounded">
+          <span class="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-mono text-[10px] font-bold">1</span>
+          <div class="truncate text-[11px]">
+            <div class="text-emerald-300 font-semibold truncate">需求规格 (Spec)</div>
+            <div class="text-[9px] text-slate-400 font-mono">Product Agent ✓</div>
+          </div>
+        </div>
+        <div class="text-slate-600 text-xs font-mono">&rarr;</div>
+
+        <!-- Stage 2 -->
+        <div class="flex-1 flex items-center space-x-2 bg-emerald-950/30 border border-emerald-500/40 px-2.5 py-1 rounded">
+          <span class="w-4 h-4 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-mono text-[10px] font-bold">2</span>
+          <div class="truncate text-[11px]">
+            <div class="text-emerald-300 font-semibold truncate">架构设计 (Arch)</div>
+            <div class="text-[9px] text-slate-400 font-mono">Architect Agent ✓</div>
+          </div>
+        </div>
+        <div class="text-slate-600 text-xs font-mono">&rarr;</div>
+
+        <!-- Stage 3 (当前活跃) -->
+        <div class="flex-1 flex items-center space-x-2 bg-amber-950/40 border-2 border-amber-500 px-2.5 py-1 rounded shadow">
+          <span class="w-4 h-4 rounded-full bg-amber-500 text-black flex items-center justify-center font-mono text-[10px] font-bold animate-pulse">3</span>
+          <div class="truncate text-[11px]">
+            <div class="text-amber-300 font-bold truncate">TDD 编码中...</div>
+            <div class="text-[9px] text-slate-300 font-mono">Senior Dev (3m40s)</div>
+          </div>
+        </div>
+        <div class="text-slate-600 text-xs font-mono">&rarr;</div>
+
+        <!-- Stage 4 -->
+        <div class="flex-1 flex items-center space-x-2 bg-[#090d18] border border-slate-800 px-2.5 py-1 rounded opacity-50">
+          <span class="w-4 h-4 rounded-full bg-slate-800 text-slate-400 flex items-center justify-center font-mono text-[10px]">4</span>
+          <div class="truncate text-[11px]">
+            <div class="text-slate-400 font-medium truncate">测试与审计</div>
+            <div class="text-[9px] text-slate-500 font-mono">QA Auditor (待)</div>
+          </div>
+        </div>
+      </div>
+
+      <span class="text-[11px] text-slate-400 font-mono pl-4">流水线已运行: 6分57秒</span>
+    </div>
+
+    <!-- 主体：左侧为针对当前流水线的人机交互对话流 + 下达指令框；右侧为当前工件与人工审批 -->
+    <div class="flex-1 flex overflow-hidden">
+      
+      <!-- 左侧主栏：人机交互指令对话流 (Chat Console for Pipeline) -->
+      <div class="flex-1 flex flex-col bg-[#070a12] border-r border-[#1a2333] overflow-hidden">
+        
+        <!-- 对话流消息区域 -->
+        <div class="flex-1 overflow-y-auto p-4 space-y-4 max-w-3xl w-full mx-auto font-sans">
+          
+          <!-- 系统初始化提示 -->
+          <div class="p-2.5 rounded bg-[#090e1a] border border-slate-800/80 text-xs text-slate-400 flex items-center justify-between font-mono">
+            <span>🚀 流水线实例 run_pipe_101 启动 · 已自动加载 spec-v1.md 与 arch-design.json 作为前置工件</span>
+            <span class="text-slate-500">18:20:00</span>
+          </div>
+
+          <!-- Product Agent 气泡 -->
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2 text-[11px]">
+              <span class="font-bold text-purple-400 font-mono">Product & Spec Agent (Stage 1)</span>
+              <span class="text-slate-500 text-[10px]">18:21:12</span>
+            </div>
+            <div class="p-3 rounded-lg bg-[#0e1526] border border-slate-800 text-xs text-slate-200 leading-relaxed">
+              我已通过 `read_file` 查阅了 `src/auth/` 的现有鉴权实现，并提炼了 4 条重放攻击防御规范。已生成工件并提交评审。
+            </div>
+          </div>
+
+          <!-- 人类下达的干预指令 -->
+          <div class="space-y-1">
+            <div class="flex items-center space-x-2 text-[11px] justify-end">
+              <span class="text-slate-500 text-[10px]">18:23:25</span>
+              <span class="font-bold text-blue-400">人类操作者 (Instruction)</span>
+            </div>
+            <div class="p-3 rounded-lg bg-blue-600/10 border border-blue-500/30 text-xs text-slate-100 max-w-lg ml-auto leading-relaxed">
+              指令确认：注意重放窗口设定为 300 秒，防重放 Nonce 必须用内存 LRU 缓存，不要过早引入 Redis。
+            </div>
+          </div>
+
+          <!-- Senior Dev 气泡与工具调用 -->
+          <div class="space-y-1.5">
+            <div class="flex items-center space-x-2 text-[11px]">
+              <span class="font-bold text-amber-300 font-mono flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5 animate-ping"></span>Senior Dev Agent (Stage 3 · 当前执行者)</span>
+              <span class="text-slate-500 text-[10px]">刚刚</span>
+            </div>
+
+            <!-- 工具执行卡片 1 -->
+            <div class="p-2.5 rounded bg-[#0b101c] border border-slate-800 font-mono text-xs">
+              <div class="text-purple-400 font-semibold mb-1">▶ 执行单测: 红绿验证</div>
+              <div class="text-slate-400 text-[11px]">bash: <code class="text-amber-300">pnpm test auth/token-guard.test.ts</code></div>
+              <div class="mt-2 text-rose-400 bg-rose-950/20 p-2 rounded border border-rose-900/40 text-[11px]">
+                FAIL auth/token-guard.test.ts<br>
+                ✕ parseTokenAmount should reject 64-bit integer overflow
+              </div>
+            </div>
+
+            <!-- 工具执行卡片 2 -->
+            <div class="p-2.5 rounded bg-[#0b101c] border border-slate-800 font-mono text-xs">
+              <div class="text-purple-400 font-semibold mb-1">▶ 写入补丁修复</div>
+              <div class="text-slate-400 text-[11px]">edit_file: <code class="text-slate-300">src/auth/token-guard.ts</code></div>
+              <div class="mt-2 text-emerald-400 bg-emerald-950/20 p-2 rounded border border-emerald-900/40 text-[11px]">
+                + if (amount > BigInt(Number.MAX_SAFE_INTEGER)) throw new RangeError("TOKEN_OVERFLOW");
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- 底部针对当前阶段 Agent 的指令输入框 (Composer) -->
+        <div class="p-3 border-t border-[#1a2333] bg-[#090d18]">
+          <div class="max-w-3xl mx-auto space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>向当前负责 Agent (<span class="text-amber-300 font-mono">Senior Dev Agent</span>) 下达指令或反馈：</span>
+              <span class="text-[10px] text-slate-500 font-mono">Enter 发送 · Shift+Enter 换行</span>
+            </div>
+            <div class="border border-slate-700/80 rounded-lg bg-[#0b101c] p-2 focus-within:border-purple-500 transition">
+              <textarea placeholder="例如：测试用例还需要覆盖负数时间戳的情况，请补充修复..." class="w-full bg-transparent border-0 resize-none text-xs text-white placeholder-slate-500 focus:outline-none min-h-[38px] max-h-24"></textarea>
+              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[11px]">
+                <div class="flex items-center space-x-2 text-slate-500 text-[10px]">
+                  <span>工作区锁定: G:\Projects\auth-service</span>
+                </div>
+                <div class="flex items-center space-x-1.5">
+                  <button class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px]">转交下一阶段</button>
+                  <button class="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-medium text-[10px]">发送指令</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右侧侧边栏：阶段工件库与人工审批门 (Gatekeeper) -->
+      <div class="w-80 bg-[#090d18] border-l border-[#1a2333] p-4 space-y-5 overflow-y-auto flex-shrink-0">
+        
+        <!-- 人工审批 Gatekeeper 卡片 -->
+        <div class="p-3.5 rounded-xl bg-amber-950/30 border border-amber-500/50 space-y-2.5 shadow-lg">
+          <div class="flex items-center space-x-2">
+            <svg class="w-4 h-4 text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <h3 class="text-xs font-bold text-amber-300">阶段 4 进入审批卡点</h3>
+          </div>
+          <p class="text-[11px] text-slate-300 leading-relaxed">
+            当 Senior Dev 完成代码后，必须经过人工确认 Diff 后方可激活 QA Auditor 角色进行全量测试。
+          </p>
+          <div class="pt-1.5 flex items-center justify-between text-xs">
+            <button class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px]">查看改动 Diff</button>
+            <button class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[10px] shadow">批准并放行</button>
+          </div>
+        </div>
+
+        <!-- 累计产出的流水线工件 (Artifacts) -->
+        <div class="space-y-3">
+          <h3 class="text-xs font-bold text-white flex items-center justify-between">
+            <span>流水线交付工件 (Artifacts)</span>
+            <span class="text-[10px] text-slate-500 font-mono">2 Files</span>
+          </h3>
+
+          <div class="space-y-2">
+            <div class="p-2.5 rounded bg-[#0e1526] border border-slate-800 hover:border-purple-500/50 transition cursor-pointer text-xs">
+              <div class="flex items-center justify-between text-slate-300 font-mono text-[11px]">
+                <span class="text-blue-400">📄 spec-v1.md</span>
+                <span class="text-slate-500 text-[10px]">4.2 KB</span>
+              </div>
+              <div class="text-[10px] text-slate-500 mt-1">由 Product Agent 产出 (4条验收规则)</div>
+            </div>
+
+            <div class="p-2.5 rounded bg-[#0e1526] border border-slate-800 hover:border-purple-500/50 transition cursor-pointer text-xs">
+              <div class="flex items-center justify-between text-slate-300 font-mono text-[11px]">
+                <span class="text-purple-400">📦 arch-design.json</span>
+                <span class="text-slate-500 text-[10px]">2.8 KB</span>
+              </div>
+              <div class="text-[10px] text-slate-500 mt-1">由 Architect Agent 产出 (类型契约)</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 任务上下文与元数据 -->
+        <div class="p-3 rounded-lg bg-[#0b101c] border border-slate-800/80 space-y-2 text-xs font-mono">
+          <div class="text-slate-400 font-bold text-[11px]">任务元数据</div>
+          <div class="text-slate-400 text-[10px] space-y-1">
+            <div>模板: Feature 全流程交付</div>
+            <div>启动时间: 2026-09-16 18:20</div>
+            <div>消耗 Tokens: 18,420 ($0.031)</div>
+            <div>当前活跃分支: main</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
+
+
+
+

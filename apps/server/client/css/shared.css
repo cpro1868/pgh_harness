@@ -1,0 +1,107 @@
+/* Purple Grapes Harness (PGH) 统一设计语言与全局布局规范 */
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-app: #070a12;
+  --bg-topbar: #0a0f1d;
+  --bg-nav: #090d18;
+  --bg-sidebar: #0c101c;
+  --bg-card: #0f1523;
+  --border-color: #1a2333;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --accent-purple: #9333ea;
+  --accent-blue: #3b82f6;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  height: 100vh;
+  width: 100vw;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', Consolas, Monaco, monospace !important;
+}
+
+/* 全局统一极细深色滚动条 */
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* 全系统严格统一的 48px 一级侧边栏 (Activity Bar) */
+.activity-bar {
+  width: 48px;
+  background-color: var(--bg-nav);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 8px 0;
+  flex-shrink: 0;
+  height: calc(100vh - 40px);
+}
+
+.activity-btn {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #64748b;
+  text-decoration: none;
+  margin-bottom: 8px;
+  position: relative;
+  transition: all 0.15s ease;
+}
+
+.activity-btn:hover {
+  color: #f1f5f9;
+  background-color: rgba(255, 255, 255, 0.05);
+}
+
+.activity-btn.active {
+  color: #c084fc;
+  background-color: rgba(168, 85, 247, 0.16);
+}
+
+.activity-btn.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background-color: #a855f7;
+}
+
+.activity-divider {
+  width: 24px;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 6px 0;
+}

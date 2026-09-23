@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>审批与 Diff 审阅 - Harness Prototype</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+</head>
+<body class="bg-[#090d16] text-slate-100 min-h-screen flex flex-col">
+
+  <!-- 原型全局导航条 -->
+  <div class="proto-nav">
+    <div class="flex items-center space-x-3">
+      <span class="font-bold text-blue-400 flex items-center">
+        <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+        Harness
+      </span>
+      <span class="text-xs text-slate-500 border-l border-slate-700 pl-3">MOD-05 权限阻断与 Diff 审阅</span>
+    </div>
+    <div class="flex items-center space-x-1">
+      <a href="index.html">原型导航</a>
+      <a href="run-chat.html">主对话</a>
+      <a href="run-terminal.html">终端执行</a>
+      <a href="approval-modal.html" class="active font-medium">审批弹窗</a>
+      <a href="question-interaction.html">结构化提问</a>
+      <a href="run-trajectory.html">事件轨迹</a>
+      <a href="config-providers.html">模型端点</a>
+      <a href="config-permissions.html">权限规则</a>
+    </div>
+  </div>
+
+  <div class="max-w-4xl mx-auto px-6 py-8 flex-1 w-full space-y-8">
+    <div>
+      <h1 class="text-2xl font-bold text-white mb-1">危险操作审批与代码 Diff 审阅弹窗</h1>
+      <p class="text-xs text-slate-400">展示写文件、修改代码或执行 Shell 时的安全闸门 (Fail-Closed) 拦截呈现。</p>
+    </div>
+
+    <!-- 审批模态卡片 1：代码修改 (edit_file) Diff 审阅 -->
+    <div class="border-2 border-amber-500/80 rounded-xl bg-[#0f172a] shadow-2xl overflow-hidden">
+      
+      <!-- 弹窗顶栏告警条 -->
+      <div class="p-4 bg-amber-950/40 border-b border-amber-500/40 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <div class="p-2 rounded-lg bg-amber-500/20 text-amber-400">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-semibold text-white">操作需要您的授权 (Approval Required)</h3>
+            <p class="text-xs text-amber-300/80">Agent 尝试修改现有源代码文件，请审阅具体的改动差异。</p>
+          </div>
+        </div>
+        <div class="text-right text-xs font-mono text-amber-400">
+          <span>倒计时: 04:42 (超时自动拒绝)</span>
+        </div>
+      </div>
+
+      <!-- 操作元数据 -->
+      <div class="p-4 bg-[#0a0f1d] border-b border-slate-800 text-xs font-mono flex items-center justify-between text-slate-300">
+        <div>
+          <span class="text-slate-500">工具:</span> <span class="text-blue-400 font-semibold">edit_file</span>
+          <span class="mx-2 text-slate-700">|</span>
+          <span class="text-slate-500">目标文件:</span> <span class="text-slate-200">src/token.ts</span>
+        </div>
+        <span class="text-[11px] text-slate-500">已执行先读后写安全校验 (Observed)</span>
+      </div>
+
+      <!-- 高保真 Diff 代码对比区 -->
+      <div class="p-4 bg-[#060913] font-mono text-xs overflow-x-auto leading-relaxed">
+        <div class="text-slate-500 mb-2">@@ -1,5 +1,8 @@ export function parseTokenAmount</div>
+        <div class="bg-slate-900/50 text-slate-400 px-2 py-0.5">  export function parseTokenAmount(raw: string): bigint {</div>
+        <!-- 删除行 (Red) -->
+        <div class="bg-rose-950/60 text-rose-300 px-2 py-0.5 flex items-center border-l-2 border-rose-500">
+          <span class="text-rose-500 w-5 select-none">-</span>
+          <span>&nbsp;&nbsp;const val = BigInt(raw);</span>
+        </div>
+        <div class="bg-rose-950/60 text-rose-300 px-2 py-0.5 flex items-center border-l-2 border-rose-500">
+          <span class="text-rose-500 w-5 select-none">-</span>
+          <span>&nbsp;&nbsp;return val;</span>
+        </div>
+        <!-- 新增行 (Green) -->
+        <div class="bg-emerald-950/60 text-emerald-300 px-2 py-0.5 flex items-center border-l-2 border-emerald-500">
+          <span class="text-emerald-500 w-5 select-none">+</span>
+          <span>&nbsp;&nbsp;const val = BigInt(raw);</span>
+        </div>
+        <div class="bg-emerald-950/60 text-emerald-300 px-2 py-0.5 flex items-center border-l-2 border-emerald-500">
+          <span class="text-emerald-500 w-5 select-none">+</span>
+          <span>&nbsp;&nbsp;if (val > BigInt(Number.MAX_SAFE_INTEGER)) {</span>
+        </div>
+        <div class="bg-emerald-950/60 text-emerald-300 px-2 py-0.5 flex items-center border-l-2 border-emerald-500">
+          <span class="text-emerald-500 w-5 select-none">+</span>
+          <span>&nbsp;&nbsp;&nbsp;&nbsp;throw new RangeError('Token amount exceeds MAX_SAFE_INTEGER bounds');</span>
+        </div>
+        <div class="bg-emerald-950/60 text-emerald-300 px-2 py-0.5 flex items-center border-l-2 border-emerald-500">
+          <span class="text-emerald-500 w-5 select-none">+</span>
+          <span>&nbsp;&nbsp;}</span>
+        </div>
+        <div class="bg-emerald-950/60 text-emerald-300 px-2 py-0.5 flex items-center border-l-2 border-emerald-500">
+          <span class="text-emerald-500 w-5 select-none">+</span>
+          <span>&nbsp;&nbsp;return val;</span>
+        </div>
+        <div class="bg-slate-900/50 text-slate-400 px-2 py-0.5">  }</div>
+      </div>
+
+      <!-- 操作动作底栏 -->
+      <div class="p-4 bg-[#0a0f1d] border-t border-slate-800 flex items-center justify-between">
+        <label class="flex items-center space-x-2 text-xs text-slate-400 cursor-pointer">
+          <input type="checkbox" class="rounded bg-slate-800 border-slate-700 text-blue-600 focus:ring-0">
+          <span>在本会话内始终允许此文件的修改 (不写入全局规则)</span>
+        </label>
+
+        <div class="flex items-center space-x-3">
+          <button class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-medium transition">
+            拒绝 (Reject)
+          </button>
+          <button class="px-5 py-2 rounded-lg bg-amber-600 hover:bg-amber-500 text-white text-xs font-semibold shadow-md transition flex items-center space-x-1.5">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path></svg>
+            <span>批准执行 (Approve)</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- 审批模态卡片 2：高危 Shell 命令拦截 (bash) -->
+    <div class="border border-rose-500/50 rounded-xl bg-[#0f172a] shadow-xl overflow-hidden">
+      <div class="p-3.5 bg-rose-950/30 border-b border-rose-500/30 flex items-center justify-between text-xs">
+        <div class="flex items-center space-x-2 text-rose-400 font-semibold font-mono">
+          <span>⚠️ 触发安全规则拦截：bash 执行</span>
+        </div>
+        <span class="text-[11px] text-slate-400 font-mono">规则: rm -rf (Deny by default)</span>
+      </div>
+      <div class="p-4 bg-[#070b14] font-mono text-xs space-y-2">
+        <div class="text-slate-400">Agent 尝试在当前工作区执行以下 Shell 命令：</div>
+        <div class="p-3 bg-slate-900 border border-slate-800 rounded text-rose-300 font-bold select-all">
+          rm -rf node_modules/.cache
+        </div>
+      </div>
+      <div class="p-3 bg-[#0a0f1d] border-t border-slate-800 flex justify-end space-x-2">
+        <button class="px-3 py-1.5 rounded bg-rose-600 hover:bg-rose-500 text-white text-xs font-medium">拒绝</button>
+        <button class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium">一次性临时允许</button>
+      </div>
+    </div>
+
+  </div>
+
+</body>
+</html>

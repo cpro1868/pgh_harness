@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Harness 原型导航中枢与系统总览</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+</head>
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex flex-col overflow-y-auto">
+
+  <!-- 顶栏全局状态 -->
+  <header class="h-14 bg-[#090e1c] border-b border-slate-800 px-8 flex items-center justify-between sticky top-0 z-50">
+    <div class="flex items-center space-x-3">
+      <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </div>
+      <span class="font-bold text-white tracking-tight text-base">Harness 控制中心 · 原型交互中枢</span>
+      <span class="text-xs px-2.5 py-0.5 rounded bg-blue-950 text-blue-300 font-mono border border-blue-800/50">v2.1 全态闭环</span>
+    </div>
+    
+    <div class="flex items-center space-x-4 text-xs font-mono">
+      <span class="text-slate-400">活跃工作区: G:\Projects\auth-service</span>
+      <span class="text-slate-600">|</span>
+      <span class="text-emerald-400 flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>Node 22 Pure TS</span>
+    </div>
+  </header>
+
+  <!-- 页面主体容器 (可自由顺畅纵向滚动) -->
+  <main class="flex-1 max-w-6xl w-full mx-auto px-6 py-10 space-y-10">
+    
+    <div class="text-center space-y-2">
+      <h1 class="text-3xl font-extrabold text-white tracking-tight">Agent Harness 生产级交互原型体系</h1>
+      <p class="text-xs text-slate-400 max-w-2xl mx-auto leading-relaxed">
+        严格分离【运行态 (Workbench)】与【配置态 (Settings & Governance)】。会话创建时选择并物理锁定工作区，对话中途随时切换大模型，具备真实 MCP/Skills 安装测试与知识库检索闭环。
+      </p>
+    </div>
+
+    <!-- 运行态模块组 -->
+    <section class="space-y-4">
+      <div class="flex items-center space-x-2.5 pb-2 border-b border-slate-800">
+        <span class="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+        <h2 class="text-sm font-bold text-white uppercase tracking-wider font-mono">一、运行态业务组 (Run-time Workbench)</h2>
+        <span class="text-xs text-slate-500">—— 专注当前任务编码执行、Shell 管道与事件真相</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 font-sans">
+        
+        <!-- 运行卡 1 -->
+        <a href="run-chat.html" class="p-5 rounded-xl bg-[#0f1523] border-2 border-blue-500/40 hover:border-blue-400 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 font-mono font-bold">核心主工作台</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-blue-400 mb-1">主对话工作台 (run-chat.html)</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              新任务工作区点选绑定与只读锁定、运行中自由切换模型、Reasoning 深度思考折叠、Todo 任务看板、流式打字与红绿代码 Diff 审阅。
+            </p>
+          </div>
+          <span class="text-xs text-blue-400 font-semibold flex items-center">打开主工作台 &rarr;</span>
+        </a>
+
+        <!-- 运行卡 2 -->
+        <a href="run-terminal.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-emerald-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">长任务管道</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-emerald-400 mb-1">执行与长任务 (run-terminal.html)</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              Node 原生标准 I/O 管道挂载、长驻子进程 Job 列表管理（PID、Uptime）、实时增量输出捕获与 SIGKILL 强杀控制。
+            </p>
+          </div>
+          <span class="text-xs text-emerald-400 font-semibold flex items-center">打开控制台 &rarr;</span>
+        </a>
+
+        <!-- 运行卡 3: 角色流水线 (模式A) -->
+        <a href="run-pipeline.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-purple-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-mono">模式A · 多角色</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-purple-400 mb-1">角色流水线运行 (run-pipeline.html)</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              阶段式角色协同看板（需求规格 → 架构设计 → TDD编码 → QA验收），工件前后传递契约与 Gatekeeper 审批流。
+            </p>
+          </div>
+          <span class="text-xs text-purple-400 font-semibold flex items-center">进入流水线 &rarr;</span>
+        </a>
+
+        <!-- 运行卡 4: BPMN 工作流引擎 (模式C) -->
+        <a href="run-workflow.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-emerald-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">模式C · BPMN 2.0</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-emerald-400 mb-1">BPMN 工作流监控 (run-workflow.html)</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              动态 SVG 业务流程拓扑高亮、排他网关表达式分支计算、流程上下文变量总线与节点审计。
+            </p>
+          </div>
+          <span class="text-xs text-emerald-400 font-semibold flex items-center">监控流程实例 &rarr;</span>
+        </a>
+
+        <!-- 运行卡 5 -->
+        <a href="run-trajectory.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-indigo-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-indigo-500/10 text-indigo-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-indigo-950 text-indigo-300 font-mono">事件唯一真相</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-indigo-400 mb-1">事件轨迹审计 (run-trajectory.html)</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              底层连续单调 events 表审查、模型当时完整发送请求 100% 确定性重构还原、一键指定 seq 节点 Fork 分叉会话。
+            </p>
+          </div>
+          <span class="text-xs text-indigo-400 font-semibold flex items-center">审计事件轨迹 &rarr;</span>
+        </a>
+
+      </div>
+    </section>
+
+    <!-- 配置态模块组 -->
+    <section class="space-y-4">
+      <div class="flex items-center space-x-2.5 pb-2 border-b border-slate-800">
+        <span class="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+        <h2 class="text-sm font-bold text-white uppercase tracking-wider font-mono">二、配置态控制中心 (Settings & Governance)</h2>
+        <span class="text-xs text-slate-500">—— 统一全局资产库、安全防线与生态扩展</span>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5 font-sans">
+        
+        <!-- 配置卡 1 -->
+        <a href="config-workspace.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-blue-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 font-mono">物理锚点</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-blue-400 mb-1">工作区与规范初始化</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              全局工作区资产管理、AGENTS.md 项目规则自动解析预览、多工作区扫描与规范治理。
+            </p>
+          </div>
+          <span class="text-xs text-blue-400 font-semibold flex items-center">管理工作区 &rarr;</span>
+        </a>
+
+        <!-- 配置卡: 记忆与经验治理 (MOD-11) -->
+        <a href="config-memories.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-yellow-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-yellow-500/10 text-yellow-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-yellow-950 text-yellow-300 font-mono">MOD-11 · 跨会话</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-yellow-400 mb-1">记忆与经验治理中心</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              多工作区经验跨会话沉淀；全自动 vs 半自动反思模式切换；支持 Markdown / 本地 SQLite (自定义路径+FTS5) / 向量双轨存储。
+            </p>
+          </div>
+          <span class="text-xs text-yellow-400 font-semibold flex items-center">管理长期记忆 &rarr;</span>
+        </a>
+
+        <!-- 配置卡 2 -->
+        <a href="config-providers.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-purple-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-mono">多 Provider 资产</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-purple-400 mb-1">多模型与 Provider 清单</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              支持 DeepSeek、OpenRouter、本地 Ollama 多端点接入；自动拉取并汇聚全量可用模型资产清单，配置独立压缩轻量模型。
+            </p>
+          </div>
+          <span class="text-xs text-purple-400 font-semibold flex items-center">配置模型端点 &rarr;</span>
+        </a>
+
+        <!-- 配置卡 4: 流水线模板 (模式A) -->
+        <a href="config-pipelines.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-purple-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-mono">模式A · 模板库</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-purple-400 mb-1">流水线模板设定</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              预设与自定义多角色协同流水线（需求分析、架构、TDD编码、QA审计），阶段工件传递与审批门设定。
+            </p>
+          </div>
+          <span class="text-xs text-purple-400 font-semibold flex items-center">管理流水线模板 &rarr;</span>
+        </a>
+
+        <!-- 配置卡 5: BPMN 流程设计 (模式C) -->
+        <a href="config-workflows.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-emerald-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">模式C · BPMN 2.0</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-emerald-400 mb-1">BPMN 业务流程设计</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              导入/导出标准 BPMN 2.0 XML 文件，绑定 Agent 角色任务节点，设定排他网关表达式与业务流转链路。
+            </p>
+          </div>
+          <span class="text-xs text-emerald-400 font-semibold flex items-center">设计 BPMN 流程 &rarr;</span>
+        </a>
+
+        <!-- 配置卡 6 -->
+        <a href="config-permissions.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-rose-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-rose-500/10 text-rose-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-300 font-mono">防线控制</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-rose-400 mb-1">权限预设与参数规则表</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              只读/编辑/全权三档预设、基于命令前缀、文件相对路径 Glob 与域名的细粒度拦截规则（Deny > Ask > Allow），Fail-Closed 闭环。
+            </p>
+          </div>
+          <span class="text-xs text-rose-400 font-semibold flex items-center">管理安全规则 &rarr;</span>
+        </a>
+
+        <!-- 配置卡 4 -->
+        <a href="config-mcp.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-emerald-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">MCP 生态</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-emerald-400 mb-1">MCP 外部服务管理中心</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              支持添加/安装 stdio 与 HTTP 类型的 MCP Server、实时连通探测、扫描发现工具清单并单独控制单项免问执行权限。
+            </p>
+          </div>
+          <span class="text-xs text-emerald-400 font-semibold flex items-center">配置 MCP Server &rarr;</span>
+        </a>
+
+        <!-- 配置卡 5 -->
+        <a href="config-skills.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-purple-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-purple-500/10 text-purple-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-purple-950 text-purple-300 font-mono">渐进披露</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-purple-400 mb-1">Skills 技能管理与编辑</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              扫描工作区与全局技能目录、提取触发时机词 (`when-to-use`)、支持正文在线 Markdown 查阅修改与模型按需调用控制。
+            </p>
+          </div>
+          <span class="text-xs text-purple-400 font-semibold flex items-center">管理技能包 &rarr;</span>
+        </a>
+
+        <!-- 配置卡 6: 系统全局设置 (Settings) -->
+        <a href="config-settings.html" class="p-5 rounded-xl bg-[#0f1523] border border-blue-500/40 hover:border-blue-400 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-blue-500/10 text-blue-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-blue-950 text-blue-300 font-mono">基础设施中枢</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-blue-400 mb-1">系统设置中心 (Settings)</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              基础运行网络（端口 3000、Token 鉴权、数据目录）、外观主题与代码字体，统一聚合收拢权限预设、MCP 服务与内核插件编排。
+            </p>
+          </div>
+          <span class="text-xs text-blue-400 font-semibold flex items-center">打开系统设置 &rarr;</span>
+        </a>
+
+        <!-- 配置卡 7 -->
+        <a href="config-plugins.html" class="p-5 rounded-xl bg-[#0f1523] border border-slate-800 hover:border-cyan-500 transition group shadow-lg flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <span class="p-2 rounded-lg bg-cyan-500/10 text-cyan-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+              </span>
+              <span class="text-[10px] px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 font-mono">内核装配</span>
+            </div>
+            <h3 class="text-sm font-bold text-white group-hover:text-cyan-400 mb-1">插件内核与依赖拓扑</h3>
+            <p class="text-xs text-slate-400 line-clamp-3 mb-4 leading-relaxed">
+              严格对齐 Cordis 理念的精简内核。可视化呈现 10 大核心插件加载顺序、提供与依赖服务拓扑及 Fail-Fast 启动保护状态。
+            </p>
+          </div>
+          <span class="text-xs text-cyan-400 font-semibold flex items-center">查看内核装配 &rarr;</span>
+        </a>
+
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="h-12 border-t border-slate-800/80 px-8 flex items-center justify-between text-[11px] text-slate-500 font-mono bg-[#090e1c] mt-auto">
+    <span>Harness Architecture: Run-time / Config-time Decoupled</span>
+    <span>Zero Native Compilation · 100% Pure TypeScript</span>
+  </footer>
+
+</body>
+</html>

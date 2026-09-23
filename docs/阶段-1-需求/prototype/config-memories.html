@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>多工作区记忆管理中心 - Harness Memory Console</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+</head>
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex font-sans">
+
+  <!-- 1. 全局最左侧系统活动栏 (56px) -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+
+    <!-- 运行态 -->
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
+    <a href="run-workflow.html" class="activity-btn" title="BPMN 业务工作流 (Workflow)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></a>
+    <a href="run-terminal.html" class="activity-btn" title="终端与长任务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></a>
+    <a href="run-trajectory.html" class="activity-btn" title="事件轨迹审计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></a>
+
+            <div class="my-3 w-6 border-b border-slate-800"></div>
+
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn active" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-knowledge.html" class="activity-btn" title="独立知识库中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 主内容区 (自由纵向滚动) -->
+  <div class="flex-1 flex flex-col overflow-y-auto">
+    
+    <!-- 顶栏 -->
+    <header class="h-12 bg-[#090d18] border-b border-[#1a2333] px-6 flex items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center space-x-3">
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60 font-mono">记忆与经验治理 (MOD-11)</span>
+        <h1 class="text-sm font-bold text-white">工作区记忆策略与存储中心 (Memory Console)</h1>
+      </div>
+
+      <div class="flex items-center space-x-2 text-xs text-slate-400 font-mono">
+        <span>受控存储管理 · 零过度设计</span>
+      </div>
+    </header>
+
+    <main class="flex-1 p-8 space-y-8 max-w-6xl w-full mx-auto">
+      
+      <!-- 模块说明与核心提取模式切换器 (全自动 vs 半自动说明) -->
+      <section class="p-5 rounded-xl bg-gradient-to-r from-blue-950/30 to-purple-950/20 border border-blue-800/40 space-y-4 shadow-lg">
+        <div class="flex items-center justify-between">
+          <div class="space-y-1">
+            <h2 class="text-sm font-bold text-white flex items-center">
+              <span>🧠 记忆沉淀机制与人机交互模式</span>
+              <span class="ml-2 text-[10px] px-2 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">全局生效</span>
+            </h2>
+            <p class="text-xs text-slate-400">大模型在长程任务中会遗忘上下文，通过记忆引擎持久化沉淀代码规约、踩坑经验与业务逻辑，跨会话按需自动唤醒。</p>
+          </div>
+        </div>
+
+        <!-- 模式选择卡片单选组 (带深度人话对比说明) -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          
+          <!-- 模式 1：全自动提取沉淀 (默认) -->
+          <label class="p-4 rounded-lg bg-[#0c1220] border-2 border-blue-500/80 cursor-pointer space-y-2 relative shadow-md">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <input type="radio" name="extraction_mode" checked class="text-blue-500">
+                <span class="font-bold text-white text-xs">🤖 全自动反思沉淀模式 (默认推荐)</span>
+              </div>
+              <span class="text-[10px] bg-blue-950 text-blue-300 px-1.5 py-0.2 rounded font-mono">零打扰</span>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              每次会话完成开发任务或成功修复 Bug 后，系统在后台使用轻量模型自动反思，提炼出本项目关键经验并自动入库。适合大多数常规开发场景。
+            </p>
+          </label>
+
+          <!-- 模式 2：半自动人工确认 -->
+          <label class="p-4 rounded-lg bg-[#0c1220] border border-slate-800 hover:border-slate-700 cursor-pointer space-y-2 relative">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <input type="radio" name="extraction_mode" class="text-purple-500">
+                <span class="font-bold text-white text-xs">👤 半自动人工审核确认模式</span>
+              </div>
+              <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-mono">严格防污染</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              Agent 总结出新经验后不直接落盘，而在对话流中弹出审批卡片由用户点击确认后方才入库。确保每条记忆绝对准确，防止大模型幻觉污染。
+            </p>
+          </label>
+
+        </div>
+      </section>
+
+      <!-- 一、多工作区独立存储策略管理 (核心重点：按工作区独立配置存储方式，支持SQLite绝对/相对路径) -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+            <h2 class="text-sm font-bold text-white">已登记工作区的独立存储方式与路径设定</h2>
+          </div>
+          <div class="flex items-center space-x-3 text-xs font-mono">
+            <span class="text-blue-400">全局经验: ~/.harness/AGENTS.md</span>
+            <span class="text-slate-500">|</span>
+            <span class="text-slate-400">项目专属: &lt;workspace&gt;/AGENTS.md (D67)</span>
+          </div>
+        </div>
+
+        <!-- 四大工作区存储策略卡片列表 (只读详情态 + 显式变更向导) -->
+        <div class="space-y-4">
+          
+          <!-- 工作区 1: auth-service (纯 Markdown 文件模式) -->
+          <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg hover:border-slate-700 transition">
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-sm font-bold text-white font-mono">G:\Projects\auth-service</h3>
+                  <span class="text-[10px] px-2 py-0.2 rounded bg-blue-950 text-blue-300 border border-blue-800/60 font-mono">活跃项目</span>
+                  <span class="text-xs text-slate-500 font-mono">5 条记忆条目</span>
+                </div>
+                <p class="text-xs text-slate-400">团队核心认证授权服务 · Git 团队协作代码库</p>
+              </div>
+
+              <!-- 显式操作按钮组 (编辑当前参数 / 变更存储模式) -->
+              <div class="flex items-center space-x-2 text-xs">
+                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-950/40 border border-blue-800/50 text-blue-300 font-mono">
+                  <span>当前介质:</span>
+                  <b class="text-white">纯 Markdown 文件 (.md)</b>
+                </div>
+                <button onclick="openConfigEditModal('G:\\Projects\\auth-service', 'file')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 flex items-center space-x-1 shadow transition">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  <span>修改参数</span>
+                </button>
+                <button onclick="openMigrationModal('G:\\Projects\\auth-service', 'file', 5, '.harness/memory.md')" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center space-x-1 shadow transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                  <span>变更存储模式与迁移...</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- 只读详情区域 -->
+            <div class="p-3.5 rounded-lg bg-[#080d18] border border-slate-800 text-xs font-mono grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300">
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">生效文件路径：</span>
+                <span class="text-blue-300 font-bold">.harness/memory.md</span>
+                <span class="text-[10px] text-slate-500 block font-sans mt-0.5">随 Git 仓库提交与版本追踪</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">Git 联动策略：</span>
+                <span class="text-emerald-400 font-medium">自动追加暂存区 (git add)</span>
+                <span class="text-[10px] text-slate-500 block font-sans mt-0.5">按 ### Conventions / Gotchas 分节</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">反思模型与状态：</span>
+                <span class="text-white">deepseek-chat (自动反思)</span>
+                <span class="text-[10px] text-emerald-400 block font-sans mt-0.5">已沉淀 5 条 · 状态正常</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 工作区 2: harness (本地 SQLite 数据库模式) -->
+          <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg hover:border-slate-700 transition">
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-sm font-bold text-white font-mono">G:\Projects\Agent\harness</h3>
+                  <span class="text-[10px] px-2 py-0.2 rounded bg-purple-950 text-purple-300 border border-purple-800/60 font-mono">平台内核</span>
+                  <span class="text-xs text-slate-500 font-mono">8 条记忆条目</span>
+                </div>
+                <p class="text-xs text-slate-400">Harness 运行时本体 · 纯 TS / 零 Native 依赖</p>
+              </div>
+
+              <div class="flex items-center space-x-2 text-xs">
+                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-purple-950/40 border border-purple-800/50 text-purple-300 font-mono">
+                  <span>当前介质:</span>
+                  <b class="text-white">本地 SQLite (node:sqlite + FTS5)</b>
+                </div>
+                <button onclick="openConfigEditModal('G:\\Projects\\Agent\\harness', 'sqlite')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 flex items-center space-x-1 shadow transition">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  <span>修改参数</span>
+                </button>
+                <button onclick="openMigrationModal('G:\\Projects\\Agent\\harness', 'sqlite', 8, '.harness/project-memory.sqlite')" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center space-x-1 shadow transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                  <span>变更存储模式与迁移...</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-lg bg-[#080d18] border border-slate-800 text-xs font-mono grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300">
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">SQLite 文件路径：</span>
+                <span class="text-purple-300 font-bold">.harness/project-memory.sqlite</span>
+                <span class="text-[10px] text-slate-500 block font-sans mt-0.5">相对路径 · WAL 模式</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">索引与检索加速：</span>
+                <span class="text-emerald-400 font-medium">FTS5 全文倒排索引 (毫秒级)</span>
+                <span class="text-[10px] text-slate-500 block font-sans mt-0.5">单轮召回上限: Top 3 条</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">分区表与驱动：</span>
+                <span class="text-white">tbl_mem_harness_core</span>
+                <span class="text-[10px] text-emerald-400 block font-sans mt-0.5">Node 22 原生 DatabaseSync</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 工作区 3: gateway-proxy (Markdown 文件 + 向量双轨模式) -->
+          <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg hover:border-slate-700 transition">
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-sm font-bold text-white font-mono">G:\Projects\gateway-proxy</h3>
+                  <span class="text-[10px] px-2 py-0.2 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">微服务代理</span>
+                  <span class="text-xs text-slate-500 font-mono">2 条记忆条目</span>
+                </div>
+                <p class="text-xs text-slate-400">高性能网关服务 · 采用 Markdown 真相源 + 本地向量双轨检索</p>
+              </div>
+
+              <div class="flex items-center space-x-2 text-xs">
+                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-emerald-950/40 border border-emerald-800/50 text-emerald-300 font-mono">
+                  <span>当前介质:</span>
+                  <b class="text-white">Markdown 文件 + 向量双轨模式</b>
+                </div>
+                <button onclick="openConfigEditModal('G:\\Projects\\gateway-proxy', 'hybrid')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 flex items-center space-x-1 shadow transition">
+                  <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+                  <span>修改参数</span>
+                </button>
+                <button onclick="openMigrationModal('G:\\Projects\\gateway-proxy', 'hybrid', 2, '.harness/memory.md')" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center space-x-1 shadow transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+                  <span>变更存储模式与迁移...</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-3.5 rounded-lg bg-[#080d18] border border-slate-800 text-xs font-mono grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300">
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">真相源文件 (Ground Truth)：</span>
+                <span class="text-blue-300 font-bold">.harness/memory.md</span>
+                <span class="text-[10px] text-slate-500 block font-sans mt-0.5">人类可读 · 随 Git 代码库协同提交</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">加速轨 (Embedding 向量)：</span>
+                <span class="text-emerald-400 font-medium">BAAI/bge-m3 (本地 Ollama · 1024维)</span>
+                <span class="text-[10px] text-slate-500 block font-sans mt-0.5">相似度阈值: 0.75 · 语义精准匹配</span>
+              </div>
+              <div>
+                <span class="text-slate-500 block text-[11px] mb-0.5">双轨协同机制：</span>
+                <span class="text-white">文件修改自动重算向量切片</span>
+                <span class="text-[10px] text-emerald-400 block font-sans mt-0.5">兼具 Git 版本化与语义联想能力</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 工作区 4: security-tools (明确展示：未启用记忆模式 Disabled) -->
+          <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800/80 space-y-4 shadow-lg hover:border-slate-700 transition opacity-90">
+            <div class="flex items-center justify-between">
+              <div class="space-y-1">
+                <div class="flex items-center space-x-2">
+                  <h3 class="text-sm font-bold text-slate-300 font-mono">G:\Projects\security-sandbox</h3>
+                  <span class="text-[10px] px-2 py-0.2 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono">保密沙箱</span>
+                  <span class="text-xs text-slate-500 font-mono">0 条记忆 (未启用)</span>
+                </div>
+                <p class="text-xs text-slate-500">敏感渗透与沙箱测试工具集 · 绝不持久化任何踩坑记忆</p>
+              </div>
+
+              <div class="flex items-center space-x-3 text-xs">
+                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-400 font-mono">
+                  <span>当前状态:</span>
+                  <b class="text-slate-300">⚪ 未启用记忆 (Disabled)</b>
+                </div>
+                <button onclick="openMigrationModal('G:\\Projects\\security-sandbox', 'disabled', 0, '无')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium flex items-center space-x-1 border border-slate-700 transition">
+                  <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                  <span>开启记忆或配置存储...</span>
+                </button>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-lg bg-[#080d18] border border-dashed border-slate-800 text-xs font-sans text-slate-500 flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <svg class="w-4 h-4 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                <span>该工作区已严格关闭记忆沉淀与召回，Agent 执行前后不读取也不反思任何信息，上下文完全由 AGENTS.md 约束。</span>
+              </div>
+              <span class="text-[10px] font-mono text-slate-500">零存储占用 · 零Token消耗</span>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <!-- 变更存储模式与数据迁移向导弹窗 (Migration Wizard Modal) -->
+  <div id="migration-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#0e1424] border border-blue-500/50 rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-5 text-xs font-sans">
+      
+      <!-- 弹窗标题 -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
+          </span>
+          <div>
+            <h3 class="text-sm font-bold text-white">受控存储模式变更与数据迁移向导</h3>
+            <p id="modal-workspace-name" class="text-[11px] text-slate-400 font-mono">G:\Projects\auth-service</p>
+          </div>
+        </div>
+        <button onclick="closeMigrationModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <!-- 第一步：当前存量数据审计 (Audit) -->
+      <div class="p-3 rounded-lg bg-[#070b14] border border-slate-800 flex items-center justify-between">
+        <div class="space-y-0.5">
+          <span class="text-[10px] uppercase font-mono text-slate-500 tracking-wider">源存储状态检测 (Source Audit)</span>
+          <div class="flex items-center space-x-2 text-slate-300">
+            <span>当前模式: <b id="modal-source-mode" class="text-blue-300 font-mono">Markdown 文件</b></span>
+            <span>·</span>
+            <span>现存条目: <b id="modal-source-count" class="text-emerald-400 font-mono">5 条记忆</b></span>
+          </div>
+        </div>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">数据完整</span>
+      </div>
+
+      <!-- 第二步：选择目标存储介质 (Target Selection) -->
+      <div class="space-y-2">
+        <label class="block text-slate-300 font-medium">1. 选择拟切换的目标存储模式：</label>
+        <div class="grid grid-cols-2 gap-2.5">
+          
+          <!-- 选项 1: SQLite (推荐) -->
+          <label onclick="updateTargetForm('sqlite')" class="p-3 rounded-lg bg-[#070b14] border border-blue-500/60 cursor-pointer block hover:border-blue-400 transition">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="target_mode" value="sqlite" checked class="text-blue-500">
+              <span class="font-bold text-white text-xs">本地 SQLite (推荐)</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">内置 FTS5 倒排索引，毫秒级关键字检索，支持自定义文件路径。</p>
+          </label>
+
+          <!-- 选项 2: Markdown -->
+          <label onclick="updateTargetForm('file')" class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block hover:border-slate-700 transition">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="target_mode" value="file" class="text-blue-500">
+              <span class="font-bold text-white text-xs">纯 Markdown 文件</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">.harness/memory.md，直接随代码库提交 Git 协同管理。</p>
+          </label>
+
+          <!-- 选项 3: Markdown 文件 + 向量双轨模式 -->
+          <label onclick="updateTargetForm('hybrid')" class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block hover:border-slate-700 transition">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="target_mode" value="hybrid" class="text-blue-500">
+              <span class="font-bold text-white text-xs">Markdown 文件 + 向量双轨模式</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">.harness/memory.md 为真相源，挂载本地 BGE-M3 向量加速语义切片召回。</p>
+          </label>
+
+          <!-- 选项 4: 彻底关闭 -->
+          <label onclick="updateTargetForm('disabled')" class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block hover:border-rose-500/60 transition">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="target_mode" value="disabled" class="text-rose-500">
+              <span class="font-bold text-rose-300 text-xs">⚪ 未启用记忆 (Disabled)</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">完全关闭反思与经验注入，适合一次性试验或保密沙箱。</p>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- 核心补全：目标存储模式专属参数动态设定表单 (切换模式时现场设定) -->
+      <div id="target-mode-params-container" class="p-3.5 rounded-lg bg-[#070b14] border border-blue-500/40 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+          <span class="font-bold text-white text-xs flex items-center">
+            <span class="w-2 h-2 rounded-full bg-blue-400 mr-1.5"></span>
+            <span>2. 设定新模式的存储与运行时参数：</span>
+          </span>
+          <span id="target-param-badge" class="text-[10px] px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 font-mono">SQLite 专属参数</span>
+        </div>
+
+        <!-- 表单项 A: SQLite 模式参数 (默认展示) -->
+        <div id="param-form-sqlite" class="space-y-2.5">
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">SQLite 数据库文件路径 (Path，支持相对或绝对路径)：</label>
+            <input type="text" id="target-sqlite-path" value=".harness/project-memory.sqlite" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+            <div class="text-[10px] text-slate-500 mt-1">留空或相对路径将自动保存在该工作区目录下；绝对路径可指定至公共数据库。</div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">分区表名 (Table Name)：</label>
+              <input type="text" value="tbl_workspace_memory" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">FTS5 全文索引开关：</label>
+              <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs">
+                <option selected>开启 FTS5 倒排索引 (毫秒级检索)</option>
+                <option>关闭 (标准 LIKE 查询)</option>
+              </select>
+            </div>
+          </div>
+        </div>
+
+        <!-- 表单项 B: Markdown 模式参数 (按需显示) -->
+        <div id="param-form-file" class="hidden space-y-2.5">
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">Markdown 记忆文件路径：</label>
+            <input type="text" id="target-file-path" value=".harness/memory.md" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+            <div class="text-[10px] text-slate-500 mt-1">保存在该工作区根目录下，随 Git 版本一同维护。</div>
+          </div>
+          <div class="flex items-center space-x-2 pt-1">
+            <input type="checkbox" checked id="target-file-git" class="rounded text-blue-600 bg-slate-900 border-slate-700">
+            <label for="target-file-git" class="text-[11px] text-slate-300">记忆追加后自动 git add 纳入暂存区</label>
+          </div>
+        </div>
+
+        <!-- 表单项 C: 双轨混合模式参数 (按需显示) -->
+        <div id="param-form-hybrid" class="hidden space-y-2.5">
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">真相源 Markdown 文件路径：</label>
+            <input type="text" value=".harness/memory.md" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">挂载 Embedding 模型：</label>
+              <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs">
+                <option selected>BAAI/bge-m3 (本地 Ollama · 1024维)</option>
+                <option>text-embedding-3-small (OpenAI)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">相似度阈值 (Threshold)：</label>
+              <input type="number" step="0.05" value="0.75" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 text-xs">
+            </div>
+          </div>
+        </div>
+
+        <!-- 表单项 D: 未启用模式提示 (按需显示) -->
+        <div id="param-form-disabled" class="hidden text-slate-400 text-[11px] py-1">
+          无需配置额外参数。切换生效后，该工作区将停止一切记忆抽取与注入。
+        </div>
+
+      </div>
+
+      <!-- 第三步：数据迁移策略（核心分流：丢弃测试数据 vs 平滑迁移） -->
+      <div class="space-y-2">
+        <label class="block text-slate-300 font-medium">3. 存量记忆数据处理策略：</label>
+        
+        <div class="space-y-2">
+          
+          <!-- 策略 A: 丢弃旧数据全新起步 (刚开始写/测试数据不要了) -->
+          <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 hover:border-amber-500/60 cursor-pointer flex items-start space-x-3 transition">
+            <input type="radio" name="migration_policy" value="fresh" checked class="mt-0.5 text-amber-500">
+            <div class="space-y-0.5">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-amber-300 text-xs">全新起步，丢弃测试数据 (不执行迁移)</span>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 font-mono">初期测试推荐</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                适用于之前仅用于调试、测试或跑出的是脏数据。直接新建空白的目标存储介质，原有旧数据不再导入（原文件自动重命名为 <code class="text-slate-300 font-mono">.bak</code> 归档备份，永不丢失）。
+              </p>
+            </div>
+          </label>
+
+          <!-- 策略 B: 平滑数据无损迁移 (生产项目已积累经验) -->
+          <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 hover:border-emerald-500/60 cursor-pointer flex items-start space-x-3 transition">
+            <input type="radio" name="migration_policy" value="migrate" class="mt-0.5 text-emerald-500">
+            <div class="space-y-0.5">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-emerald-400 text-xs">无损平滑迁移数据 (推荐生产项目)</span>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 font-mono">经验无缝继承</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                系统将在事务中将现存的全部条目逐条解析并写入目标存储介质，基于 SHA-256 内容指纹自动去重，确保历史踩坑与团队规约在新模式下无缝延续。
+              </p>
+            </div>
+          </label>
+
+        </div>
+      </div>
+
+      <!-- 操作底部 -->
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+        <span class="text-[10px] text-slate-500 font-mono flex items-center">
+          <svg class="w-3.5 h-3.5 text-emerald-400 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+          原子事务回滚保障 · 自动 .bak 备份
+        </span>
+        <div class="flex items-center space-x-2">
+          <button onclick="closeMigrationModal()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">取消</button>
+          <button onclick="executeMigration()" class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium shadow flex items-center space-x-1">
+            <span>保存新配置并执行变更</span>
+          </button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- 独立参数修改模态弹窗 (不切换介质，直接修改当前参数) -->
+  <div id="config-edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#0e1424] border border-blue-500/50 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-xs font-sans">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="p-1.5 rounded bg-blue-500/10 text-blue-400">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          </span>
+          <div>
+            <h3 class="text-sm font-bold text-white">修改当前存储参数</h3>
+            <p id="edit-modal-workspace" class="text-[11px] text-slate-400 font-mono">G:\Projects\auth-service</p>
+          </div>
+        </div>
+        <button onclick="closeConfigEditModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <!-- 参数表单容器 (根据介质渲染) -->
+      <div id="edit-modal-fields" class="space-y-3">
+        <!-- 动态注入 -->
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
+        <button onclick="closeConfigEditModal()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">取消</button>
+        <button onclick="saveCurrentConfig()" class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium shadow">保存参数更改</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function updateTargetForm(mode) {
+      document.getElementById('param-form-sqlite').classList.add('hidden');
+      document.getElementById('param-form-file').classList.add('hidden');
+      document.getElementById('param-form-hybrid').classList.add('hidden');
+      document.getElementById('param-form-disabled').classList.add('hidden');
+
+      const badge = document.getElementById('target-param-badge');
+
+      if (mode === 'sqlite') {
+        document.getElementById('param-form-sqlite').classList.remove('hidden');
+        badge.innerText = 'SQLite 专属参数';
+      } else if (mode === 'file') {
+        document.getElementById('param-form-file').classList.remove('hidden');
+        badge.innerText = 'Markdown 文件参数';
+      } else if (mode === 'hybrid') {
+        document.getElementById('param-form-hybrid').classList.remove('hidden');
+        badge.innerText = '双轨向量参数';
+      } else if (mode === 'disabled') {
+        document.getElementById('param-form-disabled').classList.remove('hidden');
+        badge.innerText = '已禁用';
+      }
+    }
+
+    function openMigrationModal(wsPath, currentMode, count, currentPath) {
+      document.getElementById('modal-workspace-name').innerText = wsPath;
+      document.getElementById('modal-source-mode').innerText = currentMode === 'file' ? 'Markdown 文件' : (currentMode === 'sqlite' ? '本地 SQLite' : (currentMode === 'hybrid' ? 'Markdown+向量双轨' : '未启用'));
+      document.getElementById('modal-source-count').innerText = count + ' 条记忆';
+      updateTargetForm('sqlite');
+      document.getElementById('migration-modal').classList.remove('hidden');
+    }
+
+    function closeMigrationModal() {
+      document.getElementById('migration-modal').classList.add('hidden');
+    }
+
+    function executeMigration() {
+      alert('已成功保存新参数并执行存储策略变更！\n• 新参数配置已生效\n• 备份：原始数据已安全留存为 .bak\n• 状态：当前工作区新存储已无缝接续。');
+      closeMigrationModal();
+    }
+
+    function openConfigEditModal(wsPath, mode) {
+      document.getElementById('edit-modal-workspace').innerText = wsPath;
+      const container = document.getElementById('edit-modal-fields');
+
+      if (mode === 'file') {
+        container.innerHTML = `
+          <div>
+            <label class="block text-slate-300 mb-1">Markdown 记忆文件路径：</label>
+            <input type="text" value=".harness/memory.md" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs">
+            <span class="text-[10px] text-slate-500 mt-1 block">相对路径将保存于代码库根目录下。</span>
+          </div>
+          <div class="flex items-center space-x-2 pt-2">
+            <input type="checkbox" checked id="edit-git-sync" class="rounded text-blue-600 bg-slate-900 border-slate-700">
+            <label for="edit-git-sync" class="text-slate-300 text-xs">记忆反思后自动 git add 追加到暂存区</label>
+          </div>
+        `;
+      } else if (mode === 'sqlite') {
+        container.innerHTML = `
+          <div>
+            <label class="block text-slate-300 mb-1">SQLite 文件路径 (支持相对或绝对路径)：</label>
+            <input type="text" value=".harness/project-memory.sqlite" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 font-mono text-xs">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">分区表名：</label>
+            <input type="text" value="tbl_mem_harness_core" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+          </div>
+          <div class="grid grid-cols-2 gap-3 pt-1">
+            <div>
+              <label class="block text-slate-400 mb-1">FTS5 全文索引：</label>
+              <select class="w-full bg-[#090d18] border border-slate-700 rounded px-2 py-1.5 text-slate-200 text-xs">
+                <option selected>开启 (毫秒级)</option>
+                <option>关闭</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 mb-1">单轮召回上限：</label>
+              <input type="number" value="3" class="w-full bg-[#090d18] border border-slate-700 rounded px-2 py-1.5 text-slate-200 text-xs">
+            </div>
+          </div>
+        `;
+      } else if (mode === 'hybrid') {
+        container.innerHTML = `
+          <div>
+            <label class="block text-slate-300 mb-1">真相源 Markdown 文件路径：</label>
+            <input type="text" value=".harness/memory.md" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs">
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">绑定 Embedding 向量模型：</label>
+            <select class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs">
+              <option selected>BAAI/bge-m3 (本地 Ollama · 1024-dim)</option>
+              <option>text-embedding-3-small (OpenAI)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-slate-300 mb-1">余弦相似度门槛 (Score Threshold)：</label>
+            <input type="number" step="0.05" value="0.75" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 text-xs">
+          </div>
+        `;
+      }
+
+      document.getElementById('config-edit-modal').classList.remove('hidden');
+    }
+
+    function closeConfigEditModal() {
+      document.getElementById('config-edit-modal').classList.add('hidden');
+    }
+
+    function saveCurrentConfig() {
+      alert('存储参数已成功更新并保存！');
+      closeConfigEditModal();
+    }
+  </script>
+
+</body>
+</html>
+
+
+
+
+

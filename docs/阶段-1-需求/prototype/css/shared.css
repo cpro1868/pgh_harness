@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
+
+:root {
+  --bg-app: #070a12;
+  --bg-nav: #0b0f19;
+  --bg-sidebar: #0d1322;
+  --bg-card: #131b2e;
+  --bg-card-hover: #19233c;
+  --border-color: #1e293b;
+  --border-subtle: #162032;
+  --border-focus: #3b82f6;
+  --text-main: #f1f5f9;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --accent-blue: #3b82f6;
+  --accent-blue-hover: #2563eb;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+  --accent-purple: #a855f7;
+  --accent-cyan: #06b6d4;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* 允许自然垂直滚动，杜绝全屏截断问题 */
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  background-color: var(--bg-app);
+  color: var(--text-main);
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  display: flex;
+}
+
+/* 针对需要固定高度双栏滚动的页面容器 */
+.h-app-screen {
+  height: 100vh;
+  overflow: hidden;
+}
+
+code, pre, .font-mono {
+  font-family: 'JetBrains Mono', Consolas, Monaco, "Courier New", monospace !important;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #243046;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Global Leftmost Activity Bar */
+.activity-bar {
+  width: 56px;
+  background-color: var(--bg-nav);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  flex-shrink: 0;
+  z-index: 50;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.activity-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  text-decoration: none;
+  margin-bottom: 6px;
+  position: relative;
+  transition: all 0.15s ease;
+}
+.activity-btn:hover {
+  color: var(--text-main);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+.activity-btn.active {
+  color: var(--accent-blue);
+  background-color: rgba(59, 130, 246, 0.12);
+}
+.activity-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background-color: var(--accent-blue);
+}
+
+.activity-divider {
+  width: 28px;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 8px 0;
+}
+
+/* Top App Bar */
+.top-app-bar {
+  height: 46px;
+  background: #090e1c;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+
+/* 锁定的工作区芯片标签 (会话运行中不可更改) */
+.locked-workspace-chip {
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid #334155;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #cbd5e1;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Stream Cursor Blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background-color: #60a5fa;
+  vertical-align: middle;
+  animation: blink 0.9s infinite;
+  margin-left: 2px;
+}

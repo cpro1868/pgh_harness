@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BPMN 业务工作流可视化编排设计器 - Harness Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+  <style>
+    .canvas-grid {
+      background-color: #070a13;
+      background-image: radial-gradient(#1e293b 1.5px, transparent 1.5px);
+      background-size: 20px 20px;
+    }
+    .node-card {
+      background: #0d1424;
+      border: 1px solid #1e293b;
+      border-radius: 10px;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+      transition: all 0.15s ease;
+      cursor: pointer;
+      user-select: none;
+    }
+    .node-card:hover {
+      border-color: #3b82f6;
+      box-shadow: 0 12px 30px -5px rgba(59, 130, 246, 0.2);
+    }
+    .node-card.selected {
+      border-color: #10b981;
+      box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.4);
+    }
+    .handle-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #3b82f6;
+      border: 2px solid #070a13;
+      position: absolute;
+      transition: transform 0.15s ease;
+    }
+    .handle-dot:hover {
+      transform: scale(1.4);
+      background: #60a5fa;
+    }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden font-sans">
+
+  <!-- 1. 全局系统活动栏 (56px) -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+
+    <!-- 运行态 -->
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
+    <a href="run-workflow.html" class="activity-btn" title="BPMN 业务工作流 (Workflow)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></a>
+    <a href="run-terminal.html" class="activity-btn" title="终端与长任务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></a>
+    <a href="run-trajectory.html" class="activity-btn" title="事件轨迹审计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></a>
+
+            <div class="my-3 w-6 border-b border-slate-800"></div>
+
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-knowledge.html" class="activity-btn" title="独立知识库中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-workflows.html" class="activity-btn active" title="BPMN 流程设计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 主编排工作室 -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    
+    <!-- 顶栏：工作室控制器 (48px) -->
+    <header class="h-12 bg-[#090d18] border-b border-[#1a2333] px-5 flex items-center justify-between z-40 flex-shrink-0">
+      <div class="flex items-center space-x-3">
+        <a href="config-workflows.html" class="text-slate-400 hover:text-white flex items-center pr-2 border-r border-slate-800 text-xs">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          <span>返回流程定义列表</span>
+        </a>
+        <span class="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">BPMN 2.0 Studio</span>
+        <h1 class="text-sm font-bold text-white">GitHub PR 智能评审与自动部署链路</h1>
+        <span class="text-xs text-slate-500 font-mono">pr-review-flow.bpmn</span>
+      </div>
+
+      <div class="flex items-center space-x-2 text-xs">
+        <a href="config-workflows.html" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+          <span>查看 XML 源码</span>
+        </a>
+        <button class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+          <span>导出 XML</span>
+        </button>
+        <a href="run-workflow.html" class="px-3.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center space-x-1 shadow">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path></svg>
+          <span>保存并前往执行实例 &rarr;</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- 三栏核心工作台：左侧物料栏 (可折叠) + 中央点阵画布 + 右侧深度参数检查器抽屉 (可折叠) -->
+    <div class="flex-1 flex overflow-hidden relative">
+      
+      <!-- 1. 左侧物料面板 (Node Palette，支持一键收起展开) -->
+      <div id="left-palette-panel" class="w-60 bg-[#090d18] border-r border-[#1a2333] flex flex-col flex-shrink-0 z-20 transition-all duration-300">
+        <div class="p-3 border-b border-[#1a2333] flex items-center justify-between">
+          <span class="text-xs font-bold text-white uppercase font-mono">BPMN 节点物料库</span>
+          <button onclick="toggleLeftPalette()" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white" title="折叠物料栏">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-mono font-semibold text-slate-400 uppercase">事件类 (Events)</div>
+            <div class="p-2 rounded bg-[#0d1424] border border-slate-800 hover:border-emerald-500/50 cursor-grab flex items-center space-x-2">
+              <span class="w-5 h-5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center font-bold text-[9px]">●</span>
+              <span class="text-white text-[11px]">Start Event (开始)</span>
+            </div>
+            <div class="p-2 rounded bg-[#0d1424] border border-slate-800 hover:border-rose-500/50 cursor-grab flex items-center space-x-2">
+              <span class="w-5 h-5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center font-bold text-[9px]">■</span>
+              <span class="text-white text-[11px]">End Event (结束)</span>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-mono font-semibold text-slate-400 uppercase">任务类 (Tasks)</div>
+            <div class="p-2 rounded bg-[#0d1424] border border-slate-800 hover:border-blue-500/60 cursor-grab flex items-center space-x-2">
+              <span class="w-5 h-5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/40 flex items-center justify-center text-[10px]">🤖</span>
+              <span class="text-white text-[11px]">Agent ServiceTask</span>
+            </div>
+            <div class="p-2 rounded bg-[#0d1424] border border-slate-800 hover:border-purple-500/60 cursor-grab flex items-center space-x-2">
+              <span class="w-5 h-5 rounded bg-purple-500/20 text-purple-400 border border-purple-500/40 flex items-center justify-center text-[10px]">👤</span>
+              <span class="text-white text-[11px]">UserTask (人工放行)</span>
+            </div>
+          </div>
+
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-mono font-semibold text-slate-400 uppercase">网关路由 (Gateways)</div>
+            <div class="p-2 rounded bg-[#0d1424] border border-slate-800 hover:border-amber-500/60 cursor-grab flex items-center space-x-2">
+              <span class="w-5 h-5 rotate-45 rounded bg-amber-500/20 text-amber-300 border border-amber-500/40 flex items-center justify-center text-[9px]"><span class="-rotate-45">✕</span></span>
+              <span class="text-white text-[11px]">ExclusiveGateway (排他)</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-2.5 border-t border-[#1a2333] text-[10px] text-slate-500 font-mono">
+          <span>画布支持多节点点击参数检查</span>
+        </div>
+      </div>
+
+      <!-- 左侧折叠后的迷你唤醒条 (Mini Trigger Bar) -->
+      <div id="left-palette-mini" class="w-9 bg-[#090d18] border-r border-[#1a2333] flex flex-col items-center py-3 space-y-3 z-20 hidden flex-shrink-0 cursor-pointer hover:bg-slate-800/40 transition" onclick="toggleLeftPalette()" title="展开物料库">
+        <button class="text-slate-400 hover:text-white">
+          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+        </button>
+        <span class="text-[10px] text-slate-400 font-mono select-none" style="writing-mode: vertical-rl;">物料库</span>
+      </div>
+
+      <!-- 2. 中央点阵编排画布 (全景视野) -->
+      <main class="flex-1 canvas-grid relative overflow-auto p-8 flex items-center justify-center">
+        
+        <!-- 画布右上角快捷控制器 (包含视口缩放与右侧抽屉唤起按钮) -->
+        <div class="absolute top-4 right-4 flex items-center space-x-2 z-30 font-mono text-xs">
+          <div class="bg-[#0d1424] border border-slate-800 rounded-lg p-1 flex items-center space-x-1 text-slate-400 shadow-xl">
+            <button class="px-2 py-0.5 hover:text-white rounded hover:bg-slate-800 text-[11px]">100%</button>
+            <button class="px-2 py-0.5 text-emerald-400 hover:text-emerald-300 rounded hover:bg-slate-800 text-[11px]">重排</button>
+          </div>
+          <button id="right-inspector-toggle-btn" onclick="toggleRightInspector()" class="px-3 py-1.5 rounded-lg bg-[#0d1424] hover:bg-slate-800 text-slate-300 border border-slate-800 flex items-center space-x-1.5 shadow-xl transition" title="展开/收起参数检查器">
+            <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
+            <span id="right-inspector-btn-text">收起参数面板</span>
+          </button>
+        </div>
+
+        <!-- 流程图图形容器 -->
+        <div class="relative" style="width: 880px; height: 400px;">
+          
+          <!-- 贝塞尔连线 SVG -->
+          <svg class="absolute inset-0 w-full h-full pointer-events-none" style="z-index: 1;">
+            <path d="M 120 190 C 150 190, 160 190, 190 190" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#conn-arrow)" />
+            <path d="M 370 190 C 400 190, 410 190, 440 190" stroke="#10b981" stroke-width="2" fill="none" marker-end="url(#conn-arrow)" />
+            <path d="M 620 190 C 640 190, 650 190, 670 190" stroke="#f59e0b" stroke-width="2" fill="none" stroke-dasharray="4" marker-end="url(#conn-arrow)" />
+            <path d="M 720 170 C 720 80, 750 80, 770 80" stroke="#3b82f6" stroke-width="2" fill="none" marker-end="url(#conn-arrow)" />
+            <path d="M 720 210 C 720 300, 750 300, 770 300" stroke="#64748b" stroke-width="2" fill="none" marker-end="url(#conn-arrow)" />
+
+            <defs>
+              <marker id="conn-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto">
+                <path d="M 0 0 L 10 5 L 0 10 z" fill="#3b82f6" />
+              </marker>
+            </defs>
+          </svg>
+
+          <!-- 节点 1: Start Event -->
+          <div onclick="selectNode('start')" id="card-start" class="node-card absolute p-3 w-28 text-center flex flex-col items-center" style="left: 0px; top: 155px; z-index: 2;">
+            <div class="w-8 h-8 rounded-full bg-emerald-500/20 border border-emerald-400 text-emerald-400 flex items-center justify-center font-bold text-xs mb-1">▶</div>
+            <div class="text-[11px] font-bold text-white">PR 提交触发</div>
+            <div class="text-[9px] text-slate-500 font-mono">StartEvent</div>
+            <div class="handle-dot" style="right: -5px; top: 32px;"></div>
+          </div>
+
+          <!-- 节点 2: 静态代码扫描 (Task 01) -->
+          <div onclick="selectNode('task01')" id="card-task01" class="node-card absolute p-3 w-44" style="left: 190px; top: 135px; z-index: 2;">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-blue-500/20 text-blue-300 font-bold">TASK 01</span>
+              <span class="text-[9px] text-slate-500 font-mono">ServiceTask</span>
+            </div>
+            <div class="text-xs font-bold text-white">静态规范扫描</div>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">Agent: Linter</div>
+            <div class="text-[9px] text-blue-400 font-mono mt-1">输入: ${gitBranch}</div>
+            <div class="handle-dot" style="left: -5px; top: 48px;"></div>
+            <div class="handle-dot" style="right: -5px; top: 48px;"></div>
+          </div>
+
+          <!-- 节点 3: 自动化集成测试 (Task 02 - 默认选中) -->
+          <div onclick="selectNode('task02')" id="card-task02" class="node-card selected absolute p-3 w-44 ring-2 ring-emerald-500/40" style="left: 440px; top: 135px; z-index: 2;">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-[10px] font-mono px-1.5 py-0.2 rounded bg-emerald-500/20 text-emerald-300 font-bold">TASK 02</span>
+              <span class="text-[9px] text-emerald-400 font-mono">当前选中</span>
+            </div>
+            <div class="text-xs font-bold text-white">自动化集成测试</div>
+            <div class="text-[10px] text-slate-300 font-mono mt-0.5">Agent: Test Runner</div>
+            <div class="text-[9px] text-amber-300 font-mono mt-1">产出: ${testCoverage}</div>
+            <div class="handle-dot" style="left: -5px; top: 48px;"></div>
+            <div class="handle-dot" style="right: -5px; top: 48px;"></div>
+          </div>
+
+          <!-- 节点 4: 排他网关 (Gateway) -->
+          <div onclick="selectNode('gateway')" id="card-gateway" class="node-card absolute p-2.5 w-24 text-center flex flex-col items-center border-amber-500/70" style="left: 670px; top: 145px; z-index: 2;">
+            <div class="w-7 h-7 rotate-45 rounded bg-amber-500/20 text-amber-300 border border-amber-500/50 flex items-center justify-center font-bold text-xs mb-1">
+              <span class="-rotate-45">✕</span>
+            </div>
+            <div class="text-[10px] font-bold text-white">覆盖率分支</div>
+            <div class="text-[8px] text-amber-400 font-mono">&gt;= 85%?</div>
+            <div class="handle-dot" style="left: -5px; top: 38px;"></div>
+            <div class="handle-dot" style="right: -5px; top: 25px; background: #3b82f6;"></div>
+            <div class="handle-dot" style="right: -5px; top: 52px; background: #64748b;"></div>
+          </div>
+
+          <!-- 节点 5: 部署预览环境 (分支 1) -->
+          <div onclick="selectNode('branch1')" id="card-branch1" class="node-card absolute p-3 w-40" style="left: 770px; top: 35px; z-index: 2;">
+            <div class="text-[9px] font-mono text-blue-400 mb-0.5">分支 1 (True)</div>
+            <div class="text-xs font-bold text-white">部署预览环境</div>
+            <div class="text-[10px] text-slate-400 font-mono mt-0.5">Agent: DevOps</div>
+            <div class="handle-dot" style="left: -5px; top: 35px;"></div>
+          </div>
+
+          <!-- 节点 6: 驳回并提修复单 (分支 2) -->
+          <div onclick="selectNode('branch2')" id="card-branch2" class="node-card absolute p-3 w-40 opacity-70" style="left: 770px; top: 255px; z-index: 2;">
+            <div class="text-[9px] font-mono text-slate-400 mb-0.5">分支 2 (Default)</div>
+            <div class="text-xs font-medium text-slate-200">驳回并生成修复单</div>
+            <div class="text-[10px] text-slate-500 font-mono mt-0.5">Agent: Issue Bot</div>
+            <div class="handle-dot" style="left: -5px; top: 35px;"></div>
+          </div>
+
+        </div>
+
+      </main>
+
+      <!-- 3. 右侧深度节点参数检查器抽屉 (Node Inspector Drawer - 支持一键收起/滑出) -->
+      <div id="right-inspector-panel" class="w-96 bg-[#090d18] border-l border-[#1a2333] flex flex-col flex-shrink-0 z-20 overflow-y-auto p-5 space-y-4 font-sans text-xs transition-all duration-300">
+        
+        <!-- 顶栏收起控制条 -->
+        <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+          <span class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">节点属性检查器 (Inspector)</span>
+          <button onclick="toggleRightInspector()" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white" title="收起面板">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+          </button>
+        </div>
+        
+        <!-- A. 当选中 Task 节点 (默认呈现 Task 02 深度配置) -->
+        <div id="inspector-task" class="space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
+              <h3 class="text-xs font-bold text-white">Agent 任务节点配置 (ServiceTask)</h3>
+            </div>
+            <span class="text-[10px] font-mono text-slate-500">ID: Task_RunUnitTests</span>
+          </div>
+
+          <!-- 基础设置 -->
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">节点名称 (Label)：</label>
+              <input type="text" value="自动化集成测试" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">调用模型 (Model)：</label>
+              <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2 py-1.5 text-white font-mono text-[11px]">
+                <option selected>DeepSeek-V3 (编码通用)</option>
+                <option>DeepSeek-R1 (推理)</option>
+                <option>Claude 3.5 Sonnet</option>
+              </select>
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">负责 Agent 角色：</label>
+            <select class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+              <option selected>Test Runner Agent (自动化测试执行者)</option>
+              <option>Senior Dev Agent (研发)</option>
+              <option>Linter Agent (规范审计)</option>
+            </select>
+          </div>
+
+          <!-- 关键一：输入变量映射 (Input Variables) -->
+          <div class="p-3 rounded-lg bg-[#0c1220] border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-300 font-bold text-[11px] flex items-center">
+                <span class="text-blue-400 mr-1">📥</span> 输入变量消费 (Input Variables)
+              </span>
+              <span class="text-[10px] text-blue-400 cursor-pointer">+ 关联上游变量</span>
+            </div>
+            
+            <div class="space-y-1.5 font-mono text-[11px]">
+              <div class="flex items-center justify-between p-1.5 rounded bg-[#070b14] border border-slate-800">
+                <span class="text-slate-400">prId</span>
+                <span class="text-slate-500">&larr;</span>
+                <span class="text-blue-400 font-bold">${workflow.variables.prId}</span>
+              </div>
+              <div class="flex items-center justify-between p-1.5 rounded bg-[#070b14] border border-slate-800">
+                <span class="text-slate-400">targetBranch</span>
+                <span class="text-slate-500">&larr;</span>
+                <span class="text-blue-400 font-bold">${workflow.variables.targetBranch}</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- 关键二：Prompt 严格区分 System Prompt 与 User Prompt -->
+          <div class="space-y-3 pt-1">
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <label class="block text-slate-300 font-bold text-[11px] text-purple-300">
+                  🛡️ System Prompt (人设规约与安全边界)：
+                </label>
+                <span class="text-[10px] text-slate-500">固定约束</span>
+              </div>
+              <textarea rows="3" class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-200 font-mono text-[11px] focus:outline-none focus:border-purple-500">你是自动化测试执行 Agent。你的职责是使用 bash 工具运行项目测试脚本并搜集覆盖率，严禁擅自修改业务源代码文件；测试失败时提取核心报错栈返回。</textarea>
+            </div>
+
+            <div class="space-y-1">
+              <div class="flex items-center justify-between">
+                <label class="block text-slate-300 font-bold text-[11px] text-emerald-300">
+                  💬 User Prompt 模板 (带变量插值)：
+                </label>
+                <span class="text-[10px] text-blue-400 font-mono">支持 ${var} 语法</span>
+              </div>
+              <textarea rows="3" class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-200 font-mono text-[11px] focus:outline-none focus:border-emerald-500">请针对 PR #{prId} 分支 {targetBranch} 执行命令 `pnpm test -- --coverage`，计算覆盖率数字，输出标准 JSON 格式：{"coverage": number, "passed": boolean}。</textarea>
+            </div>
+          </div>
+
+          <!-- 关键三：输出变量总线绑定 (Output Variables) -->
+          <div class="p-3 rounded-lg bg-[#0c1220] border border-slate-800 space-y-2">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-300 font-bold text-[11px] flex items-center">
+                <span class="text-amber-400 mr-1">📤</span> 变量总线输出映射 (Outputs)
+              </span>
+              <span class="text-[10px] text-blue-400 cursor-pointer">+ 添加输出映射</span>
+            </div>
+
+            <div class="p-2 rounded bg-[#070b14] border border-slate-800 space-y-1.5 font-mono text-[11px]">
+              <div class="flex items-center justify-between text-slate-400">
+                <span>输出全局变量名:</span>
+                <span class="text-amber-300 font-bold">testCoverage</span>
+              </div>
+              <div class="flex items-center justify-between text-slate-400">
+                <span>提取路径表达式:</span>
+                <span class="text-slate-200">result.coverage</span>
+              </div>
+              <div class="flex items-center justify-between text-slate-400">
+                <span>变量值类型:</span>
+                <span class="text-slate-300">Number (浮点数)</span>
+              </div>
+              <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800">提供给下游 ExclusiveGateway 做分支判定条件</div>
+            </div>
+          </div>
+
+          <!-- 工具白名单 -->
+          <div class="space-y-1.5">
+            <label class="block text-slate-400 text-[11px]">开放工具权限：</label>
+            <div class="grid grid-cols-2 gap-2 text-slate-300 font-mono text-[11px]">
+              <label class="flex items-center space-x-1.5 p-1.5 rounded bg-[#0c1220] border border-slate-800"><input type="checkbox" checked class="rounded bg-slate-900 border-slate-700"><span>bash (测试命令)</span></label>
+              <label class="flex items-center space-x-1.5 p-1.5 rounded bg-[#0c1220] border border-slate-800"><input type="checkbox" checked class="rounded bg-slate-900 border-slate-700"><span>read_file (读报告)</span></label>
+            </div>
+          </div>
+
+          <button class="w-full py-2 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow transition">
+            保存任务节点参数
+          </button>
+        </div>
+
+        <!-- B. 当选中 ExclusiveGateway (排他网关条件表达式设定器) -->
+        <div id="inspector-gateway" class="space-y-4 hidden">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center space-x-2">
+              <span class="w-2.5 h-2.5 rounded-full bg-amber-400"></span>
+              <h3 class="text-xs font-bold text-white">排他网关表达式设置 (ExclusiveGateway)</h3>
+            </div>
+            <span class="text-[10px] font-mono text-slate-500">ID: Gateway_Coverage</span>
+          </div>
+
+          <div class="space-y-1">
+            <label class="block text-slate-400 text-[11px]">网关名称 (Label)：</label>
+            <input type="text" value="覆盖率分支判定" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium">
+          </div>
+
+          <!-- 分支条件表达式设定清单 -->
+          <div class="space-y-3 pt-1">
+            <div class="text-slate-300 font-bold text-[11px] flex items-center justify-between">
+              <span>🔀 分支流转条件规则 (SequenceFlow Rules)：</span>
+              <span class="text-[10px] text-amber-400">+ 添加条件分支</span>
+            </div>
+
+            <!-- 分支 1 -->
+            <div class="p-3 rounded-lg bg-[#0c1220] border border-blue-500/50 space-y-2">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="font-bold text-blue-400">流向分支 1: Task_DeployPreview</span>
+                <span class="text-[10px] bg-blue-950 text-blue-300 px-1.5 rounded font-mono">True 流</span>
+              </div>
+              <div class="space-y-1">
+                <label class="block text-slate-400 text-[10px]">判定表达式 (JavaScript / FEEL 语法)：</label>
+                <input type="text" value="${testCoverage >= 85.0}" class="w-full bg-[#070b14] border border-slate-700 rounded px-2 py-1 text-emerald-400 font-mono text-xs">
+              </div>
+              <div class="text-[10px] text-slate-500">当 testCoverage 大于等于 85% 时自动流转至部署预览环境</div>
+            </div>
+
+            <!-- 分支 2 (Default / Else) -->
+            <div class="p-3 rounded-lg bg-[#0c1220] border border-slate-800 space-y-2">
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="font-bold text-slate-300">流向分支 2: Task_IssueBot</span>
+                <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 rounded font-mono">Default (Else)</span>
+              </div>
+              <div class="text-[11px] text-slate-400 font-mono">条件表达式: <span class="text-slate-500 font-sans">默认兜底流（不满足上述条件时流转）</span></div>
+              <div class="text-[10px] text-slate-500">驳回 PR 并调用 Issue Bot 创建补测工单</div>
+            </div>
+          </div>
+
+          <!-- 表达式在线自检沙盒 -->
+          <div class="p-3 rounded-lg bg-[#070b14] border border-slate-800 space-y-2 font-mono text-xs">
+            <div class="flex items-center justify-between text-slate-400 text-[11px]">
+              <span>表达式即时沙盒测试 (Test Evaluator)</span>
+              <button class="text-blue-400 hover:text-blue-300">运行求值</button>
+            </div>
+            <div class="flex items-center space-x-2 text-[11px]">
+              <span class="text-slate-400">mock: testCoverage =</span>
+              <input type="number" value="91.5" class="w-16 bg-[#0c1220] border border-slate-700 rounded px-1.5 py-0.5 text-white">
+              <span class="text-slate-400">&rarr;</span>
+              <span class="text-emerald-400 font-bold">MATCH (分支1)</span>
+            </div>
+          </div>
+
+          <button class="w-full py-2 rounded bg-amber-600 hover:bg-amber-500 text-white font-semibold text-xs shadow transition">
+            保存网关条件设置
+          </button>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    function toggleLeftPalette() {
+      const panel = document.getElementById('left-palette-panel');
+      const mini = document.getElementById('left-palette-mini');
+      if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        mini.classList.add('hidden');
+      } else {
+        panel.classList.add('hidden');
+        mini.classList.remove('hidden');
+      }
+    }
+
+    function toggleRightInspector() {
+      const panel = document.getElementById('right-inspector-panel');
+      const btnText = document.getElementById('right-inspector-btn-text');
+      if (panel.classList.contains('hidden')) {
+        panel.classList.remove('hidden');
+        btnText.innerText = '收起参数面板';
+      } else {
+        panel.classList.add('hidden');
+        btnText.innerText = '展开参数面板';
+      }
+    }
+
+    function selectNode(type) {
+      document.querySelectorAll('.node-card').forEach(el => el.classList.remove('selected', 'ring-2', 'ring-emerald-500/40'));
+      
+      const taskInspector = document.getElementById('inspector-task');
+      const gatewayInspector = document.getElementById('inspector-gateway');
+      const rightPanel = document.getElementById('right-inspector-panel');
+      const btnText = document.getElementById('right-inspector-btn-text');
+
+      // 点击节点时如果右侧是折叠的，自动唤出
+      if (rightPanel.classList.contains('hidden')) {
+        rightPanel.classList.remove('hidden');
+        btnText.innerText = '收起参数面板';
+      }
+      
+      if (type === 'gateway') {
+        document.getElementById('card-gateway').classList.add('selected', 'ring-2', 'ring-emerald-500/40');
+        taskInspector.classList.add('hidden');
+        gatewayInspector.classList.remove('hidden');
+      } else {
+        const card = document.getElementById('card-' + type) || document.getElementById('card-task02');
+        card.classList.add('selected', 'ring-2', 'ring-emerald-500/40');
+        gatewayInspector.classList.add('hidden');
+        taskInspector.classList.remove('hidden');
+      }
+    }
+  </script>
+
+</body>
+</html>
+
+
+
+
+

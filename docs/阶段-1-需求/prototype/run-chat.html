@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>主工作台 - Harness Workbench</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+  <style>
+    /* 严格按照 IDE 紧凑比例定制微观样式 */
+    .ide-top-bar {
+      height: 38px;
+      background: #090d18;
+      border-bottom: 1px solid #1a2333;
+      padding: 0 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+    .micro-pill {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden">
+
+  <!-- 1. 全局最左侧极窄活动栏 (VS Code 风格，宽度压缩至 48px) -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+
+    <!-- 运行态 (Run-time) -->
+    <a href="run-chat.html" class="activity-btn active" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
+    <a href="run-workflow.html" class="activity-btn" title="BPMN 业务工作流 (Workflow)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></a>
+    <a href="run-terminal.html" class="activity-btn" title="终端与长任务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></a>
+    <a href="run-trajectory.html" class="activity-btn" title="事件轨迹审计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></a>
+
+            <div class="my-3 w-6 border-b border-slate-800"></div>
+
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-knowledge.html" class="activity-btn" title="独立知识库中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 二级会话列表侧边栏 (紧凑高密度) -->
+  <div class="w-56 bg-[#0c101c] border-r border-[#1a2333] flex flex-col flex-shrink-0">
+    <div class="p-2 border-b border-[#1a2333]">
+      <button class="w-full py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-medium flex items-center justify-center space-x-1 shadow-sm transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <span>新建对话</span>
+      </button>
+    </div>
+
+    <!-- 紧凑会话列表 -->
+    <div class="flex-1 overflow-y-auto p-1.5 space-y-0.5 font-sans">
+      <div class="px-2 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider">最近对话</div>
+      
+      <!-- 当前激活会话 -->
+      <div class="p-2 rounded bg-[#162238] border border-blue-500/40 text-white cursor-pointer shadow-sm">
+        <div class="text-[11px] font-medium truncate">修复 auth/token 溢出并补测</div>
+        <div class="flex items-center justify-between mt-1 text-[10px] text-slate-400 font-mono">
+          <span class="text-blue-400 truncate max-w-[90px]">auth-service</span>
+          <span>10m前</span>
+        </div>
+      </div>
+
+      <div class="p-2 rounded hover:bg-slate-800/40 text-slate-300 cursor-pointer">
+        <div class="text-[11px] truncate text-slate-400">重构 SQLite 迁移为 WAL 模式</div>
+        <div class="flex items-center justify-between mt-1 text-[10px] text-slate-500 font-mono">
+          <span class="truncate max-w-[90px]">harness</span>
+          <span>2h前</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="p-2 border-t border-[#1a2333] text-[10px] text-slate-500 font-mono flex items-center justify-between">
+      <span>node:sqlite WAL</span>
+      <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+    </div>
+  </div>
+
+  <!-- 3. 主对话面板 (极致紧凑、比例平衡) -->
+  <div class="flex-1 flex flex-col overflow-hidden bg-[#070a12]">
+    
+    <!-- 严格降维的顶栏 (高度压缩至 38px，微型胶囊控件) -->
+    <header class="ide-top-bar">
+      <!-- 显眼且物理锁定的工作区指示 (紧凑单行) -->
+      <div class="flex items-center space-x-1.5 bg-slate-900/90 border border-slate-800 px-2 py-0.5 rounded text-[11px] font-mono text-slate-300" title="当前会话已物理锁定该工作区">
+        <svg class="w-3 h-3 text-amber-400" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
+        <span class="text-slate-500">[锁定]</span>
+        <span class="text-blue-300 font-bold">auth-service</span>
+        <span class="text-slate-500 text-[10px] hidden md:inline">G:\Projects\auth-service</span>
+      </div>
+
+      <!-- 运行时状态面板：微型自由切模型 + 微型预设切换 -->
+      <div class="flex items-center space-x-2 text-[11px] font-mono">
+        <!-- 核心功能：运行中随时切换当前使用的模型 (微型紧凑下拉) -->
+        <div class="flex items-center bg-slate-900 border border-slate-800 rounded px-1.5 py-0.5 space-x-1">
+          <span class="w-1.5 h-1.5 rounded-full bg-blue-400"></span>
+          <select class="bg-transparent text-slate-200 font-medium text-[11px] focus:outline-none cursor-pointer">
+            <option value="deepseek-chat" selected>deepseek-chat (V3)</option>
+            <option value="deepseek-reasoner">deepseek-reasoner (R1推理)</option>
+            <option value="claude-3.7-sonnet">claude-3.7-sonnet</option>
+            <option value="gpt-4o">gpt-4o</option>
+            <option value="qwen2.5-coder:32b">qwen2.5-coder:32b</option>
+          </select>
+        </div>
+
+        <!-- 微型预设选择器 -->
+        <div class="flex items-center bg-slate-950 border border-slate-800 rounded p-0.5 text-[10px]">
+          <button class="px-1.5 py-0.2 text-slate-500 hover:text-slate-300">只读</button>
+          <button class="px-1.5 py-0.2 bg-blue-600 text-white rounded font-bold">编辑</button>
+          <button class="px-1.5 py-0.2 text-slate-500 hover:text-slate-300">全权</button>
+        </div>
+
+        <!-- 紧凑 Token 费用指标 -->
+        <div class="text-slate-400 bg-slate-900 border border-slate-800 px-2 py-0.5 rounded text-[10px]">
+          <span>16.4k toks</span>
+          <span class="text-slate-600 mx-0.5">|</span>
+          <span class="text-emerald-400 font-semibold">$0.024</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- 运行时状态与安全告警通知条容器 -->
+    <div id="runtime-alert-bar" class="space-y-1 px-6 pt-2 max-w-4xl w-full mx-auto text-xs font-sans">
+      
+      <!-- 告警条 1：工作区写互斥独占排队提醒 (D42, D43) -->
+      <div class="p-2.5 rounded-lg bg-amber-950/40 border border-amber-500/50 flex items-center justify-between text-amber-200 text-[11px] shadow">
+        <div class="flex items-center space-x-2">
+          <svg class="w-4 h-4 text-amber-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+          <span><b>工作区写锁等待中</b>：同项目的会话 <code class="font-mono text-amber-300">sess_71c9b2</code> 正在执行测试与文件修改，当前写操作已自动挂起排队。</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <span class="font-mono text-[10px] text-amber-400/80">预计释放: 8s</span>
+          <button onclick="this.parentElement.parentElement.remove(); alert('已向原会话发送 SIGTERM 中断信号，成功接管工作区独占写锁！');" class="px-2 py-0.5 rounded bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-[10px] shadow">中断旧会话并接管</button>
+        </div>
+      </div>
+
+      <!-- 告警条 2：检测到外部代码手动修改防卫 (D44) -->
+      <div class="p-2 rounded-lg bg-blue-950/40 border border-blue-500/40 flex items-center justify-between text-blue-200 text-[11px]">
+        <div class="flex items-center space-x-2">
+          <span class="text-blue-400">⚠️</span>
+          <span>检测到外部编辑器修改了 <code class="font-mono text-blue-300">src/auth/token.ts</code>，Agent 已自动刷新最新指纹拒绝盲目覆盖。<b>温馨提示：不建议在 Agent 运行中并发手动改写同一文件！</b></span>
+        </div>
+        <button onclick="this.parentElement.remove()" class="text-slate-400 hover:text-white text-xs">&times;</button>
+      </div>
+
+    </div>
+
+    <!-- 消息对话流 (主视窗占据绝对核心空间) -->
+    <main class="flex-1 overflow-y-auto px-6 py-4 space-y-4 max-w-4xl w-full mx-auto">
+      
+      <!-- 用户消息 -->
+      <div class="flex justify-end">
+        <div class="max-w-xl bg-blue-600 text-white rounded-xl rounded-tr-xs px-3.5 py-2 text-xs shadow leading-relaxed">
+          请检查 <code class="bg-blue-700 px-1 py-0.2 rounded font-mono text-[11px]">src/token.ts</code> 中的数字溢出异常，写单元测试复现，并安全修复该函数。
+        </div>
+      </div>
+
+      <!-- 助手执行流 -->
+      <div class="space-y-3">
+        
+        <!-- Reasoning 折叠与思维链展开卡片 (D58 治理落地) -->
+        <div class="border border-purple-900/60 rounded-md bg-[#0c1020] p-2 text-xs font-mono">
+          <div class="flex items-center justify-between text-slate-400 cursor-pointer text-[11px]" onclick="document.getElementById('reasoning-body').classList.toggle('hidden');">
+            <span class="text-purple-300 flex items-center space-x-1.5">
+              <svg class="w-3 h-3 text-purple-400 animate-spin" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+              <span class="font-bold">深度推理思考 (2,410 tokens · deepseek-reasoner)</span>
+              <span class="text-[10px] text-purple-400/80 bg-purple-950/80 px-1.5 py-0.2 rounded border border-purple-800/40">历史回传自动折叠剥离</span>
+            </span>
+            <span class="text-[10px] text-slate-500 hover:text-slate-300">[点击展开/收起]</span>
+          </div>
+          <!-- 展开内容区 -->
+          <div id="reasoning-body" class="mt-2 pt-2 border-t border-purple-950/80 text-[11px] text-purple-200/80 space-y-1 font-sans leading-relaxed">
+            <p>1. 用户要求复现大数溢出问题并编写单测。首先检查 `src/token.ts` 中 `parseTokenAmount` 的实现...</p>
+            <p>2. 注意到输入未检查 `MAX_SAFE_INTEGER`，在极端字符串输入下会引发精度丢失或异常抛出。</p>
+            <p>3. 规划执行路径：先调用 `read_file`，后创建 TDD 测试用例，最后通过 `edit` 精确替换。</p>
+          </div>
+        </div>
+
+        <!-- Todo 看板 (精致微型化) -->
+        <div class="border border-slate-800/80 rounded-md bg-[#0b101c] p-2.5 text-[11px] font-mono">
+          <div class="flex items-center justify-between mb-2 text-slate-400 text-[10px] font-bold uppercase">
+            <span>任务看板</span>
+            <span class="text-blue-400">2 / 5 完成</span>
+          </div>
+          <div class="space-y-1 text-slate-300">
+            <div class="text-slate-500 line-through flex items-center"><span class="text-emerald-400 mr-1.5">✓</span> 读取 src/token.ts 并复现溢出边界</div>
+            <div class="text-slate-500 line-through flex items-center"><span class="text-emerald-400 mr-1.5">✓</span> 编写 tests/token.test.ts 覆盖测试</div>
+            <div class="text-blue-300 font-semibold flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-blue-400 mr-2 animate-ping"></span> 修改 src/token.ts 实现精确收窄校验</div>
+            <div class="text-slate-600 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-slate-700 mr-2"></span> 运行 npm test 验证全部测试通过</div>
+          </div>
+        </div>
+
+        <!-- 先读后写观察卡片 (紧凑卡) -->
+        <div class="border border-slate-800 rounded-md bg-[#0f1523] overflow-hidden text-xs font-mono">
+          <div class="px-2.5 py-1.5 bg-[#121a2d] flex items-center justify-between border-b border-slate-800/80 text-[11px]">
+            <span class="text-emerald-400 font-semibold">read_file: "src/token.ts"</span>
+            <span class="text-[10px] text-emerald-400 bg-emerald-950/80 px-1.5 py-0.2 rounded border border-emerald-800/50">已观察凭据 (Observed)</span>
+          </div>
+          <div class="p-2.5 bg-[#070b14] text-slate-300 text-[11px] leading-relaxed">
+            1: export function parseTokenAmount(raw: string): bigint {<br>
+            2: &nbsp;&nbsp;const val = BigInt(raw);<br>
+            3: &nbsp;&nbsp;return val; // 未做 MAX_SAFE_INTEGER 校验<br>
+            4: }
+          </div>
+        </div>
+
+        <!-- 文本回答流 -->
+        <div class="text-xs text-slate-200 leading-relaxed pt-1">
+          已通过 <code class="font-mono text-[11px] bg-slate-800 px-1 py-0.2 rounded">read_file</code> 确认了隐患。根据项目 <code class="font-mono text-[11px] bg-slate-800 px-1 py-0.2 rounded">AGENTS.md</code> 的 TDD 规范，现已在 <code class="font-mono text-[11px] bg-slate-800 px-1 py-0.2 rounded">tests/token.test.ts</code> 中编写好了复现测试。现在准备修改源代码，已触发人工审批弹窗<span class="cursor-blink"></span>
+        </div>
+
+        <!-- 本回合操作兜底与 Git 回滚条 (D59) -->
+        <div class="mt-2.5 p-2 rounded-lg bg-[#140e1b] border border-rose-900/40 flex items-center justify-between text-xs font-sans">
+          <div class="flex items-center space-x-2 text-rose-300/90">
+            <span class="text-xs">🔄</span>
+            <span>本回合已就绪自动 Checkpoint。如方向偏差或测试未过，可一键回退。</span>
+          </div>
+          <button onclick="if(confirm('确定要撤销本回合涉及的所有代码变更与新文件吗？工作区将原子恢复至本回合开始前状态。')) alert('已通过 git checkout 与 clean 原子撤销本回合修改！');" class="px-2.5 py-1 rounded bg-rose-600/20 hover:bg-rose-600/30 text-rose-300 border border-rose-500/40 font-mono text-[11px] flex items-center space-x-1 transition">
+            <span>撤销本回合修改 (Revert Turn)</span>
+          </button>
+        </div>
+
+        <!-- 流式中断断点恢复交互条 (D47) -->
+        <div class="mt-2 p-2.5 rounded-lg bg-[#0d1424] border border-slate-800 flex items-center justify-between text-xs font-sans">
+          <div class="flex items-center space-x-2 text-slate-400">
+            <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+            <span>流式输出曾在 18:42 偶发网络抖动截断，已完整保留前序产物。</span>
+          </div>
+          <div class="flex items-center space-x-2 font-mono text-[11px]">
+            <button onclick="alert('已向服务端发起断点续接请求，正在从当前断点继续生成...');" class="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium shadow flex items-center space-x-1">
+              <span>从断点继续 (Continue)</span>
+            </button>
+            <button onclick="alert('正在重新调用模型整轮重新生成...');" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">
+              <span>整轮重试</span>
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Composer 底部输入框 (新会话工作区轻量选择器嵌入) -->
+    <div class="p-3 border-t border-[#1a2333] bg-[#090d18] max-w-4xl w-full mx-auto space-y-1.5">
+      
+      <!-- 新建会话时，选择工作区的专属轻量交互栏 (已按需求做成单行按钮与文件夹弹窗联动) -->
+      <div class="flex items-center justify-between bg-[#0e1422] border border-slate-800 rounded px-2.5 py-1 text-[11px]">
+        <div class="flex items-center space-x-1.5">
+          <span class="text-slate-500 font-sans">当前绑定的工作区:</span>
+          <span class="font-mono text-slate-200 font-semibold">G:\Projects\auth-service</span>
+        </div>
+        <!-- 点击直接唤起文件系统选择文件夹 -->
+        <button class="px-2 py-0.5 bg-slate-800 hover:bg-slate-700 text-blue-300 rounded border border-slate-700 text-[10px] flex items-center space-x-1 transition">
+          <svg class="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+          <span>选择工作区文件夹...</span>
+        </button>
+      </div>
+
+      <div class="border border-slate-700/80 rounded-lg bg-[#0b101c] p-2 focus-within:border-blue-500 transition">
+        <textarea placeholder="输入编码指令，按 Enter 发送，Shift+Enter 换行..." class="w-full bg-transparent border-0 resize-none text-xs text-white placeholder-slate-500 focus:outline-none min-h-[42px] max-h-28"></textarea>
+        
+        <div class="flex items-center justify-between pt-1.5 border-t border-slate-800/80 text-[11px]">
+          <div class="flex items-center space-x-3 text-slate-400 font-mono text-[10px]">
+            <button class="hover:text-white flex items-center space-x-1"><span>@ 引用文件</span></button>
+            <button class="hover:text-white"><span>/ 快捷命令</span></button>
+            
+            <!-- 场景 B：子任务委派开关 (Subagents) -->
+            <label class="flex items-center space-x-1 text-slate-300 hover:text-white cursor-pointer bg-slate-800/50 px-2 py-0.5 rounded border border-slate-700/60 transition">
+              <input type="checkbox" checked class="w-3 h-3 text-blue-500 rounded bg-slate-900 border-slate-700 focus:ring-0">
+              <span class="text-blue-400 font-semibold">⚡ 开启子任务委派 (Subagents)</span>
+            </label>
+          </div>
+
+          <div class="flex items-center space-x-1.5">
+            <button class="px-2.5 py-1 rounded bg-rose-600/90 hover:bg-rose-500 text-white font-medium text-[10px] flex items-center space-x-1">
+              <span>中止 (Abort)</span>
+            </button>
+            <button class="px-3 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium text-[10px]">
+              <span>发送</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 首次运行两步破冰就绪向导 (First-Run Welcome Wizard - D57) -->
+  <div id="first-run-wizard-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#0e1424] border border-blue-500/50 rounded-2xl max-w-lg w-full p-6 shadow-2xl space-y-5 text-xs font-sans">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2.5">
+          <div class="w-8 h-8 rounded-lg bg-blue-600/20 text-blue-400 flex items-center justify-center border border-blue-500/30">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          </div>
+          <div>
+            <h3 class="text-sm font-bold text-white">欢迎使用 Agent Harness</h3>
+            <p class="text-[11px] text-slate-400">两步极速就绪向导 · 1 分钟完成破冰体验</p>
+          </div>
+        </div>
+        <button onclick="document.getElementById('first-run-wizard-modal').classList.add('hidden')" class="text-slate-500 hover:text-white">&times;</button>
+      </div>
+
+      <!-- 步骤 1：接入第一个模型 -->
+      <div class="p-3.5 rounded-xl bg-[#080d18] border border-slate-800 space-y-2.5">
+        <div class="flex items-center justify-between">
+          <span class="font-bold text-white text-xs flex items-center">
+            <span class="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] mr-1.5 font-mono">1</span>
+            <span>接入首个模型底座 (Provider)</span>
+          </span>
+          <span class="text-[10px] text-emerald-400 font-mono">支持 DeepSeek / 本地 Ollama</span>
+        </div>
+        <div class="space-y-2">
+          <input type="text" value="https://api.deepseek.com/v1" placeholder="Base URL" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs font-mono">
+          <div class="flex items-center space-x-2">
+            <input type="password" value="sk-dsh89f2a4****************" placeholder="API Key" class="flex-1 bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs font-mono">
+            <button onclick="alert('探测成功！已拉取 deepseek-chat, deepseek-reasoner 等 2 个模型。');" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-blue-400 border border-slate-700 font-mono text-[11px] whitespace-nowrap">测试连通</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 步骤 2：选择第一个本地项目 -->
+      <div class="p-3.5 rounded-xl bg-[#080d18] border border-slate-800 space-y-2.5">
+        <span class="font-bold text-white text-xs flex items-center">
+          <span class="w-4 h-4 rounded-full bg-blue-600 text-white flex items-center justify-center text-[10px] mr-1.5 font-mono">2</span>
+          <span>选择当前本地项目工作区 (Workspace)</span>
+        </span>
+        <div class="flex items-center space-x-2">
+          <input type="text" value="G:\Projects\auth-service" class="flex-1 bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 text-xs font-mono">
+          <button class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px]">浏览...</button>
+        </div>
+        <span class="text-[10px] text-slate-500 block">系统将在根目录自动检测 AGENTS.md 规则并实施物理安全沙箱保护。</span>
+      </div>
+
+      <div class="pt-2 border-t border-slate-800 flex items-center justify-between">
+        <button onclick="document.getElementById('first-run-wizard-modal').classList.add('hidden')" class="text-slate-500 hover:text-slate-400 text-[11px]">跳过向导</button>
+        <button onclick="document.getElementById('first-run-wizard-modal').classList.add('hidden'); alert('环境初始化就绪！已为您开启首个编程任务会话。');" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow flex items-center space-x-1">
+          <span>完成初始化并进入工作台 &rarr;</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+</body>
+</html>
+
+
+
+

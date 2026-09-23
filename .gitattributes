@@ -1,0 +1,14 @@
+# 统一换行策略：源码一律 LF，避免 Windows checkout 时 LF↔CRLF 抖动
+* text=auto eol=lf
+
+# Windows 脚本保持 CRLF，兼容 cmd/pwsh 解析
+*.cmd text eol=crlf
+*.ps1 text eol=crlf
+*.bat text eol=crlf
+
+# 二进制资产不做换行处理
+*.png binary
+*.jpg binary
+*.ico binary
+*.rar binary
+*.zip binary

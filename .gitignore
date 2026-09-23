@@ -1,0 +1,40 @@
+# 依赖目录（任何层级，零 Native 项目也绝无例外）
+node_modules/
+
+# 构建产物与缓存
+dist/
+build/
+.next/
+out/
+coverage/
+*.tsbuildinfo
+
+# 本地数据目录（运行时数据库、锁文件、日志、会话私有 blob）
+.pg_harness/
+.pg_harness*/
+*.db
+*.db-wal
+*.db-shm
+logs/
+*.log
+
+# 密钥与本地环境（安全红线：绝不入库）
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+*.p12
+secrets/
+
+# 外部参考源码库：非本项目源码，且体量大、许可证归属第三方，
+# 不纳入版本库（详见 WBS 第 7 节偏差登记与 AGENTS.md 版权合规要求）
+reference/
+
+# 编辑器与操作系统杂项
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+*.swp
+*~

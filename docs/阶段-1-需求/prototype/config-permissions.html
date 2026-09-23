@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>权限规则与沙箱配置 - Harness Control Center</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+</head>
+<body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden">
+
+  <!-- 1. 最左侧全局活动栏 -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+
+    <!-- 运行态 (Run-time) -->
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
+    <a href="run-workflow.html" class="activity-btn" title="BPMN 业务工作流 (Workflow)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg></a>
+    <a href="run-terminal.html" class="activity-btn" title="终端与长任务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4"></path></svg></a>
+    <a href="run-trajectory.html" class="activity-btn" title="事件轨迹审计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg></a>
+
+            <div class="my-3 w-6 border-b border-slate-800"></div>
+
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-knowledge.html" class="activity-btn" title="独立知识库中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn active mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 主体操作区 -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    <header class="top-app-bar">
+      <div class="flex items-center space-x-3">
+        <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">设置控制台</span>
+        <span class="text-slate-600">/</span>
+        <span class="text-xs font-semibold text-white">权限规则与沙箱</span>
+      </div>
+
+      <div class="text-xs font-mono text-rose-400 bg-rose-950/60 px-2.5 py-0.5 rounded border border-rose-800/40">
+        判定优先级: DENY > ASK > ALLOW
+      </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-8 max-w-5xl w-full mx-auto space-y-6">
+      <div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">安全预设与细粒度权限控制表</h1>
+        <p class="text-xs text-slate-400 mt-1">控制 Agent 在本地环境的每一次动作。未命中的操作遵循 Fail-Closed 原则自动阻断。</p>
+      </div>
+
+      <!-- 预设卡片组 -->
+      <section class="border border-slate-800 rounded-xl bg-[#0f1523] p-5 shadow-xl space-y-3">
+        <h2 class="text-xs font-bold text-white uppercase tracking-wider font-mono">全局安全预设 (Preset)</h2>
+        <div class="grid grid-cols-3 gap-4 font-sans">
+          <div class="p-4 rounded-lg bg-[#090d16] border border-slate-800 hover:border-slate-700 cursor-pointer">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-white">只读模式 (Plan Mode)</span>
+              <span class="text-[10px] text-slate-500 font-mono">安全只读</span>
+            </div>
+            <p class="text-[11px] text-slate-400">仅允许只读搜索与文件查看，所有修改文件与命令执行严格 Deny 拒绝。</p>
+          </div>
+
+          <div class="p-4 rounded-lg bg-[#142036] border-2 border-blue-500 cursor-pointer shadow-md">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-blue-300">编辑模式 (Edit - 默认)</span>
+              <span class="text-[10px] bg-blue-900/60 text-blue-200 px-1.5 py-0.2 rounded font-mono">生效中</span>
+            </div>
+            <p class="text-[11px] text-slate-300">只读操作放行，写文件必须人工 Diff 审批，Shell 执行根据白名单严格拦截。</p>
+          </div>
+
+          <div class="p-4 rounded-lg bg-[#090d16] border border-slate-800 hover:border-slate-700 cursor-pointer">
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-xs font-bold text-white">全权模式 (Autonomous)</span>
+              <span class="text-[10px] text-rose-400 font-mono">慎用</span>
+            </div>
+            <p class="text-[11px] text-slate-400">已知安全工具与命令全部免问放行，仅越界与不可逆操作拦截。</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 细粒度规则数据表 -->
+      <section class="border border-slate-800 rounded-xl bg-[#0f1523] overflow-hidden shadow-xl">
+        <div class="p-4 bg-[#131b2e] border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-white">参数模式匹配规则表 (Rules Table)</h2>
+            <p class="text-[11px] text-slate-400 mt-0.5">支持命令前缀白名单、相对路径通配符与域名过滤。</p>
+          </div>
+          <button class="px-3.5 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-1 shadow-sm">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>添加新规则</span>
+          </button>
+        </div>
+
+        <table class="w-full text-left border-collapse text-xs font-mono">
+          <thead>
+            <tr class="border-b border-slate-800 text-slate-400 bg-[#090d16]">
+              <th class="py-3 px-4 font-semibold">工具 (Tool)</th>
+              <th class="py-3 px-4 font-semibold">参数模式 (Pattern)</th>
+              <th class="py-3 px-4 font-semibold">执行动作 (Action)</th>
+              <th class="py-3 px-4 font-semibold font-sans">规则描述</th>
+              <th class="py-3 px-4 text-right">操作</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-800/60 text-slate-300">
+            <tr class="hover:bg-slate-800/20">
+              <td class="py-3 px-4 text-blue-400 font-bold">bash</td>
+              <td class="py-3 px-4 text-white">git status|git diff|git log</td>
+              <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/40">ALLOW</span></td>
+              <td class="py-3 px-4 text-slate-400 font-sans">Git 只读查询免审批直接执行</td>
+              <td class="py-3 px-4 text-right text-slate-500 hover:text-slate-300 cursor-pointer">编辑</td>
+            </tr>
+            <tr class="hover:bg-slate-800/20">
+              <td class="py-3 px-4 text-blue-400 font-bold">bash</td>
+              <td class="py-3 px-4 text-white">npm test|node --test</td>
+              <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/40">ALLOW</span></td>
+              <td class="py-3 px-4 text-slate-400 font-sans">单元测试运行放行</td>
+              <td class="py-3 px-4 text-right text-slate-500 hover:text-slate-300 cursor-pointer">编辑</td>
+            </tr>
+            <tr class="hover:bg-slate-800/20 bg-rose-950/10">
+              <td class="py-3 px-4 text-rose-400 font-bold">bash</td>
+              <td class="py-3 px-4 text-rose-300 font-bold">rm -rf|del /s</td>
+              <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800/40">DENY</span></td>
+              <td class="py-3 px-4 text-slate-400 font-sans">高危破坏性删除命令严格拒绝</td>
+              <td class="py-3 px-4 text-right text-slate-500 hover:text-slate-300 cursor-pointer">编辑</td>
+            </tr>
+            <tr class="hover:bg-slate-800/20 bg-rose-950/10">
+              <td class="py-3 px-4 text-rose-400 font-bold">write_file</td>
+              <td class="py-3 px-4 text-rose-300 font-bold">*.env|*.key|*.pem</td>
+              <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800/40">DENY</span></td>
+              <td class="py-3 px-4 text-slate-400 font-sans">敏感凭据文件绝对禁止覆写</td>
+              <td class="py-3 px-4 text-right text-slate-500 hover:text-slate-300 cursor-pointer">编辑</td>
+            </tr>
+            <tr class="hover:bg-slate-800/20">
+              <td class="py-3 px-4 text-blue-400 font-bold">write_file</td>
+              <td class="py-3 px-4 text-white">src/**</td>
+              <td class="py-3 px-4"><span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/40">ASK</span></td>
+              <td class="py-3 px-4 text-slate-400 font-sans">源代码修改必须弹窗人工审批</td>
+              <td class="py-3 px-4 text-right text-slate-500 hover:text-slate-300 cursor-pointer">编辑</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+</body>
+</html>
+
+
+
+
+
+

@@ -1,0 +1,1250 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>工作区初始化与项目规则设定 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans">
+
+  <!-- 统一 40px 顶栏 -->
+  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs">
+    <div class="flex items-center space-x-2.5">
+      <div class="w-6 h-6 rounded bg-purple-600 flex items-center justify-center font-bold text-white text-[11px] font-mono shadow-sm">PG</div>
+      <span class="font-bold text-white tracking-wide text-xs">Purple Grapes Harness</span>
+      <span class="text-slate-600">/</span>
+      <span class="text-slate-400 font-medium">工作区治理中心</span>
+    </div>
+
+    <button onclick="openRegisterWorkspaceModal()" class="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
+      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+      <span>+ 登记新工作区</span>
+    </button>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+    
+    <!-- 全系统严格一致的 48px 一级侧边栏 -->
+    <aside class="activity-bar">
+      <a href="run-chat.html" class="activity-btn" title="主会话工作台 (Chat)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      </a>
+      <a href="config-workspace.html" class="activity-btn active" title="工作区管理与规则 (Workspaces)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn" title="Provider 资产池">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <div class="flex-1"></div>
+      <a href="config-settings.html" class="activity-btn" title="系统设置中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </a>
+    </aside>
+
+    <!-- 主面板 -->
+    <main class="flex-1 p-8 max-w-5xl w-full mx-auto space-y-8 overflow-y-auto">
+      <div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">工作区治理与工程规则设定</h1>
+        <p class="text-xs text-slate-400 mt-1">登记本地物理项目代码库，管理专属 AGENTS.md 项目总纲规范与全局文件扫描忽略黑名单。配置真实落盘写入 SQLite。</p>
+      </div>
+
+      <!-- 已登记工作区大表 -->
+      <section class="border border-slate-800 rounded-xl bg-[#0f1523] overflow-hidden shadow-xl">
+        <div class="p-4 bg-[#131b2e] border-b border-slate-800 flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-white">已登记工作区清单 (<span id="ws-count-badge">0</span>)</h2>
+            <p class="text-[11px] text-slate-400 mt-0.5">登记后的工作区将在主会话工作台中直接提供一键点选绑定与沙箱锁定保护。</p>
+          </div>
+          <button onclick="loadWorkspacesFromBackend()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 font-mono">
+            刷新清单
+          </button>
+        </div>
+
+        <div id="workspaces-table-container" class="divide-y divide-slate-800/60 font-mono text-xs">
+          <!-- 动态真实渲染 -->
+        </div>
+      </section>
+
+      <!-- 板块 1：AGENTS.md 项目规范模板配置 (对齐需求原型规范) -->
+      <section class="border border-slate-800 rounded-xl bg-[#0f1523] p-6 shadow-xl space-y-5">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+            </span>
+            <div>
+              <h2 class="text-sm font-semibold text-white">项目规范生成模板 (AGENTS.md Generator)</h2>
+              <p class="text-[11px] text-slate-400">当新建或向目标工作区注入规范时，按此模板规则自动编译生成规范文件。</p>
+            </div>
+          </div>
+          <button onclick="saveAgentsTemplate()" class="px-3.5 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow-sm">
+            保存模板
+          </button>
+        </div>
+
+        <div class="space-y-4 text-xs font-mono">
+          <!-- 项目概览信息（写入模板第一章；选择目标工作区可自动带入登记信息） -->
+          <div class="p-3 rounded-lg bg-[#090d16] border border-slate-800 space-y-2.5">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-300 font-sans font-medium">项目概览信息</span>
+              <span class="text-[10px] text-slate-500 font-sans">选择下方「目标工作区」可自动带入其登记名称与描述</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <div>
+                <label class="text-slate-400 font-sans block mb-1">项目名称：</label>
+                <input id="tpl-project-name" type="text" oninput="onOverviewEdited()" placeholder="例如：Purple Grapes Harness" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 text-[11px] focus:outline-none focus:border-blue-500">
+              </div>
+              <div>
+                <label class="text-slate-400 font-sans block mb-1">一句话定位：</label>
+                <input id="tpl-project-desc" type="text" oninput="onOverviewEdited()" placeholder="例如：面向软件工程研发全生命周期的编码 Agent 运行时" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 text-[11px] focus:outline-none focus:border-blue-500">
+              </div>
+            </div>
+            <div>
+              <label class="text-slate-400 font-sans block mb-1">核心功能（每行一条）：</label>
+              <textarea id="tpl-project-features" oninput="onOverviewEdited()" rows="3" placeholder="例如：&#10;编码 Agent 端到端闭环（改代码 → 跑测试 → 出 diff）&#10;插件化微内核与工具执行沙箱" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-2.5 py-1.5 text-slate-200 text-[11px] leading-relaxed focus:outline-none focus:border-blue-500"></textarea>
+            </div>
+          </div>
+
+          <!-- 章节开关：勾选即参与生成 -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-slate-400 font-sans">章节开关（勾选即纳入模板，可随时调整）：</span>
+              <button onclick="restoreDefaultTemplate()" class="text-[10px] text-slate-400 hover:text-white underline font-sans">恢复默认模板</button>
+            </div>
+            <div class="grid grid-cols-2 gap-2.5">
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-overview" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">项目概览（名称 / 定位 / 功能）</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-honor" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">铁律 · 八荣八耻</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-stack" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">技术栈与目录约定</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-strict" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">类型与编码规约</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-nonative" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">依赖与零 Native 合规</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-tdd" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">质量门槛与 TDD</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-git" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">Git 提交规范</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-security" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">安全红线</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-tooling" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">工具使用纪律（AI 代理）</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-docs" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">文档与变更留痕</span>
+              </label>
+              <label class="p-2.5 rounded-lg bg-[#090d16] border border-slate-800 flex items-center space-x-2 cursor-pointer">
+                <input type="checkbox" id="tpl-exclude" checked onchange="regenerateTemplate()" class="rounded text-blue-600">
+                <span class="text-slate-200 font-sans">全局扫描忽略清单</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Markdown 编辑器 -->
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <span class="text-slate-400 font-sans">模板内容（Markdown 格式，可直接编辑）：</span>
+              <span id="tpl-status" class="text-[10px] text-slate-500"></span>
+            </div>
+            <textarea id="agents-template-preview" spellcheck="false" oninput="onTemplateEdited()" class="w-full bg-[#090d16] border border-slate-800 rounded-lg p-3 text-slate-300 text-[11px] leading-relaxed min-h-[420px] font-mono focus:outline-none focus:border-blue-600"></textarea>
+          </div>
+
+          <!-- 工作区写入 + AI 优化 -->
+          <div class="space-y-2 pt-1">
+            <div class="flex items-center space-x-2 flex-wrap">
+              <span class="text-slate-400 font-sans text-[11px]">目标工作区：</span>
+              <select id="agents-target-select" onchange="onAgentsTargetChange(this.value)" class="bg-[#080d1a] border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200 font-mono text-[11px] focus:outline-none focus:border-blue-500">
+                <option value="">选择目标工作区...</option>
+              </select>
+              <button onclick="writeTemplateToWorkspace()" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold shadow-sm font-sans">写入所选工作区</button>
+              <span class="text-[10px] text-slate-500 font-sans">写入会覆盖该工作区已有的 AGENTS.md</span>
+            </div>
+            <div class="flex items-center space-x-2 flex-wrap">
+              <span class="text-slate-400 font-sans text-[11px]">优化模型：</span>
+              <select id="ai-model-select" class="bg-[#080d1a] border border-slate-700 rounded-lg px-2 py-1.5 text-slate-200 font-mono text-[11px] focus:outline-none focus:border-purple-500 min-w-[220px]">
+                <option value="">加载模型中...</option>
+              </select>
+              <button onclick="optimizeTemplateWithAi()" id="ai-optimize-btn" class="px-3 py-1.5 rounded bg-purple-700 hover:bg-purple-600 text-white font-semibold shadow-sm font-sans">✨ AI 优化</button>
+              <span class="text-[10px] text-slate-500 font-sans">AI 优化会读取目标工作区的真实仓库事实，结果仅写入编辑器，需你确认后保存</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 板块 2：Git 提交规范校验模板 -->
+      <section class="border border-slate-800 rounded-xl bg-[#0f1523] p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"></path></svg>
+            </span>
+            <h2 class="text-sm font-semibold text-white">Git 提交规范模板 (Conventional Commits)</h2>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 font-mono">提交前强校验</span>
+        </div>
+
+        <div class="space-y-3 font-mono text-xs">
+          <div>
+            <label class="text-slate-400 block mb-1 font-sans">提交信息格式标准：</label>
+            <input type="text" readonly value="<type>(<scope>): <subject>" class="w-full bg-[#090d16] border border-slate-700 rounded-lg px-3 py-2 text-white">
+          </div>
+          <div class="text-slate-400 font-sans text-[11px]">
+            允许的提交类型：<span class="text-blue-300 font-mono">feat, fix, docs, refactor, test, chore, perf</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- 板块 3：全局忽略黑名单 (Global Ignore) -->
+      <section class="border border-slate-800 rounded-xl bg-[#0f1523] p-6 shadow-xl space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center space-x-2">
+            <span class="p-1.5 rounded-lg bg-rose-500/10 text-rose-400">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+            </span>
+            <h2 class="text-sm font-semibold text-white">全局扫描排除黑名单 (Global Exclude Patterns)</h2>
+          </div>
+          <span class="text-[10px] px-2 py-0.5 rounded bg-rose-950 text-rose-300 font-mono">严格禁止搜索扫描</span>
+        </div>
+
+        <div class="space-y-2 font-mono text-xs">
+          <label class="text-slate-400 block font-sans">排除目录与高危文件 Glob 列表 (保护系统安全防 OOM 内存溢出)：</label>
+          <textarea id="global-exclude-textarea" oninput="onExcludeEdited()" class="w-full bg-[#090d16] border border-slate-700 rounded-lg p-3 text-slate-300 min-h-[110px] leading-relaxed focus:outline-none focus:border-blue-600">
+.git
+node_modules
+dist
+build
+coverage
+*.env
+*.pem
+*.key
+          </textarea>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 模态弹窗：登记新工作区 -->
+  <div id="ws-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="max-w-lg w-full rounded-xl bg-[#0f1523] border border-slate-700 shadow-2xl overflow-hidden flex flex-col font-sans text-xs">
+      <div class="px-6 py-4 bg-[#131b2e] border-b border-slate-800 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white">登记本地代码工作区</h3>
+        <button onclick="document.getElementById('ws-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="p-6 space-y-4">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">本地物理工作区绝对路径 (必填)：</label>
+          <div class="flex items-center space-x-2">
+            <input id="modal-ws-path" type="text" placeholder="手动输入或点击右侧按钮浏览目录..." class="flex-1 bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-blue-500">
+            <!-- 浏览器原生选择器兜底 -->
+            <input type="file" id="browser-native-folder-input" webkitdirectory directory class="hidden" onchange="handleBrowserFolderSelected(event)">
+            <button type="button" onclick="openDirectoryBrowserModal()" id="browse-folder-btn" class="px-3 py-2 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 font-medium whitespace-nowrap flex items-center space-x-1.5 transition shadow">
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+              <span>浏览目录...</span>
+            </button>
+            <button type="button" title="直接唤起操作系统原生选择对话框" onclick="triggerNativeFolderPicker()" id="os-picker-btn" class="px-2.5 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium whitespace-nowrap flex items-center space-x-1 transition shadow">
+              <span>🖥️ OS 对话框</span>
+            </button>
+          </div>
+          <span class="text-[10px] text-slate-500 mt-1 block">支持 deepseek-harness 风格的应用内目录导航器、快速新建子目录，或直接点击 OS 对话框。</span>
+        </div>
+
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">项目展示别名 (选填)：</label>
+          <input id="modal-ws-name" type="text" placeholder="留空则默认取文件夹名称" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">项目定位简短描述 (选填)：</label>
+          <input id="modal-ws-desc" type="text" placeholder="例如: 智能体运行时内核与服务平台" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">全局扫描忽略黑名单 (逗号分隔)：</label>
+          <input id="modal-ws-ignore" type="text" value="node_modules, .git, dist, build, .next" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-blue-300 font-mono focus:outline-none focus:border-blue-500">
+          <span class="text-[10px] text-slate-500 mt-1 block">Agent 搜索文件时将硬性跳过上述目录防 OOM 内存溢出。</span>
+        </div>
+      </div>
+
+      <div class="px-6 py-3.5 bg-[#090d18] border-t border-slate-800 flex justify-between items-center text-xs">
+        <span id="ws-save-status" class="text-emerald-400 font-medium"></span>
+        <div class="flex space-x-2">
+          <button onclick="document.getElementById('ws-modal').classList.add('hidden')" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">取消</button>
+          <button onclick="saveWorkspaceToBackend()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold shadow-sm">登记并持久化落盘</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- deepseek-harness 风格的应用内目录导航浏览器 (Miller/列式与层级双栏) -->
+  <div id="dir-browser-modal" class="hidden fixed inset-0 z-[60] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
+    <div class="w-full max-w-3xl h-[520px] rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl overflow-hidden flex flex-col font-sans text-xs">
+      
+      <!-- 头部：标题与面包屑/快速路径编辑条 -->
+      <div class="px-5 py-3.5 bg-[#131d38] border-b border-slate-800 flex flex-col gap-2.5 flex-none">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <span class="text-sm font-bold text-white flex items-center gap-1.5">
+              <svg class="w-4 h-4 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+              <span>选择物理代码工作区目录</span>
+            </span>
+            <span id="dir-browser-subtip" class="text-[10px] text-slate-400">（支持双击下钻，单击选中）</span>
+          </div>
+          <button onclick="closeDirectoryBrowserModal()" class="text-slate-400 hover:text-white text-base">✕</button>
+        </div>
+
+        <!-- 面包屑导航与编辑栏 -->
+        <div class="flex items-center bg-[#090d18] border border-slate-700 rounded-lg px-2.5 py-1.5 gap-1.5 overflow-x-auto">
+          <button onclick="jumpToRoot()" title="主驱动器根目录" class="text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-slate-800">
+            💻 根
+          </button>
+          <button onclick="jumpToHome()" title="用户主目录" class="text-slate-400 hover:text-white px-1.5 py-0.5 rounded hover:bg-slate-800">
+            🏠 用户
+          </button>
+          <span class="text-slate-600">|</span>
+          <div id="dir-crumbs-trail" class="flex items-center gap-1 flex-1 overflow-x-auto whitespace-nowrap">
+            <!-- 动态填充面包屑 -->
+          </div>
+          <button onclick="togglePathInputMode()" title="手动输入绝对路径" class="text-blue-400 hover:text-blue-300 p-1 hover:bg-slate-800 rounded">
+            ✏️
+          </button>
+        </div>
+
+        <!-- 手动路径输入框 (折叠显示) -->
+        <div id="dir-direct-input-container" class="hidden flex items-center gap-2">
+          <input id="dir-direct-path-input" type="text" placeholder="例如: G:\Projects\Agent\harness" class="flex-1 bg-[#090d18] border border-blue-500 rounded px-3 py-1.5 text-white font-mono text-xs focus:outline-none">
+          <button onclick="navigateDirectPath()" class="px-3 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded font-medium">跳转</button>
+        </div>
+      </div>
+
+      <!-- 中间目录内容列表区域 (类似 deepseek-harness 的列式渲染) -->
+      <div class="flex-1 min-h-0 flex bg-[#0b1120] relative">
+        <div id="dir-entries-list" class="flex-1 overflow-y-auto p-2 divide-y divide-slate-800/60 font-mono text-xs">
+          <!-- 动态加载目录条目 -->
+        </div>
+        <div id="dir-loading-overlay" class="hidden absolute inset-0 bg-black/60 backdrop-blur-[1px] flex items-center justify-center text-slate-300 gap-2">
+          <span class="animate-spin text-blue-400 text-base">⟳</span>
+          <span>正在扫描文件系统目录...</span>
+        </div>
+      </div>
+
+      <!-- 底部操作栏 (新建文件夹、显示隐藏目录、取消与确认选中) -->
+      <div class="px-5 py-3 bg-[#11192e] border-t border-slate-800 flex items-center justify-between flex-none">
+        <div class="flex items-center space-x-2">
+          <button onclick="promptCreateDirectory()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 flex items-center space-x-1 transition">
+            <span>+ 新建文件夹</span>
+          </button>
+          <label class="flex items-center space-x-1.5 text-slate-400 cursor-pointer select-none text-[11px] pl-2">
+            <input type="checkbox" id="show-hidden-dirs-toggle" onchange="renderDirectoryEntries()" class="rounded bg-slate-900 border-slate-700 text-blue-500">
+            <span>显示隐藏目录</span>
+          </label>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <div class="text-[11px] text-slate-400 max-w-xs truncate mr-2" id="dir-selected-preview">已选: 尚未选中</div>
+          <button onclick="closeDirectoryBrowserModal()" class="px-4 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">取消</button>
+          <button onclick="confirmDirectorySelection()" id="dir-confirm-btn" class="px-5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold shadow transition disabled:opacity-50">确定使用此工作区</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <script>
+    async function loadWorkspacesFromBackend() {
+      try {
+        const res = await fetch('/api/workspaces');
+        if (!res.ok) return;
+        const result = await res.json();
+        if (result.code === 0 && Array.isArray(result.data)) {
+          renderWorkspaces(result.data);
+          populateAgentsTargets(result.data);
+        }
+      } catch (err) {
+        console.warn('Failed to load workspaces:', err.message);
+      }
+    }
+
+    function renderWorkspaces(list) {
+      document.getElementById('ws-count-badge').textContent = list.length;
+      const container = document.getElementById('workspaces-table-container');
+      container.innerHTML = '';
+
+      if (list.length === 0) {
+        container.innerHTML = `
+          <div class="p-8 text-center space-y-3 font-sans">
+            <span class="text-3xl block">📁</span>
+            <div class="text-slate-300 font-bold text-sm">暂无已登记的工作区</div>
+            <p class="text-xs text-slate-500 max-w-md mx-auto">系统处于全新就绪状态。请点击右上角「+ 登记新工作区」接入您的第一个物理代码项目。</p>
+          </div>
+        `;
+        return;
+      }
+
+      list.forEach((ws) => {
+        const item = document.createElement('div');
+        item.className = 'p-4 hover:bg-slate-800/20 flex items-center justify-between transition';
+        const hasAgents = ws.rules && ws.rules.hasAgentsMd;
+
+        item.innerHTML = `
+          <div class="space-y-1 max-w-xl">
+            <div class="flex items-center space-x-2">
+              <span class="font-bold text-white text-sm font-sans">${ws.name}</span>
+              ${ws.exists ? '<span class="px-1.5 py-0.2 rounded text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-800/50">路径有效</span>' : '<span class="px-1.5 py-0.2 rounded text-[10px] bg-rose-950 text-rose-400 border border-rose-800/50">目录不存在</span>'}
+              ${hasAgents ? '<span class="px-1.5 py-0.2 rounded text-[10px] bg-blue-950 text-blue-300 border border-blue-800/50 font-sans">AGENTS.md 已就绪</span>' : '<span class="px-1.5 py-0.2 rounded text-[10px] bg-amber-950 text-amber-300 border border-amber-800/50 font-sans">缺 AGENTS.md</span>'}
+            </div>
+            <div class="text-[11px] text-slate-400 truncate">${ws.path}</div>
+            <div class="text-[10px] text-slate-500 font-sans">${ws.description || '无项目描述'} · 忽略: ${ws.ignorePatterns ? ws.ignorePatterns.slice(0, 3).join(', ') + '...' : ''}</div>
+          </div>
+
+          <div class="flex items-center space-x-2 font-sans text-xs">
+            ${!hasAgents ? `<button onclick="generateAgentsMd('${encodeURIComponent(ws.path)}')" class="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300 rounded border border-purple-800/50 flex items-center space-x-1"><span>✨ 生成 AGENTS.md</span></button>` : ''}
+            <button onclick="deleteWorkspace('${ws.id}')" class="px-2 py-1 text-rose-400 hover:bg-rose-950/40 rounded border border-rose-900/40">删除记录</button>
+          </div>
+        `;
+        container.appendChild(item);
+      });
+    }
+
+    function openRegisterWorkspaceModal() {
+      document.getElementById('modal-ws-path').value = '';
+      document.getElementById('modal-ws-name').value = '';
+      document.getElementById('modal-ws-desc').value = '';
+      document.getElementById('ws-modal').classList.remove('hidden');
+    }
+
+    // ========== deepseek-harness 风格的应用内目录导航浏览器状态机 ==========
+    let currentBrowseListing = null;
+    let selectedBrowseEntryPath = null;
+
+    async function openDirectoryBrowserModal(targetPath) {
+      document.getElementById('dir-browser-modal').classList.remove('hidden');
+      const input = document.getElementById('modal-ws-path').value.trim();
+      const initialPath = targetPath || input || 'G:\\Projects';
+      await loadDirectoryBrowse(initialPath);
+    }
+
+    function closeDirectoryBrowserModal() {
+      document.getElementById('dir-browser-modal').classList.add('hidden');
+    }
+
+    async function loadDirectoryBrowse(targetPath) {
+      const loading = document.getElementById('dir-loading-overlay');
+      loading.classList.remove('hidden');
+      try {
+        const query = targetPath ? `?path=${encodeURIComponent(targetPath)}` : '';
+        const res = await fetch(`/api/workspaces/browse${query}`);
+        const result = await res.json();
+        if (result.code === 0 && result.data) {
+          currentBrowseListing = result.data;
+          selectedBrowseEntryPath = currentBrowseListing.current;
+          renderCrumbs(currentBrowseListing.crumbs);
+          renderDirectoryEntries();
+          updateSelectedPreview(currentBrowseListing.current);
+          document.getElementById('dir-direct-path-input').value = currentBrowseListing.current;
+        } else {
+          alert('列出目录失败: ' + (result.message || '未知原因'));
+        }
+      } catch (err) {
+        alert('请求目录服务异常: ' + err.message);
+      } finally {
+        loading.classList.add('hidden');
+      }
+    }
+
+    function renderCrumbs(crumbs) {
+      const container = document.getElementById('dir-crumbs-trail');
+      container.innerHTML = '';
+      crumbs.forEach((crumb, idx) => {
+        if (idx > 0) {
+          const sep = document.createElement('span');
+          sep.className = 'text-slate-600 text-[10px]';
+          sep.textContent = '>';
+          container.appendChild(sep);
+        }
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = `px-1.5 py-0.5 rounded text-[11px] font-mono transition ${crumb.path === currentBrowseListing.current ? 'text-blue-400 font-bold bg-blue-950/40' : 'text-slate-300 hover:text-white hover:bg-slate-800'}`;
+        btn.textContent = crumb.name;
+        btn.onclick = () => loadDirectoryBrowse(crumb.path);
+        container.appendChild(btn);
+      });
+      // 自动滚动到最右端最新目录
+      container.scrollLeft = container.scrollWidth;
+    }
+
+    function renderDirectoryEntries() {
+      if (!currentBrowseListing) return;
+      const listEl = document.getElementById('dir-entries-list');
+      listEl.innerHTML = '';
+
+      const showHidden = document.getElementById('show-hidden-dirs-toggle').checked;
+      const filtered = currentBrowseListing.entries.filter(e => showHidden || !e.hidden);
+
+      if (filtered.length === 0) {
+        listEl.innerHTML = `
+          <div class="py-12 text-center text-slate-500 font-sans">
+            <span class="text-2xl block mb-2">📂</span>
+            <span>该目录下暂无子文件夹（可直接点击右下角确定使用此目录，或新建子目录）</span>
+          </div>
+        `;
+        return;
+      }
+
+      filtered.forEach((item) => {
+        const row = document.createElement('div');
+        const isSelected = selectedBrowseEntryPath === item.path;
+        row.className = `px-3 py-2 flex items-center justify-between cursor-pointer rounded transition select-none ${isSelected ? 'bg-blue-600/30 text-white border border-blue-500/50' : 'hover:bg-slate-800/60 text-slate-300'}`;
+        
+        row.innerHTML = `
+          <div class="flex items-center space-x-2.5 truncate">
+            <span class="text-amber-400 text-sm">📁</span>
+            <span class="truncate text-xs ${item.hidden ? 'text-slate-500 italic' : ''}">${item.name}</span>
+          </div>
+          <div class="flex items-center space-x-2 text-[10px] text-slate-500">
+            <button class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 enter-sub-btn">下钻进入 ➔</button>
+          </div>
+        `;
+
+        // 单击选中高亮
+        row.onclick = (e) => {
+          selectedBrowseEntryPath = item.path;
+          renderDirectoryEntries();
+          updateSelectedPreview(item.path);
+        };
+
+        // 双击或点击下钻直接进入子目录
+        row.ondblclick = () => loadDirectoryBrowse(item.path);
+        row.querySelector('.enter-sub-btn').onclick = (e) => {
+          e.stopPropagation();
+          loadDirectoryBrowse(item.path);
+        };
+
+        listEl.appendChild(row);
+      });
+    }
+
+    function updateSelectedPreview(pathStr) {
+      document.getElementById('dir-selected-preview').textContent = `已选: ${pathStr}`;
+    }
+
+    function togglePathInputMode() {
+      const container = document.getElementById('dir-direct-input-container');
+      container.classList.toggle('hidden');
+      if (!container.classList.contains('hidden')) {
+        const input = document.getElementById('dir-direct-path-input');
+        input.focus();
+        input.select();
+      }
+    }
+
+    async function navigateDirectPath() {
+      const val = document.getElementById('dir-direct-path-input').value.trim();
+      if (val) {
+        await loadDirectoryBrowse(val);
+      }
+    }
+
+    function jumpToRoot() {
+      loadDirectoryBrowse('G:\\');
+    }
+
+    function jumpToHome() {
+      if (currentBrowseListing && currentBrowseListing.home) {
+        loadDirectoryBrowse(currentBrowseListing.home);
+      }
+    }
+
+    async function promptCreateDirectory() {
+      if (!currentBrowseListing) return;
+      const folderName = prompt(`在 [${currentBrowseListing.current}] 下创建新文件夹名称:`, 'my-new-project');
+      if (!folderName || !folderName.trim()) return;
+
+      try {
+        const res = await fetch('/api/workspaces/create-directory', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ parentPath: currentBrowseListing.current, name: folderName.trim() }),
+        });
+        const result = await res.json();
+        if (result.code === 0 && result.path) {
+          // 重新列出并选中该新创建目录
+          await loadDirectoryBrowse(currentBrowseListing.current);
+          selectedBrowseEntryPath = result.path;
+          updateSelectedPreview(result.path);
+          renderDirectoryEntries();
+        } else {
+          alert('创建文件夹失败: ' + (result.message || '未知错误'));
+        }
+      } catch (err) {
+        alert('请求创建异常: ' + err.message);
+      }
+    }
+
+    function confirmDirectorySelection() {
+      const target = selectedBrowseEntryPath || (currentBrowseListing && currentBrowseListing.current);
+      if (!target) {
+        alert('请先选中一个物理工作区目录！');
+        return;
+      }
+      fillSelectedPath(target);
+      closeDirectoryBrowserModal();
+    }
+
+    // 唤起 OS 级别的选择对话框
+    async function triggerNativeFolderPicker() {
+      const btn = document.getElementById('os-picker-btn');
+      const originalText = btn.innerHTML;
+      btn.innerHTML = '<span>⏳ 唤起中...</span>';
+      try {
+        const res = await fetch('/api/workspaces/select-folder', { method: 'POST' });
+        const result = await res.json();
+        btn.innerHTML = originalText;
+        if (result.code === 0 && result.path) {
+          fillSelectedPath(result.path);
+          return;
+        }
+      } catch (err) {
+        console.warn('Native picker error:', err);
+      }
+      btn.innerHTML = originalText;
+      document.getElementById('browser-native-folder-input').click();
+    }
+
+    async function triggerFolderPicker() {
+      openDirectoryBrowserModal();
+    }
+
+
+    function handleBrowserFolderSelected(event) {
+      const files = event.target.files;
+      if (files && files.length > 0) {
+        // 获取相对路径的顶层目录名
+        const firstFile = files[0];
+        const relPath = firstFile.webkitRelativePath || '';
+        const folderName = relPath.split('/')[0];
+        if (folderName) {
+          const input = document.getElementById('modal-ws-path');
+          // 如果当前已有前缀，拼装完整路径，否则提示
+          if (!input.value) {
+            input.value = `G:\\Projects\\${folderName}`;
+          }
+          const nameInput = document.getElementById('modal-ws-name');
+          if (!nameInput.value) {
+            nameInput.value = folderName;
+          }
+        }
+      }
+    }
+
+    function fillSelectedPath(selectedPath) {
+      document.getElementById('modal-ws-path').value = selectedPath;
+      const pathParts = selectedPath.replace(/[\\\/]+$/, '').split(/[\\\/]/);
+      const defaultName = pathParts[pathParts.length - 1];
+      const nameInput = document.getElementById('modal-ws-name');
+      if (!nameInput.value && defaultName) {
+        nameInput.value = defaultName;
+      }
+    }
+
+
+
+    async function saveWorkspaceToBackend() {
+      const pathVal = document.getElementById('modal-ws-path').value.trim();
+      const nameVal = document.getElementById('modal-ws-name').value.trim();
+      const descVal = document.getElementById('modal-ws-desc').value.trim();
+      const ignoreVal = document.getElementById('modal-ws-ignore').value.trim();
+      const statusEl = document.getElementById('ws-save-status');
+
+      if (!pathVal) {
+        alert('请填写真实工作区物理绝对路径！');
+        return;
+      }
+
+      statusEl.textContent = '正在保存至 SQLite...';
+
+      const payload = {
+        path: pathVal,
+        name: nameVal || undefined,
+        description: descVal,
+        ignorePatterns: ignoreVal.split(',').map(s => s.trim()).filter(Boolean),
+      };
+
+      try {
+        const res = await fetch('/api/workspaces', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const result = await res.json();
+        if (res.ok && result.code === 0) {
+          statusEl.textContent = '✓ 登记成功！';
+          setTimeout(() => {
+            statusEl.textContent = '';
+            document.getElementById('ws-modal').classList.add('hidden');
+          }, 600);
+          await loadWorkspacesFromBackend();
+        } else {
+          statusEl.textContent = '保存失败: ' + result.message;
+        }
+      } catch (err) {
+        statusEl.textContent = '请求异常: ' + err.message;
+      }
+    }
+
+    async function generateAgentsMd(encodedPath) {
+      const targetPath = decodeURIComponent(encodedPath);
+      const template = currentTemplate();
+      if (!template.trim()) {
+        alert('模板内容为空，请先在「项目规范生成模板」中编辑或恢复默认模板。');
+        return;
+      }
+      if (!confirm(`确定要在该工作区物理目录下写入 AGENTS.md 吗？\n${targetPath}\n\n将使用模板生成器中的当前内容（${template.length} 字符），如已存在将被覆盖。`)) return;
+
+      try {
+        const res = await fetch('/api/workspaces/init-agents-md', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: targetPath, template }),
+        });
+        const result = await res.json();
+        if (res.ok && result.code === 0) {
+          alert('✓ 标准 AGENTS.md 已成功写入该项目物理目录！');
+          await loadWorkspacesFromBackend();
+        } else {
+          alert('生成失败: ' + result.message);
+        }
+      } catch (err) {
+        alert('操作异常: ' + err.message);
+      }
+    }
+
+    async function deleteWorkspace(id) {
+      if (!confirm('确定要从 Harness 中注销该工作区吗？本地代码文件不会受到任何影响。')) return;
+      try {
+        await fetch(`/api/workspaces/${id}`, { method: 'DELETE' });
+        await loadWorkspacesFromBackend();
+      } catch (err) {
+        console.error('Delete failed:', err);
+      }
+    }
+
+    // ================= AGENTS.md 模板生成器 =================
+    let agentsTemplateSaved = '';
+    let agentsTemplateSource = 'generated'; // generated | manual | ai
+    let workspaceRegistryCache = [];
+
+    const TEMPLATE_SECTION_IDS = [
+      'tpl-overview', 'tpl-honor', 'tpl-stack', 'tpl-strict', 'tpl-nonative', 'tpl-tdd',
+      'tpl-git', 'tpl-security', 'tpl-tooling', 'tpl-docs', 'tpl-exclude',
+    ];
+
+    function readTemplateFlags() {
+      const on = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.checked : true;
+      };
+      return {
+        overview: on('tpl-overview'),
+        honor: on('tpl-honor'),
+        stack: on('tpl-stack'),
+        strict: on('tpl-strict'),
+        nonative: on('tpl-nonative'),
+        tdd: on('tpl-tdd'),
+        git: on('tpl-git'),
+        security: on('tpl-security'),
+        tooling: on('tpl-tooling'),
+        docs: on('tpl-docs'),
+        exclude: on('tpl-exclude'),
+      };
+    }
+
+    /** 读取项目概览三要素；空值一律输出占位符，绝不替用户编造项目信息。 */
+    function readOverview() {
+      const val = (id) => {
+        const el = document.getElementById(id);
+        return el ? el.value.trim() : '';
+      };
+      const features = val('tpl-project-features')
+        .split('\n')
+        .map((line) => line.replace(/^[-*]\s*/, '').trim())
+        .filter(Boolean);
+      return {
+        name: val('tpl-project-name'),
+        description: val('tpl-project-desc'),
+        features,
+      };
+    }
+
+    /** 读取全局忽略黑名单（模板忽略清单的唯一来源，避免两处配置漂移）。 */
+    function readExcludeEntries() {
+      const el = document.getElementById('global-exclude-textarea');
+      const raw = el ? el.value : '';
+      const seen = new Set();
+      const list = [];
+      for (const token of raw.split(/[\n,]/)) {
+        const entry = token.trim();
+        if (!entry || seen.has(entry)) continue;
+        seen.add(entry);
+        list.push(entry);
+      }
+      return list.length > 0 ? list : ['node_modules', '.git', 'dist'];
+    }
+
+    function onExcludeEdited() {
+      // 黑名单是模板忽略清单的唯一来源：未被手动改写时静默同步，否则留给用户决定何时重新生成
+      if (agentsTemplateSource === 'manual') {
+        refreshTemplateStatus();
+        return;
+      }
+      setTemplateContent(buildAgentsTemplate(readTemplateFlags()), 'generated');
+    }
+
+    /** 生成 Markdown 格式的 AGENTS.md 模板正文（纯函数，便于比对与测试）。 */
+    function buildAgentsTemplate(flags) {
+      const out = [];
+      let n = 0;
+      const h = (title) => {
+        n += 1;
+        out.push(`## ${n}. ${title}`);
+        out.push('');
+      };
+
+      out.push('# AGENTS.md —— 项目规范与协作准则');
+      out.push('');
+      out.push('> 本文件是本仓库对「人」与「AI 编码代理」共同生效的行为准则，由 Purple Grapes Harness 生成。');
+      out.push('> 与临时口头约定冲突时以本文件为准；需要变更时，先改本文件再改代码。');
+      out.push('');
+      out.push('## 适用范围');
+      out.push('');
+      out.push('- 对本仓库进行读写的一切人与自动化代理；');
+      out.push('- 覆盖编码、测试、依赖引入、提交与文档留痕全流程。');
+      out.push('');
+
+      if (flags.overview) {
+        const overview = readOverview();
+        h('项目概览');
+        out.push(`- **项目名称**：${overview.name || '<待填写>'}`);
+        out.push(`- **一句话定位**：${overview.description || '<待填写>'}`);
+        out.push('- **核心功能**：');
+        if (overview.features.length > 0) {
+          for (const feature of overview.features) out.push(`  - ${feature}`);
+        } else {
+          out.push('  - <待填写>');
+        }
+        out.push('');
+      }
+
+      if (flags.honor) {
+        h('铁律 · 八荣八耻');
+        out.push('| 耻 | 荣 |');
+        out.push('| --- | --- |');
+        out.push('| 以臆猜接口为耻 | **以查档求证为荣**——写代码前查文档、读源码，不猜 API |');
+        out.push('| 以模糊开工为耻 | **以对齐需求为荣**——开工前确认需求与验收标准 |');
+        out.push('| 以脑补业务为耻 | **以请示规则为荣**——业务规则不明确就问，不自作主张 |');
+        out.push('| 以新增冗余为耻 | **以复用存量为荣**——优先复用既有代码与平台能力 |');
+        out.push('| 以省略校验为耻 | **以完备测例为荣**——非平凡逻辑必须留可运行的验证 |');
+        out.push('| 以乱改架构为耻 | **以恪守规范为荣**——不擅自改架构，改动先评审 |');
+        out.push('| 以不懂装懂为耻 | **以坦诚存疑为荣**——不确定就明说，给出疑点清单 |');
+        out.push('| 以批量乱改为耻 | **以分步迭代为荣**——小步提交，一次只做一件事 |');
+        out.push('');
+      }
+
+      if (flags.stack) {
+        h('技术栈与目录约定');
+        out.push('- **运行时**：Node.js 22+；包管理使用仓库声明的 lockfile 工具，不混用其他包管理器。');
+        out.push('- **源码目录**：业务代码集中在约定目录下，禁止在仓库根堆放临时脚本与试验文件。');
+        out.push('- **命名**：文件与目录 `kebab-case`，类型与组件 `PascalCase`，函数与变量 `camelCase`，常量 `SCREAMING_SNAKE_CASE`。');
+        out.push('- **提交边界**：构建产物、依赖目录、本地环境文件与任何真实密钥一律不进版本库。');
+        out.push('');
+      }
+
+      if (flags.strict) {
+        h('类型与编码规约');
+        out.push('- 开启 `strict` 严格模式，**禁止 `any`**；确需宽泛时用 `unknown` 并在使用点收窄。');
+        out.push('- 注释只在解释「为什么」时添加，不复述代码在做什么；不留注释掉的死代码。');
+        out.push('- 错误必须被处理：可恢复的写日志，不可恢复的上抛，**禁止静默吞异常**。');
+        out.push('- 保持既有代码风格与目录惯例，不引入第二套写法。');
+        out.push('');
+      }
+
+      if (flags.nonative) {
+        h('依赖引入与零 Native 合规');
+        out.push('- **绝对禁止**引入需要 MSVC / Visual Studio C++ 编译链或 `node-gyp` 的依赖（任何带 `bindings.gyp` 或触发本地编译的包）。');
+        out.push('- 仅使用 MIT / Apache-2.0 / BSD 或纯 JS/TS、Node 内置标准库；**拒绝许可证存在争议（如 GPL 传染性）的依赖**。');
+        out.push('- 新增依赖必须说明理由与替代方案对比；能不加就不加。');
+        out.push('');
+      }
+
+      if (flags.tdd) {
+        h('质量门槛与 TDD');
+        out.push('- **先写测试再写实现**：非平凡逻辑必须先有可运行、可失败的验证。');
+        out.push('- 提交前必须全绿通过仓库既有质量门槛，例如：');
+        out.push('');
+        out.push('```bash');
+        out.push('pnpm check      # lint + typecheck + test');
+        out.push('```');
+        out.push('');
+        out.push('- 使用仓库既有的测试运行器与约定，**不引入重型测试框架**。');
+        out.push('- 修复缺陷时，先补一条能复现的用例，再改实现。');
+        out.push('');
+      }
+
+      if (flags.git) {
+        h('Git 提交规范');
+        out.push('提交信息格式：');
+        out.push('');
+        out.push('```text');
+        out.push('<type>(<scope>): <subject>');
+        out.push('```');
+        out.push('');
+        out.push('| 允许的 type | 含义 |');
+        out.push('| --- | --- |');
+        out.push('| `feat` | 新功能 |');
+        out.push('| `fix` | 缺陷修复 |');
+        out.push('| `docs` | 文档变更 |');
+        out.push('| `refactor` | 不改变行为的重构 |');
+        out.push('| `test` | 测试相关 |');
+        out.push('| `chore` | 构建、依赖与杂项 |');
+        out.push('| `perf` | 性能优化 |');
+        out.push('');
+        out.push('- 一次提交只做一件事，提交信息说清「为什么」。');
+        out.push('- **禁止**未经确认的 `git push`、强制推送与改写公共历史。');
+        out.push('');
+      }
+
+      if (flags.security) {
+        h('安全红线');
+        out.push('- 密钥、Token、口令**不得**写入仓库、日志或接口回包；日志按 `sk-` 类模式脱敏。');
+        out.push('- 所有外部输入（HTTP 请求、工具入参、文件路径）在信任边界处必须校验。');
+        out.push('- 文件操作不得越出仓库根；对已存在路径做 `realpath` 校验以阻断符号链接逃逸。');
+        out.push('- 渲染任何外部内容（模型输出、抓取正文）前必须消毒，防 XSS 注入。');
+        out.push('');
+      }
+
+      if (flags.tooling) {
+        h('工具使用纪律（面向 AI 代理）');
+        out.push('- **先读后写**：修改任何已存在文件前，必须先读取其当前内容建立基线；未读过的文件不得直接改。');
+        out.push('- 优先精确原文替换；替换失败不要盲目重试，先重新读取再判断。');
+        out.push('- 命令必须在仓库根内执行，**禁止**用 `cd ..` 或绝对路径越界操作仓库之外的目录。');
+        out.push('- 单条命令必须设置超时；不得执行 `git push` 等不可逆的远端操作。');
+        out.push('');
+      }
+
+      if (flags.docs) {
+        h('文档与变更留痕');
+        out.push('- 架构决策、范围变更、需求调整必须落到文档，不留口头约定。');
+        out.push('- 完成一个任务后同步更新进展记录与当前会话台账。');
+        out.push('- 文档与代码冲突时，**先改文档再改代码**，或在文档中标注偏离原因。');
+        out.push('');
+      }
+
+      if (flags.exclude) {
+        h('全局扫描忽略清单');
+        out.push('以下目录与文件类型在检索、统计与打包时一律跳过：');
+        out.push('');
+        for (const entry of readExcludeEntries()) {
+          out.push(`- \`${entry}\``);
+        }
+        out.push('');
+      }
+
+      h('交付前自检清单');
+      out.push('- [ ] 相关测试已补齐并通过（非平凡逻辑必有可运行验证）');
+      out.push('- [ ] 无新增 `any`、无调试残留、无注释掉的死代码');
+      out.push('- [ ] 未引入违反零 Native 与许可证合规的依赖');
+      out.push('- [ ] 提交信息符合本文件规范，且一次提交只做一件事');
+      out.push('- [ ] 未提交任何密钥或本地环境文件');
+      out.push('');
+
+      return out.join('\n');
+    }
+
+    function currentTemplate() {
+      const el = document.getElementById('agents-template-preview');
+      return el ? el.value : '';
+    }
+
+    function refreshTemplateStatus() {
+      const el = document.getElementById('tpl-status');
+      if (!el) return;
+      const content = currentTemplate();
+      if (content === agentsTemplateSaved && content.trim() !== '') {
+        el.textContent = `已保存 · ${content.length} 字符`;
+        el.className = 'text-[10px] text-emerald-400';
+        return;
+      }
+      const label = agentsTemplateSource === 'manual'
+        ? '手动编辑'
+        : agentsTemplateSource === 'ai'
+          ? 'AI 优化'
+          : '由章节开关生成';
+      el.textContent = `未保存（${label}）· ${content.length} 字符`;
+      el.className = agentsTemplateSource === 'ai' ? 'text-[10px] text-purple-300' : 'text-[10px] text-amber-400';
+    }
+
+    function setTemplateContent(content, source) {
+      const el = document.getElementById('agents-template-preview');
+      if (!el) return;
+      el.value = content;
+      agentsTemplateSource = source || 'generated';
+      refreshTemplateStatus();
+    }
+
+    function regenerateTemplate() {
+      if (agentsTemplateSource === 'manual' && !confirm('检测到模板已被手动编辑，重新生成会覆盖你的修改。\n\n继续将丢弃手动改动，确定吗？')) {
+        return;
+      }
+      setTemplateContent(buildAgentsTemplate(readTemplateFlags()), 'generated');
+    }
+
+    function onTemplateEdited() {
+      agentsTemplateSource = 'manual';
+      refreshTemplateStatus();
+    }
+
+    /** 概览字段变更：未被手动改写时静默同步，避免用户还要手动点一次生成。 */
+    function onOverviewEdited() {
+      if (agentsTemplateSource === 'manual') {
+        refreshTemplateStatus();
+        return;
+      }
+      setTemplateContent(buildAgentsTemplate(readTemplateFlags()), 'generated');
+    }
+
+    function restoreDefaultTemplate() {
+      TEMPLATE_SECTION_IDS.forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) el.checked = true;
+      });
+      setTemplateContent(buildAgentsTemplate(readTemplateFlags()), 'generated');
+    }
+
+    async function saveAgentsTemplate() {
+      const content = currentTemplate();
+      if (!content.trim()) {
+        alert('模板内容不能为空。');
+        return;
+      }
+      try {
+        const res = await fetch('/api/settings/section', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: 'agentsTemplate', data: content }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.code !== 0) {
+          alert('保存失败: ' + (result.message || res.status));
+          return;
+        }
+        agentsTemplateSaved = content;
+        refreshTemplateStatus();
+      } catch (err) {
+        alert('保存请求异常: ' + err.message);
+      }
+    }
+
+    async function loadAgentsTemplate() {
+      try {
+        const res = await fetch('/api/settings/all');
+        const result = await res.json();
+        const saved = result && result.code === 0 && result.data ? result.data.agentsTemplate : null;
+        if (typeof saved === 'string' && saved.trim() !== '') {
+          agentsTemplateSaved = saved;
+          setTemplateContent(saved, 'generated');
+          return;
+        }
+      } catch (err) {
+        console.warn('Load agents template failed:', err);
+      }
+      agentsTemplateSaved = '';
+      setTemplateContent(buildAgentsTemplate(readTemplateFlags()), 'generated');
+    }
+
+    function populateAgentsTargets(list) {
+      workspaceRegistryCache = Array.isArray(list) ? list : [];
+      const select = document.getElementById('agents-target-select');
+      if (!select) return;
+      const previous = select.value;
+      select.innerHTML = '<option value="">选择目标工作区...</option>';
+      workspaceRegistryCache.forEach((ws) => {
+        const opt = document.createElement('option');
+        opt.value = ws.path;
+        opt.textContent = `${ws.name || ws.path} (${ws.path})`;
+        select.appendChild(opt);
+      });
+      // 只有一个已登记工作区时直接选中，避免"必须先选工作区"的隐性卡点
+      if (previous && workspaceRegistryCache.some((w) => w.path === previous)) {
+        select.value = previous;
+      } else if (workspaceRegistryCache.length > 0) {
+        select.value = workspaceRegistryCache[0].path;
+      }
+    }
+
+    /** 载入可选模型（来自 Provider 资产池，含探测到的模型列表）。 */
+    async function loadAiModels() {
+      const select = document.getElementById('ai-model-select');
+      if (!select) return;
+      try {
+        const res = await fetch('/api/providers');
+        const result = await res.json();
+        const providers = result.code === 0 && Array.isArray(result.data) ? result.data : [];
+        select.innerHTML = '';
+        let count = 0;
+        providers.forEach((p) => {
+          const models = Array.isArray(p.models) && p.models.length > 0
+            ? p.models
+            : [{ id: 'deepseek-chat', name: 'deepseek-chat（默认，建议先探测模型列表）' }];
+          models.forEach((m) => {
+            const opt = document.createElement('option');
+            opt.value = `${p.id}|${m.id}`;
+            opt.textContent = `${m.id} · ${p.name}`;
+            select.appendChild(opt);
+            count += 1;
+          });
+        });
+        if (count === 0) {
+          select.innerHTML = '<option value="">未配置任何 Provider</option>';
+        }
+      } catch (err) {
+        console.warn('Load models for AI optimize failed:', err);
+        select.innerHTML = '<option value="">模型加载失败</option>';
+      }
+    }
+
+    function fillOverviewFromWorkspace(wsPath) {
+      const ws = workspaceRegistryCache.find((w) => w.path === wsPath);
+      if (!ws) return;
+      const nameEl = document.getElementById('tpl-project-name');
+      const descEl = document.getElementById('tpl-project-desc');
+      if (nameEl) nameEl.value = ws.name || String(wsPath).split(/[\\/]/).pop() || '';
+      if (descEl) descEl.value = ws.description || '';
+    }
+
+    /** 选择目标工作区时带入其登记的名称与描述，避免用户重复抄写。 */
+    function onAgentsTargetChange(wsPath) {
+      fillOverviewFromWorkspace(wsPath);
+      // 只在校验内容"干净"时重生成：手改过或存在未保存改动时绝不覆盖
+      const pristine = currentTemplate() === agentsTemplateSaved;
+      if (agentsTemplateSource === 'manual' || !pristine) {
+        refreshTemplateStatus();
+        return;
+      }
+      setTemplateContent(buildAgentsTemplate(readTemplateFlags()), 'generated');
+    }
+
+    /** AI 优化：把模板连同真实仓库事实交给模型改写，结果只进编辑器，需人工确认后保存。 */
+    async function optimizeTemplateWithAi() {
+      const targetSelect = document.getElementById('agents-target-select');
+      const targetPath = targetSelect ? targetSelect.value : '';
+      const modelSelect = document.getElementById('ai-model-select');
+      const modelValue = modelSelect ? modelSelect.value : '';
+      const template = currentTemplate();
+
+      if (!targetPath) {
+        alert('AI 优化需要真实仓库事实作为依据，请先选择「目标工作区」。');
+        return;
+      }
+      if (!modelValue) {
+        alert('没有可用模型。请先前往【模型与 Provider 资产池】配置 Provider 与 API Key，并点【获取模型列表】。');
+        return;
+      }
+      if (!template.trim()) {
+        alert('模板内容为空，无法优化。');
+        return;
+      }
+
+      const [providerId, ...modelRest] = modelValue.split('|');
+      const modelId = modelRest.join('|');
+
+      if (!confirm(`AI 优化会把当前模板，连同该工作区的真实事实（package.json / README 摘要 / 顶层目录）发送给模型改写。\n\n调用：${modelId}\n将消耗一次模型调用；模型被要求只基于给定事实、不得编造。\n\n优化结果仅写入编辑器，需你确认后再保存。确定继续吗？\n\n目标：${targetPath}`)) return;
+
+      const btn = document.getElementById('ai-optimize-btn');
+      const originalText = btn ? btn.textContent : '';
+      if (btn) {
+        btn.textContent = '✨ 优化中...';
+        btn.disabled = true;
+      }
+      try {
+        const res = await fetch('/api/workspaces/optimize-agents-md', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: targetPath, template, providerId, modelId }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.code !== 0) {
+          alert('AI 优化失败: ' + (result.message || res.status));
+          return;
+        }
+        setTemplateContent(result.data.content, 'ai');
+      } catch (err) {
+        alert('AI 优化请求异常: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.textContent = originalText;
+          btn.disabled = false;
+        }
+      }
+    }
+
+    async function writeTemplateToWorkspace() {
+      const select = document.getElementById('agents-target-select');
+      const targetPath = select ? select.value : '';
+      const content = currentTemplate();
+      if (!targetPath) {
+        alert('请先选择目标工作区。');
+        return;
+      }
+      if (!content.trim()) {
+        alert('模板内容不能为空。');
+        return;
+      }
+      if (!confirm(`将把当前模板写入以下工作区的 AGENTS.md：\n${targetPath}\n\n若已存在同名文件将被覆盖，确定继续吗？`)) return;
+
+      try {
+        const res = await fetch('/api/workspaces/init-agents-md', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: targetPath, template: content }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.code !== 0) {
+          alert('写入失败: ' + (result.message || res.status));
+          return;
+        }
+        alert('✓ 模板已写入目标工作区 AGENTS.md');
+        await loadWorkspacesFromBackend();
+      } catch (err) {
+        alert('写入请求异常: ' + err.message);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadAgentsTemplate();
+      await loadAiModels();
+      await loadWorkspacesFromBackend();
+    });
+  </script>
+</body>
+</html>
