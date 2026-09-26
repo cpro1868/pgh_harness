@@ -420,6 +420,7 @@ coverage
 
           <div class="flex items-center space-x-2 font-sans text-xs">
             ${!hasAgents ? `<button onclick="generateAgentsMd('${encodeURIComponent(ws.path)}')" class="px-2.5 py-1 bg-purple-950/60 hover:bg-purple-900/60 text-purple-300 rounded border border-purple-800/50 flex items-center space-x-1"><span>✨ 生成 AGENTS.md</span></button>` : ''}
+            <button onclick="revealWorkspace('${encodeURIComponent(ws.path)}')" class="px-2 py-1 text-slate-300 hover:bg-slate-800 rounded border border-slate-700 flex items-center space-x-1" title="在系统文件管理器中打开该目录">📂 打开目录</button>
             <button onclick="deleteWorkspace('${ws.id}')" class="px-2 py-1 text-rose-400 hover:bg-rose-950/40 rounded border border-rose-900/40">删除记录</button>
           </div>
         `;
@@ -737,6 +738,24 @@ coverage
         }
       } catch (err) {
         alert('操作异常: ' + err.message);
+      }
+    }
+
+    /** 在系统文件管理器中打开该工作区目录（后端只允许已登记目录）。 */
+    async function revealWorkspace(encodedPath) {
+      const targetPath = decodeURIComponent(encodedPath);
+      try {
+        const res = await fetch('/api/workspaces/reveal', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ path: targetPath }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.code !== 0) {
+          alert('打开失败: ' + (result.message || res.status));
+        }
+      } catch (err) {
+        alert('打开请求异常: ' + err.message);
       }
     }
 

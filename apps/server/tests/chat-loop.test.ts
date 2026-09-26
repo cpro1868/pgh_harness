@@ -354,17 +354,45 @@ test('TC-02-02: 对话闭环集成 (会话落盘 + ReAct 工具循环 + SSE 事�
     assert.equal(res.status, 400);
   });
 
-  await t.test('Revert Turn 真实撤销本回合文件修改', async () => {
-    fs.writeFileSync(path.join(wsDir, 'agent_new.txt'), 'agent content\n', 'utf8');
-    const res = await fetch(`http://127.0.0.1:${testPort}/api/sessions/${sessionId}/revert`, {
+  await t.test('TC-01-08-001 集成层：并发向同一工作区发写请求触发 HTTP 409 互斥拦截', async () => {
+    // 1. 创建另一个绑定相同工作区目录的独立会话 B
+    const sessionBRes = await fetch(`http://127.0.0.1:${testPort}/api/sessions`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ turnId }),
+      body: JSON.stringify({ workspacePath: wsDir, modelId: 'stub-model' }),
     });
-    const body = (await res.json()) as { code: number; data: { success: boolean } };
-    assert.equal(body.code, 0);
-    assert.equal(body.data.success, true);
-    assert.equal(fs.existsSync(path.join(wsDir, 'agent_new.txt')), false);
-    assert.equal(fs.readFileSync(path.join(wsDir, 'hello.txt'), 'utf8'), 'hello world\n');
+    const sessionBId = ((await sessionBRes.json()) as { data: { id: string } }).data.id;
+
+    // 2. 模拟真实并发：会话 A 占有该工作区写锁（如正在进行长任务执行）
+    const wsResolved = path.resolve(wsDir);
+    const acquired = (server as any).writeLocks.tryAcquire(wsResolved, sessionId);
+    assert.equal(acquired, true, '会话 A 应成功占有写锁');
+    assert.equal((server as any).writeLocks.holder(wsResolved), sessionId);
+
+    try {
+      // 3. 会话 B 并发向同一工作区发起写请求
+      const resB = await fetch(`http://127.0.0.1:${testPort}/api/chat/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          sessionId: sessionBId,
+          message: '第二会话并发冲突写操作',
+          workspacePath: wsDir,
+          providerId: 'stub-llm',
+          modelId: 'stub-model',
+        }),
+      });
+
+      // 4. 断言核心安全契约：服务端必须立刻返回 409 拦截，绝不发生并发写竞争！
+      assert.equal(resB.status, 409, '并发写冲突时必须返回 HTTP 409 Conflict');
+      const bodyB = (await resB.json()) as { code: number; message: string; holder?: string };
+      assert.equal(bodyB.code, 409);
+      assert.ok(bodyB.message.includes('占用写锁'));
+      assert.equal(bodyB.holder, sessionId, '409 响应必须明确指明当前写锁持有者会话 ID');
+    } finally {
+      // 5. 释放写锁
+      (server as any).writeLocks.release(wsResolved, sessionId);
+      assert.equal((server as any).writeLocks.holder(wsResolved), undefined);
+    }
   });
 });

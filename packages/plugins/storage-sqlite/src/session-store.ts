@@ -62,6 +62,18 @@ export class SessionStore {
     stmt.run(Date.now(), id);
   }
 
+  /**
+   * 更新会话的权限预设（只读 / 编辑 / 完全授权）。
+   * @param id - 会话标识。
+   * @param preset - 目标预设，由调用方完成取值校验。
+   * @returns 是否命中了会话。
+   */
+  public setPreset(id: string, preset: SessionModel['preset']): boolean {
+    const stmt = this.db.raw.prepare('UPDATE sessions SET preset = ?, updated_at = ? WHERE id = ?;');
+    const info = stmt.run(preset, Date.now(), id);
+    return Number(info.changes ?? 0) > 0;
+  }
+
   public delete(id: string): boolean {
     const raw = this.db.raw;
     raw.exec('BEGIN IMMEDIATE;');

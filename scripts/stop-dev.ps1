@@ -32,6 +32,12 @@ if ($targetPort -eq 0) {
     $targetPort = 3210
 }
 
+# 优先调用跨平台确定性 kill-port 工具
+$killScript = Join-Path $PSScriptRoot "kill-port.ts"
+if (Test-Path $killScript) {
+    & node --experimental-strip-types $killScript $targetPort
+}
+
 $pidsToKill = @()
 try {
     $lines = & cmd.exe /c "netstat -ano -p tcp | findstr /R /C:`":$targetPort `"" 2>$null

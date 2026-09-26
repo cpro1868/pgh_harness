@@ -113,6 +113,14 @@
       >
         <span>⬇️</span><span>导出对话</span>
       </button>
+      <button
+        type="button"
+        onclick="toggleRightPanel()"
+        title="展开 / 收起右侧面板"
+        class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
+      >
+        <span>📋</span><span>面板</span>
+      </button>
     </div>
   </header>
 
@@ -136,32 +144,10 @@
       </a>
     </aside>
 
-    <!-- 二级会话列表栏 (对齐 deepseek-harness，实时加载与回放) -->
-    <div class="w-56 bg-[#0c101c] border-r border-[#1a2333] flex flex-col shrink-0">
-      <div class="p-2 border-b border-[#1a2333]">
-        <button onclick="createNewSession()" class="w-full py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-semibold flex items-center justify-center space-x-1 shadow-sm transition">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-          <span>新建对话</span>
-        </button>
-      </div>
-
-      <div class="flex-1 overflow-y-auto p-1.5 space-y-1 font-sans">
-        <div class="px-2 py-1 text-[10px] font-semibold text-slate-500 uppercase tracking-wider font-mono">会话清单</div>
-        <div id="session-list-container" class="space-y-1 text-xs">
-          <!-- 动态加载历史会话 -->
-        </div>
-      </div>
-
-      <div class="p-2 border-t border-[#1a2333] text-[10px] text-slate-500 font-mono flex items-center justify-between bg-[#090d16]">
-        <span>PGH Core</span>
-        <span class="flex items-center text-emerald-400"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span>SSE 在线</span>
-      </div>
-    </div>
-
     <!-- 消息对话与操作主区域 -->
     <main class="flex-1 flex flex-col justify-between overflow-hidden bg-[#070a12]">
-      <!-- 消息滚动展示区 -->
-      <div id="messages-scroll-area" class="flex-1 overflow-y-auto p-6 space-y-4 max-w-4xl w-full mx-auto">
+      <!-- 消息滚动展示区 (拓宽为 max-w-6xl w-full px-6 py-4，呈现更充裕的代码与对话空间) -->
+      <div id="messages-scroll-area" class="flex-1 overflow-y-auto px-6 py-4 space-y-4 max-w-6xl w-full mx-auto">
         <!-- 初始就绪空状态 (Hero Shell) -->
         <div id="chat-empty-state" class="py-16 text-center space-y-3 select-none">
           <span class="text-4xl block">⚡</span>
@@ -177,9 +163,9 @@
         <div id="messages-stream-container" class="space-y-4 hidden"></div>
       </div>
 
-      <!-- 底部 Composer 输入面板 (完全重构：对齐 deepseek-harness 极简沉浸交互) -->
+      <!-- 底部 Composer 输入面板 (同步拓宽为 max-w-6xl，提升宽屏使用体验) -->
       <div class="p-4 border-t border-[#1a2333] bg-[#0a0f1d] shrink-0">
-        <div class="max-w-4xl mx-auto space-y-2">
+        <div class="max-w-6xl mx-auto space-y-2">
           
           <!-- 异常诊断横幅 (代替 alert，错误即时可见) -->
           <div id="composer-error-banner" class="hidden px-3 py-2 bg-rose-950/80 border border-rose-800/80 rounded-lg text-rose-200 text-xs flex items-center justify-between">
@@ -228,6 +214,18 @@
                 >
                   <span>🔄 撤销本回合</span>
                 </button>
+
+                <!-- 授权档位（对齐 deepseek-harness 的沙箱模式选择） -->
+                <select
+                  id="permission-preset-select"
+                  onchange="handlePermissionPresetChange(this.value)"
+                  title="本会话的工具授权档位：只读 / 标准（写操作与命令需人工审批）/ 完全授权（免审批，但硬性红线仍然拒绝）"
+                  class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-[11px] font-mono focus:outline-none focus:border-blue-500"
+                >
+                  <option value="readonly">🔒 只读</option>
+                  <option value="edit">✏️ 标准（需审批）</option>
+                  <option value="full">⚡ 完全授权</option>
+                </select>
               </div>
 
               <!-- 对齐 deepseek-harness 的 Send / Stop 二合一动态状态机按钮 -->
@@ -256,6 +254,51 @@
         </div>
       </div>
     </main>
+
+    <!-- 右侧面板：历史会话（色块 + 悬停预览）+ 本会话轮次大纲 -->
+    <aside id="right-panel" class="w-64 bg-[#0c101c] border-l border-[#1a2333] flex flex-col flex-shrink-0 transition-all duration-200">
+      <!-- 面板头：标签页 + 收起按钮 -->
+      <div class="border-b border-[#1a2333] flex items-center px-1 pt-1 gap-0.5">
+        <button type="button" id="tab-btn-sessions" onclick="switchRightPanelTab('sessions')" class="flex-1 px-2 py-1.5 rounded-t text-[11px] font-sans border-b-2 text-blue-300 border-blue-500 bg-slate-800/50 transition">💬 会话</button>
+        <button type="button" id="tab-btn-outline" onclick="switchRightPanelTab('outline')" class="flex-1 px-2 py-1.5 rounded-t text-[11px] font-sans border-b-2 text-slate-400 border-transparent bg-transparent transition">📑 大纲</button>
+        <button type="button" onclick="collapseRightPanel()" class="px-2 py-1.5 text-slate-500 hover:text-slate-300 text-xs font-mono" title="收起面板">»</button>
+      </div>
+
+      <!-- 历史会话标签页：色块 + 悬停预览 -->
+      <div id="right-tab-sessions" class="flex-1 flex flex-col overflow-hidden">
+        <div class="p-2 border-b border-[#1a2333]">
+          <button onclick="createNewSession()" class="w-full py-1.5 px-2 bg-blue-600 hover:bg-blue-500 text-white rounded text-[11px] font-semibold flex items-center justify-center space-x-1 shadow-sm transition">
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+            <span>新建对话</span>
+          </button>
+        </div>
+        <div id="session-list-container" class="flex-1 overflow-y-auto p-2 space-y-2"></div>
+        <div class="p-2 border-t border-[#1a2333] text-[10px] text-slate-500 font-mono flex items-center justify-between bg-[#090d16]">
+          <span>PGH Core</span>
+          <span class="flex items-center text-emerald-400"><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1 animate-pulse"></span>在线</span>
+        </div>
+      </div>
+
+      <!-- 本会话大纲标签页 -->
+      <div id="right-tab-outline" class="flex-1 flex-col overflow-hidden hidden">
+        <div class="px-2 py-1.5 border-b border-[#1a2333]">
+          <span class="text-[10px] font-mono text-slate-400">轮次大纲 <span id="outline-count" class="text-blue-300">0</span></span>
+        </div>
+        <div id="outline-list" class="flex-1 overflow-y-auto p-1.5 space-y-1"></div>
+      </div>
+    </aside>
+
+    <!-- 右侧面板收起后的展开条（在最右侧边缘，竖排提示，极其醒目防走丢） -->
+    <button
+      type="button"
+      id="right-panel-expand"
+      onclick="expandRightPanel()"
+      class="hidden w-7 bg-[#0a0f1d] hover:bg-[#131b2e] border-l border-[#1a2333] text-slate-400 hover:text-blue-300 flex flex-col items-center justify-center py-4 transition group cursor-pointer"
+      title="点击展开会话与大纲面板"
+    >
+      <span class="text-xs text-blue-400 group-hover:scale-125 transition-transform mb-2">«</span>
+      <span class="text-[10px] [writing-mode:vertical-rl] tracking-widest text-slate-400 group-hover:text-white font-mono select-none">会话面板</span>
+    </button>
 
   </div>
 
@@ -331,6 +374,52 @@
     let pendingAttachments = [];
     const MAX_ATTACHMENTS = 3;
     const MAX_ATTACHMENT_BYTES = 64 * 1024;
+    // 本会话授权档位：只读 / 标准（写操作需审批）/ 完全授权
+    let activePermissionPreset = 'edit';
+
+    /** 同步授权档位下拉框显示。 */
+    function renderPermissionPreset() {
+      const select = document.getElementById('permission-preset-select');
+      if (select && select.value !== activePermissionPreset) select.value = activePermissionPreset;
+    }
+
+    /**
+     * 切换本会话授权档位：立即落盘并记录审计事件。
+     * 注意「完全授权」只免除人工审批，硬性红线（git push / 关机 / 格式化 / 根路径删除 / 敏感凭据读写）依旧拒绝。
+     */
+    async function handlePermissionPresetChange(value) {
+      const preset = ['readonly', 'edit', 'full'].includes(value) ? value : 'edit';
+      activePermissionPreset = preset;
+      renderPermissionPreset();
+
+      if (!activeSessionId) {
+        // 尚未创建会话：档位会随首条消息一并提交
+        if (preset === 'full') showInfoBanner('已选择「完全授权」：本会话写操作与命令将免审批执行（硬性红线仍拒绝）。');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/sessions/${activeSessionId}/permission`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ preset }),
+        });
+        const result = await res.json();
+        if (!res.ok || result.code !== 0) {
+          showErrorBanner('切换授权档位失败: ' + (result.message || res.status));
+          return;
+        }
+        if (preset === 'full') {
+          showInfoBanner('已切换到「完全授权」：本会话写操作与命令免审批执行；git push / 关机 / 格式化 / 根路径删除 / 敏感凭据读写等硬性红线仍然拒绝。');
+        } else if (preset === 'readonly') {
+          showInfoBanner('已切换到「只读」：一切写入与命令都被拒绝。');
+        } else {
+          showInfoBanner('已切换到「标准」：写文件与执行命令需人工审批。');
+        }
+      } catch (err) {
+        showErrorBanner('切换授权档位异常: ' + err.message);
+      }
+    }
 
     function renderAttachmentChips() {
       const box = document.getElementById('attachment-chips');
@@ -411,6 +500,24 @@
     function escapeHtml(text) {
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
       return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    /** 距底部多少像素以内算"贴底"，超过就认为用户在往上翻阅。 */
+    const AUTOSCROLL_NEAR_BOTTOM_PX = 120;
+
+    /**
+     * 让消息区跟随最新内容滚动。
+     * 真实可滚动容器是 `#messages-scroll-area`（overflow-y-auto），内层 stream-container 并不滚动。
+     * @param force - true 时无视位置强制滚到底（用户主动发消息/切换会话）。
+     */
+    function scrollMessagesToBottom(force) {
+      const area = document.getElementById('messages-scroll-area');
+      if (!area) return;
+      const distanceToBottom = area.scrollHeight - area.scrollTop - area.clientHeight;
+      // 仅在用户本就贴着底部时自动跟随：否则会强行把他从历史翻阅中拽走
+      if (force === true || distanceToBottom < AUTOSCROLL_NEAR_BOTTOM_PX) {
+        area.scrollTop = area.scrollHeight;
+      }
     }
 
     function showBanner(msg, tone) {
@@ -512,12 +619,14 @@
               p.models.forEach(m => {
                 const opt = document.createElement('option');
                 opt.value = m.id;
+                opt.dataset.providerId = p.id;
                 opt.textContent = `${m.id} (${p.name})`;
                 select.appendChild(opt);
               });
             } else {
               const opt = document.createElement('option');
               opt.value = 'deepseek-chat';
+              opt.dataset.providerId = p.id;
               opt.textContent = `deepseek-chat (${p.name})`;
               select.appendChild(opt);
             }
@@ -528,7 +637,7 @@
       }
     }
 
-    // 5. 左侧会话树：按工作区（Workspace）分组聚合 (100% 对齐 deepseek-harness 交互规范)
+    // 5. 右侧历史会话：按工作区分组，每会话一个色块，悬停显示预览（ChatGPT 风格）
     async function loadSessionList() {
       try {
         const [wsRes, sessRes] = await Promise.all([
@@ -545,116 +654,114 @@
         container.innerHTML = '';
 
         if (workspaces.length === 0 && sessions.length === 0) {
-          container.innerHTML = `<div class="p-2 text-[11px] text-slate-500 italic">暂无工作区与会话</div>`;
+          container.innerHTML = `<div class="p-3 text-[11px] text-slate-500 italic">暂无工作区与会话</div>`;
           return;
         }
 
-        // 建立工作区字典与归属映射
         const wsMap = new Map();
-        workspaces.forEach(w => {
-          wsMap.set(w.path, { workspace: w, sessions: [] });
-        });
-
-        // 收集未在工作区列表中登记的离散会话
-        const ungroupedSessions = [];
+        workspaces.forEach(w => wsMap.set(w.path, { workspace: w, sessions: [] }));
+        const ungrouped = [];
         sessions.forEach(s => {
-          if (wsMap.has(s.workspacePath)) {
-            wsMap.get(s.workspacePath).sessions.push(s);
-          } else {
-            ungroupedSessions.push(s);
-          }
+          if (wsMap.has(s.workspacePath)) wsMap.get(s.workspacePath).sessions.push(s);
+          else ungrouped.push(s);
         });
 
-        // 渲染已登记工作区及其会话分组
         for (const [wsPath, group] of wsMap.entries()) {
           const ws = group.workspace;
-          const wsSessions = group.sessions;
-          const wsShort = ws.name || wsPath.split('\\').pop() || wsPath;
+          const wsShort = ws.name || wsPath.split(/[\\/]/).pop() || wsPath;
+          const hue = workspaceHue(wsPath);
 
           const groupEl = document.createElement('div');
-          groupEl.className = 'space-y-1 mb-2.5';
-
-          // 工作区树根卡片：展示名称与专属 [+] 按钮
+          groupEl.className = 'space-y-1.5';
           groupEl.innerHTML = `
-            <div class="px-1.5 py-1 flex items-center justify-between text-slate-300 hover:text-white group font-medium select-none">
-              <div class="flex items-center space-x-1.5 truncate text-[11px]" title="${wsPath}">
-                <span class="text-amber-400">📁</span>
+            <div class="flex items-center justify-between px-0.5 group cursor-pointer select-none" onclick="createSessionInWorkspace('${encodeURIComponent(wsPath)}')" title="在此工作区下新建会话">
+              <div class="flex items-center space-x-1.5 text-[11px] truncate">
+                <span class="w-2 h-2 rounded-sm flex-shrink-0" style="background:hsl(${hue},65%,50%)"></span>
                 <span class="font-bold truncate text-slate-200">${wsShort}</span>
-                <span class="text-[10px] text-slate-500 font-mono">(${wsSessions.length})</span>
+                <span class="text-[10px] text-slate-500 font-mono">${group.sessions.length}</span>
               </div>
-              <button
-                type="button"
-                onclick="createSessionInWorkspace('${encodeURIComponent(wsPath)}')"
-                class="opacity-0 group-hover:opacity-100 p-0.5 px-1.5 bg-blue-600/30 hover:bg-blue-600 text-blue-300 hover:text-white rounded text-[10px] transition"
-                title="在此工作区下开启新会话"
-              >
-                +
-              </button>
+              <span class="opacity-0 group-hover:opacity-100 text-blue-400 text-sm leading-none">+</span>
             </div>
-            <div class="space-y-1 pl-2 border-l border-slate-800 ml-2 session-children-box">
-              <!-- 会话条目 -->
-            </div>
+            <div class="grid grid-cols-2 gap-1.5 ws-children"></div>
           `;
-
-          const childrenBox = groupEl.querySelector('.session-children-box');
-          if (wsSessions.length === 0) {
-            childrenBox.innerHTML = `<div class="py-1 text-[10px] text-slate-600 italic">暂无会话，点击 + 新建</div>`;
+          const children = groupEl.querySelector('.ws-children');
+          if (group.sessions.length === 0) {
+            children.innerHTML = `<div class="col-span-2 py-1 text-[10px] text-slate-600 italic text-center">空 · 点击 + 新建</div>`;
           } else {
-            wsSessions.forEach(sess => {
-              childrenBox.appendChild(createSessionRowElement(sess));
-            });
+            group.sessions.forEach(sess => children.appendChild(createSessionBlockElement(sess, hue)));
           }
-
           container.appendChild(groupEl);
         }
 
-        // 渲染未在工作区列表中但存在历史会话的集合
-        if (ungroupedSessions.length > 0) {
-          const unGroupEl = document.createElement('div');
-          unGroupEl.className = 'space-y-1 mt-2';
-          unGroupEl.innerHTML = `
-            <div class="px-1.5 py-1 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">其他历史会话</div>
-            <div class="space-y-1 pl-2 border-l border-slate-800 ml-2 ungrouped-children-box"></div>
+        if (ungrouped.length > 0) {
+          const el = document.createElement('div');
+          el.className = 'space-y-1.5 pt-2 border-t border-slate-800/60';
+          el.innerHTML = `
+            <div class="px-0.5 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">未分组</div>
+            <div class="grid grid-cols-2 gap-1.5 un-children"></div>
           `;
-          const unBox = unGroupEl.querySelector('.ungrouped-children-box');
-          ungroupedSessions.forEach(sess => {
-            unBox.appendChild(createSessionRowElement(sess));
-          });
-          container.appendChild(unGroupEl);
+          const un = el.querySelector('.un-children');
+          ungrouped.forEach(sess => un.appendChild(createSessionBlockElement(sess, 210)));
+          container.appendChild(el);
         }
-
       } catch (err) {
         console.warn('Load workspace sessions failed:', err);
       }
     }
 
-    function createSessionRowElement(sess) {
-      const isActive = sess.id === activeSessionId;
-      const item = document.createElement('div');
-      item.className = `p-1.5 px-2 rounded cursor-pointer transition shadow-sm border flex items-center justify-between group ${
-        isActive ? 'bg-[#162238] border-blue-500/60 text-white font-medium' : 'hover:bg-slate-800/40 border-slate-800/40 text-slate-300'
-      }`;
-      const timeStr = new Date(sess.updatedAt || sess.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    /** 由工作区路径派生稳定色相，同一工作区色块颜色一致。 */
+    function workspaceHue(wsPath) {
+      let hash = 0;
+      for (let i = 0; i < wsPath.length; i++) hash = (hash * 31 + wsPath.charCodeAt(i)) % 360;
+      return hash;
+    }
 
-      item.innerHTML = `
-        <div class="flex-1 min-w-0 pr-1">
-          <div class="text-[11px] truncate leading-snug">${sess.title || '新对话'}</div>
-          <div class="text-[9px] text-slate-500 font-mono mt-0.5">${timeStr}</div>
+    /**
+     * 会话色块（ChatGPT 风格）：平时只显示紧凑方块，悬停时弹出完整预览卡（包含标题、工作区、最后更新时间、删除按钮）。
+     */
+    function createSessionBlockElement(sess, hue) {
+      const isActive = sess.id === activeSessionId;
+      const title = sess.title || '新对话';
+      const timeStr = new Date(sess.updatedAt || sess.createdAt).toLocaleString([], { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const wsShort = (sess.workspacePath || '').split(/[\\/]/).pop() || '';
+      // 提取标题前 2 个汉字或首字母缩写作为色块微标
+      const badgeText = title.slice(0, 2);
+
+      const block = document.createElement('div');
+      block.className = `group relative h-11 rounded-lg cursor-pointer flex flex-col items-center justify-center transition-all duration-150 border select-none ${
+        isActive ? 'border-blue-400 ring-2 ring-blue-500/30 shadow-lg scale-[1.02]' : 'border-slate-800/80 hover:border-slate-600 hover:scale-[1.02]'
+      }`;
+      block.style.background = `linear-gradient(135deg, hsl(${hue}, 40%, ${isActive ? 28 : 18}%), hsl(${hue}, 50%, ${isActive ? 20 : 12}%))`;
+
+      block.innerHTML = `
+        <span class="text-white font-bold text-xs tracking-tight pointer-events-none drop-shadow-sm">${escapeHtml(badgeText)}</span>
+        <span class="text-[9px] text-slate-300/80 font-mono truncate px-1 max-w-[90%] pointer-events-none">${escapeHtml(title.slice(0, 4))}</span>
+
+        <!-- 悬停全貌卡片（ChatGPT 浮层，向左展开，带 pointer-events 允许点击删除） -->
+        <div class="session-preview hidden group-hover:block absolute right-full top-0 mr-2 w-56 bg-[#0f172a] border border-slate-700 rounded-lg p-3 z-50 shadow-2xl text-left space-y-1.5 transition-all">
+          <div class="text-xs text-white font-semibold leading-snug line-clamp-2">${escapeHtml(title)}</div>
+          <div class="flex items-center space-x-1 text-[10px] text-blue-300 font-mono truncate">
+            <span>📁</span><span class="truncate">${escapeHtml(wsShort)}</span>
+          </div>
+          <div class="text-[9px] text-slate-400 font-mono">更新: ${timeStr}</div>
+          <div class="pt-1 border-t border-slate-800">
+            <button
+              type="button"
+              class="w-full px-2 py-1 text-[10px] text-rose-400 hover:text-white hover:bg-rose-600/80 rounded border border-rose-900/50 transition text-center flex items-center justify-center space-x-1 cursor-pointer"
+              onclick="deleteSession(event, '${sess.id}')"
+            >
+              <span>🗑️</span><span>删除此会话</span>
+            </button>
+          </div>
         </div>
-        <button
-          type="button"
-          onclick="deleteSession(event, '${sess.id}')"
-          class="opacity-0 group-hover:opacity-100 p-0.5 text-slate-500 hover:text-rose-400 hover:bg-rose-950/40 rounded transition text-xs"
-          title="删除此会话与关联事件"
-        >
-          🗑️
-        </button>
       `;
-      item.onclick = (e) => {
+
+      block.addEventListener('click', (e) => {
         if (e.target.closest('button')) return;
         switchSession(sess.id);
-      };
-      return item;
+      });
+
+      return block;
     }
 
     // 在指定工作区直接新建会话
@@ -692,6 +799,12 @@
       lastTurnId = null;
       lastKnownSeq = 0;
       stopSessionWatch();
+      // 新会话回到安全的默认档位（标准：写操作需审批），避免沿用上一次的"完全授权"
+      activePermissionPreset = 'edit';
+      renderPermissionPreset();
+      // 清空右侧轮次大纲
+      outlineTurns = [];
+      renderTurnOutline();
       document.getElementById('chat-empty-state').classList.remove('hidden');
       const streamBox = document.getElementById('messages-stream-container');
       streamBox.classList.add('hidden');
@@ -702,6 +815,7 @@
     async function switchSession(sessionId) {
       activeSessionId = sessionId;
       await loadSessionList();
+      await syncPermissionPresetFromServer(sessionId);
 
       try {
         const res = await fetch(`/api/sessions/${sessionId}/messages?after=0`);
@@ -718,6 +832,142 @@
       }
     }
 
+    /** 从服务端同步指定会话的授权档位（切换会话时保证界面与后端一致）。 */
+    async function syncPermissionPresetFromServer(sessionId) {
+      try {
+        const res = await fetch('/api/sessions');
+        const body = await res.json();
+        const record = (body.data || []).find((item) => item.id === sessionId);
+        if (record && typeof record.preset === 'string' && ['readonly', 'edit', 'full'].includes(record.preset)) {
+          activePermissionPreset = record.preset;
+        }
+      } catch {
+        // 同步失败不阻断会话切换，保留当前档位显示
+      }
+      renderPermissionPreset();
+    }
+
+    // ---------- 右侧面板 (会话色块列表 + 轮次大纲) ----------
+    let outlineTurns = [];
+    let rightPanelTab = 'sessions';
+
+    function switchRightPanelTab(tab) {
+      rightPanelTab = tab;
+      const tabSessions = document.getElementById('right-tab-sessions');
+      const tabOutline = document.getElementById('right-tab-outline');
+      const btnSessions = document.getElementById('tab-btn-sessions');
+      const btnOutline = document.getElementById('tab-btn-outline');
+      const activeCls = ['text-blue-300', 'border-blue-500', 'bg-slate-800/50'];
+      const idleCls = ['text-slate-400', 'border-transparent', 'bg-transparent'];
+
+      tabSessions.classList.toggle('hidden', tab !== 'sessions');
+      tabSessions.classList.toggle('flex', tab === 'sessions');
+      tabOutline.classList.toggle('hidden', tab !== 'outline');
+      tabOutline.classList.toggle('flex', tab === 'outline');
+
+      btnSessions.className = btnSessions.className.replace(/\b(text-\S+|border-\S+|bg-\S+)\b/g, '').trim();
+      btnOutline.className = btnOutline.className.replace(/\b(text-\S+|border-\S+|bg-\S+)\b/g, '').trim();
+      const target = tab === 'sessions' ? btnSessions : btnOutline;
+      const other = tab === 'sessions' ? btnOutline : btnSessions;
+      target.classList.add(...activeCls);
+      other.classList.add(...idleCls);
+    }
+
+    function collapseRightPanel() {
+      const panel = document.getElementById('right-panel');
+      const strip = document.getElementById('right-panel-expand');
+      if (panel) panel.classList.add('hidden');
+      if (strip) { strip.classList.remove('hidden'); strip.classList.add('flex'); }
+    }
+
+    function expandRightPanel() {
+      const panel = document.getElementById('right-panel');
+      const strip = document.getElementById('right-panel-expand');
+      if (panel) panel.classList.remove('hidden');
+      if (strip) { strip.classList.add('hidden'); strip.classList.remove('flex'); }
+    }
+
+    function toggleRightPanel() {
+      const panel = document.getElementById('right-panel');
+      if (!panel) return;
+      if (panel.classList.contains('hidden')) expandRightPanel();
+      else collapseRightPanel();
+    }
+
+    /** 渲染右侧轮次大纲列表。 */
+    function renderTurnOutline() {
+      const list = document.getElementById('outline-list');
+      const count = document.getElementById('outline-count');
+      if (!list) return;
+      if (count) count.textContent = String(outlineTurns.length);
+
+      if (outlineTurns.length === 0) {
+        list.innerHTML = '<div class="p-3 text-[11px] text-slate-500 italic">本会话暂无对话轮次</div>';
+        return;
+      }
+
+      list.innerHTML = '';
+      outlineTurns.forEach((turn, index) => {
+        const question = String(turn.user || '(无提问)').replace(/\s+/g, ' ').trim();
+        const preview = question.length > 42 ? `${question.slice(0, 42)}…` : question;
+        const toolCount = Array.isArray(turn.tools) ? turn.tools.filter((item) => item.kind === 'call').length : 0;
+        const meta = [
+          toolCount > 0 ? `🔧 ${toolCount}` : '',
+          turn.steps ? `${turn.steps} 步` : '',
+          turn.stoppedReason && turn.stoppedReason !== 'completed' ? turn.stoppedReason : '',
+        ].filter(Boolean).join(' · ');
+
+        const item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'w-full text-left px-2.5 py-2 rounded-lg border border-transparent hover:border-slate-700 hover:bg-slate-800/50 transition space-y-0.5';
+        item.innerHTML = `
+          <div class="flex items-center justify-between text-[10px] font-mono text-slate-500">
+            <span>第 ${index + 1} 轮</span>
+            <span class="truncate max-w-[80px]">${escapeHtml(String(turn.model || ''))}</span>
+          </div>
+          <div class="text-[11px] text-slate-300 leading-snug">${escapeHtml(preview)}</div>
+          ${meta ? `<div class="text-[10px] text-slate-500 font-mono">${escapeHtml(meta)}</div>` : ''}
+        `;
+        item.addEventListener('click', () => jumpToTurn(turn.turnId, item));
+        list.appendChild(item);
+      });
+    }
+
+    /** 点击大纲条目跳转到对应轮次，并高亮当前项。 */
+    function jumpToTurn(turnId, item) {
+      if (!turnId) return;
+      const target = document.querySelector(`[data-turn-id="${turnId}"]`);
+      if (!target) {
+        showErrorBanner('该轮次不在当前视图中。');
+        return;
+      }
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      const list = document.getElementById('outline-list');
+      if (list) {
+        list.querySelectorAll('button').forEach((el) => el.classList.remove('bg-slate-800/70', 'border-blue-600/50'));
+      }
+      if (item) item.classList.add('bg-slate-800/70', 'border-blue-600/50');
+    }
+
+    /** 回合结束后从服务端重取事件，保证大纲与落盘事实一致（单一数据来源，避免增量维护漂移）。 */
+    async function refreshTurnOutline() {
+      if (!activeSessionId) {
+        outlineTurns = [];
+        renderTurnOutline();
+        return;
+      }
+      try {
+        const res = await fetch(`/api/sessions/${activeSessionId}/messages?after=0`);
+        const result = await res.json();
+        if (result.code === 0 && Array.isArray(result.data)) {
+          outlineTurns = groupTurns(result.data);
+          renderTurnOutline();
+        }
+      } catch {
+        // 大纲刷新失败不影响主流程
+      }
+    }
+
     // ---------- 逐轮对话渲染与操作 (模型标注 / 点赞点踩 / 重做 / 导出) ----------
 
     function groupTurns(events) {
@@ -727,7 +977,7 @@
         if (!ev.turnId) continue;
         let turn = byId.get(ev.turnId);
         if (!turn) {
-          turn = { turnId: ev.turnId, user: '', assistant: '', model: '', tools: [], attachments: [], questions: [], answers: [], approvals: [], decisions: [], todos: null, feedback: null };
+          turn = { turnId: ev.turnId, user: '', assistant: '', model: '', tools: [], attachments: [], questions: [], answers: [], approvals: [], decisions: [], todos: null, feedback: null, steps: 0, stoppedReason: '' };
           byId.set(ev.turnId, turn);
           turns.push(turn);
         }
@@ -752,6 +1002,9 @@
           turn.tools.push({ kind: 'result', output: String((ev.payload || {}).output || ''), isError: Boolean((ev.payload || {}).isError), meta: (ev.payload || {}).meta });
         } else if (ev.type === 'todo/update') {
           turn.todos = Array.isArray((ev.payload || {}).todos) ? ev.payload.todos : null;
+        } else if (ev.type === 'turn/completed') {
+          turn.steps = Number((ev.payload || {}).stepsUsed || 0);
+          turn.stoppedReason = String((ev.payload || {}).stoppedReason || '');
         } else if (ev.type === 'message/feedback') {
           turn.feedback = String((ev.payload || {}).rating || '');
         }
@@ -781,28 +1034,62 @@
       const lastTurn = turns[turns.length - 1];
       lastTurnId = lastTurn ? lastTurn.turnId : null;
 
+      // 1. 恢复最后一轮使用的模型为顶栏下拉框选中的模型
+      if (lastTurn && lastTurn.model) {
+        const select = document.getElementById('topbar-model-select');
+        if (select) {
+          const matched = Array.from(select.options).find(opt => opt.value === lastTurn.model);
+          if (matched) {
+            select.value = lastTurn.model;
+          }
+        }
+      }
+
       for (const turn of turns) {
         if (turn.user) appendUserBubble(turn.user, turn.attachments);
         const card = createAssistantCard(turn.turnId, turn.model, Boolean(lastTurn) && turn.turnId === lastTurn.turnId);
 
-        for (const tool of turn.tools) {
-          if (tool.kind === 'call' && tool.tool === 'ask_user') continue;
-          const line = document.createElement('div');
-          if (tool.kind === 'call') {
-            line.className = 'text-[11px] font-mono text-amber-300/90 bg-amber-950/20 border border-amber-900/30 rounded px-2.5 py-1 my-1';
-            line.textContent = `🔧 执行工具: ${tool.tool} ${JSON.stringify(tool.args || {})}`;
-          } else {
-            line.className = `text-[11px] font-mono rounded px-2.5 py-1 my-0.5 ${tool.isError ? 'text-rose-300 bg-rose-950/20 border border-rose-900/30' : 'text-emerald-300/90 bg-emerald-950/20 border border-emerald-900/30'}`;
-            line.textContent = `📥 工具输出 (${tool.output.length} 字符)${tool.isError ? ' [报错]' : ''}`;
-          }
-          card.toolsEl.appendChild(line);
-        }
+        // 历史会话默认将工具调用、输出及 Diff 细节折叠收缩（details 包裹），点击才展开查看
+        if (turn.tools && turn.tools.length > 0) {
+          const details = document.createElement('details');
+          details.className = 'group border border-slate-800/80 bg-[#090d18] rounded-lg p-2 text-xs space-y-1 my-1 transition';
+          
+          const toolCallCount = turn.tools.filter(t => t.kind === 'call' && t.tool !== 'ask_user').length;
+          const summary = document.createElement('summary');
+          summary.className = 'cursor-pointer select-none text-[11px] font-mono text-slate-400 group-hover:text-blue-300 flex items-center justify-between list-none';
+          summary.innerHTML = `
+            <span class="flex items-center space-x-1.5">
+              <span>🔧 工具执行轨迹 (${toolCallCount} 次调用)</span>
+            </span>
+            <span class="text-[10px] text-slate-500 group-open:rotate-180 transition-transform">▼</span>
+          `;
+          details.appendChild(summary);
 
-        // 行级 Diff 审阅卡（红绿对比）
-        for (const tool of turn.tools) {
-          if (tool.kind === 'result' && tool.meta && Array.isArray(tool.meta.lines)) {
-            card.toolsEl.appendChild(createDiffCard(tool.meta));
+          const toolBody = document.createElement('div');
+          toolBody.className = 'pt-2 space-y-1 border-t border-slate-800/60 mt-1.5';
+
+          for (const tool of turn.tools) {
+            if (tool.kind === 'call' && tool.tool === 'ask_user') continue;
+            const line = document.createElement('div');
+            if (tool.kind === 'call') {
+              line.className = 'text-[11px] font-mono text-amber-300/90 bg-amber-950/20 border border-amber-900/30 rounded px-2.5 py-1 my-1';
+              line.textContent = `🔧 执行工具: ${tool.tool} ${JSON.stringify(tool.args || {})}`;
+            } else {
+              line.className = `text-[11px] font-mono rounded px-2.5 py-1 my-0.5 ${tool.isError ? 'text-rose-300 bg-rose-950/20 border border-rose-900/30' : 'text-emerald-300/90 bg-emerald-950/20 border border-emerald-900/30'}`;
+              line.textContent = `📥 工具输出 (${tool.output.length} 字符)${tool.isError ? ' [报错]' : ''}`;
+            }
+            toolBody.appendChild(line);
           }
+
+          // 行级 Diff 审阅卡（红绿对比）放进折叠区内
+          for (const tool of turn.tools) {
+            if (tool.kind === 'result' && tool.meta && Array.isArray(tool.meta.lines)) {
+              toolBody.appendChild(createDiffCard(tool.meta));
+            }
+          }
+
+          details.appendChild(toolBody);
+          card.toolsEl.appendChild(details);
         }
 
         for (const question of turn.questions) {
@@ -827,23 +1114,76 @@
         streamBox.appendChild(card.el);
       }
 
-      streamBox.scrollTop = streamBox.scrollHeight;
+      // 渲染完毕后强制拉到底部最新一条对话 (force=true)，杜绝跳回第一条
+      scrollMessagesToBottom(true);
+      requestAnimationFrame(() => scrollMessagesToBottom(true));
+      setTimeout(() => scrollMessagesToBottom(true), 50);
 
       // 任务清单卡片回放：取整个会话最后一次 todo/update
       const latestTodos = [...turns].reverse().find((turn) => turn.todos)?.todos ?? null;
       renderTodoDock(latestTodos);
+
+      // 右侧轮次大纲与当前会话保持一致
+      outlineTurns = turns;
+      renderTurnOutline();
+    }
+
+    /**
+     * 将 Markdown 文本中各级标题统一降级，保证其级别严格低于包裹层级。
+     * 例如基础层级为 2（## 助手），内容中的一级标题 # 降为 ###，## 降为 ####，以此类推；
+     * 并在代码块内部（``` 或 ~~~）跳过，防止污染代码注释。
+     */
+    function demoteMarkdownHeadings(content, baseLevel = 2) {
+      if (!content || typeof content !== 'string') return '';
+      const lines = content.split('\n');
+      let inCodeBlock = false;
+      let codeFence = '';
+
+      const demoted = lines.map((line) => {
+        const fenceMatch = line.match(/^(\s*)(`{3,}|~{3,})/);
+        if (fenceMatch) {
+          if (!inCodeBlock) {
+            inCodeBlock = true;
+            codeFence = fenceMatch[2][0];
+          } else if (fenceMatch[2][0] === codeFence) {
+            inCodeBlock = false;
+            codeFence = '';
+          }
+          return line;
+        }
+
+        if (inCodeBlock) return line;
+
+        // 匹配未被代码块包裹的标题行 (#+ 后面跟随空格或末尾)
+        const headingMatch = line.match(/^(#{1,6})(\s+.*)$/);
+        if (headingMatch) {
+          const currentHashes = headingMatch[1];
+          const rest = headingMatch[2];
+          // 降级：增加 baseLevel 个 '#'，Markdown 最大建议层级 6（超过也合规渲染）
+          const newHashes = '#'.repeat(currentHashes.length + baseLevel);
+          return `${newHashes}${rest}`;
+        }
+
+        return line;
+      });
+
+      return demoted.join('\n');
     }
 
     function turnsToMarkdown(turns, title) {
       const lines = [`# ${title}`, '', `> 导出时间：${new Date().toLocaleString()}`, ''];
-      for (const turn of turns) {
+      turns.forEach((turn, idx) => {
+        lines.push(`## 轮次 ${idx + 1}`);
+        lines.push('');
+
         if (turn.user) {
-          lines.push('## 👤 用户', '', turn.user, '');
+          lines.push('### 👤 用户输入', '');
+          lines.push(demoteMarkdownHeadings(turn.user, 3), '');
         }
         if (turn.attachments && turn.attachments.length > 0) {
           lines.push(`> 附加参考材料：${turn.attachments.map((n) => `\`${n}\``).join('、')}`, '');
         }
-        if (turn.tools.length > 0) {
+        if (turn.tools && turn.tools.length > 0) {
           lines.push('<details><summary>工具调用轨迹</summary>', '');
           for (const tool of turn.tools) {
             if (tool.kind === 'call') {
@@ -855,12 +1195,15 @@
           lines.push('', '</details>', '');
         }
         if (turn.assistant) {
-          lines.push(`## 🤖 助手${turn.model ? ` · 模型：${turn.model}` : ''}`, '', turn.assistant, '');
+          lines.push(`### 🤖 助手回答${turn.model ? ` · 模型：${turn.model}` : ''}`, '');
+          // 助手回答从属于 ###，内部内容标题降级为 #### 开始 (baseLevel=3)
+          lines.push(demoteMarkdownHeadings(turn.assistant, 3), '');
         }
         if (turn.feedback) {
           lines.push(`> 本轮评价：${turn.feedback === 'up' ? '👍 答得好' : '👎 有待加强'}`, '');
         }
-      }
+        lines.push('---', '');
+      });
       return lines.join('\n');
     }
 
@@ -1034,7 +1377,7 @@
         const modelId = document.getElementById('topbar-model-select').value || 'deepseek-chat';
         const card = createAssistantCard(null, modelId, true);
         streamBox.appendChild(card.el);
-        streamBox.scrollTop = streamBox.scrollHeight;
+        scrollMessagesToBottom();
 
         await runStream(result.data.message, modelId, card, result.data.attachments || []);
       } catch (err) {
@@ -1309,7 +1652,7 @@
         : '';
       bubble.innerHTML = `<div class="font-bold text-blue-300 text-[10px] font-mono">YOU</div><div class="whitespace-pre-wrap">${escapeHtml(text)}</div>${chips}`;
       streamBox.appendChild(bubble);
-      streamBox.scrollTop = streamBox.scrollHeight;
+      scrollMessagesToBottom();
       return bubble;
     }
 
@@ -1332,13 +1675,15 @@
       streamBox.classList.remove('hidden');
 
       appendUserBubble(text, attachments.map((a) => a.filename));
+      // 用户主动发消息：强制滚到底，确保立刻看到自己的输入与新回合
+      scrollMessagesToBottom(true);
       textarea.value = '';
       pendingAttachments = [];
       renderAttachmentChips();
 
       const card = createAssistantCard(null, modelId, true);
       streamBox.appendChild(card.el);
-      streamBox.scrollTop = streamBox.scrollHeight;
+      scrollMessagesToBottom();
 
       await runStream(text, modelId, card, attachments);
     }
@@ -1347,6 +1692,9 @@
     async function runStream(text, modelId, card, attachments) {
       const streamBox = document.getElementById('messages-stream-container');
       const wsPath = activeWorkspacePath || 'G:\\Projects\\Agent\\harness';
+      const modelSelect = document.getElementById('topbar-model-select');
+      const selectedOption = modelSelect ? modelSelect.selectedOptions[0] : null;
+      const providerId = selectedOption?.dataset?.providerId;
       let hasContentStarted = false;
       let accumulatedMd = '';
 
@@ -1355,7 +1703,7 @@
         badge.className = 'text-[11px] font-mono text-amber-300/90 bg-amber-950/20 border border-amber-900/30 rounded px-2.5 py-1 my-1';
         badge.textContent = `🔧 执行工具: ${toolName} ${JSON.stringify(args || {})}`;
         card.toolsEl.appendChild(badge);
-        streamBox.scrollTop = streamBox.scrollHeight;
+        scrollMessagesToBottom();
       };
 
       setRunningState(true);
@@ -1371,8 +1719,10 @@
             sessionId: activeSessionId,
             message: text,
             workspacePath: wsPath,
+            providerId: providerId,
             modelId: modelId,
             attachments: (attachments || []).map((a) => ({ filename: a.filename, content: a.content })),
+            permissionPreset: activePermissionPreset,
           }),
           signal: activeAbortController.signal,
         });
@@ -1428,16 +1778,16 @@
               }
               accumulatedMd += (data.text || '');
               card.contentEl.innerHTML = renderMarkdown(accumulatedMd);
-              streamBox.scrollTop = streamBox.scrollHeight;
+              scrollMessagesToBottom();
             } else if (eventType === 'tool-call-start') {
               // ask_user 由专用问答卡片呈现，避免重复渲染工具徽标
               if (data.tool !== 'ask_user') appendToolBadge(data.tool, data.args);
             } else if (eventType === 'question-request') {
               card.toolsEl.appendChild(createQuestionCard(data, null));
-              streamBox.scrollTop = streamBox.scrollHeight;
+              scrollMessagesToBottom();
             } else if (eventType === 'approval-request') {
               card.toolsEl.appendChild(createApprovalCard(data, null));
-              streamBox.scrollTop = streamBox.scrollHeight;
+              scrollMessagesToBottom();
             } else if (eventType === 'tool-result') {
               const line = document.createElement('div');
               line.className = `text-[11px] font-mono rounded px-2.5 py-1 my-0.5 ${data.isError ? 'text-rose-300 bg-rose-950/20 border border-rose-900/30' : 'text-emerald-300/90 bg-emerald-950/20 border border-emerald-900/30'}`;
@@ -1446,7 +1796,7 @@
               if (data.meta && Array.isArray(data.meta.lines)) {
                 card.toolsEl.appendChild(createDiffCard(data.meta));
               }
-              streamBox.scrollTop = streamBox.scrollHeight;
+              scrollMessagesToBottom();
             } else if (eventType === 'todo-update') {
               renderTodoDock(data.todos);
             } else if (eventType === 'turn-end') {
@@ -1474,6 +1824,8 @@
         setRunningState(false);
         // 回合结束回到空闲态，恢复长期订阅以承接后台/跨标签的新事件
         if (activeSessionId) startSessionWatch(activeSessionId);
+        // 回合已落盘，刷新右侧大纲（以服务端事实为准）
+        void refreshTurnOutline();
       }
     }
 
@@ -1834,16 +2186,20 @@
       }
     }
 
-    // 息屏/休眠后切回前台：立即重连并拉齐（不等 30s 看门狗）
+    // 息屏/休眠后切回前台：立即重连并拉齐（不等 30s 看门狗），并保证滚动贴合最新消息
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState !== 'visible') return;
       if (streamWatch.closed || !streamWatch.sessionId) return;
       console.info('[PGH] 切回前台，主动校验 SSE 连接…');
       void reconnectSessionStream();
+      // 切回前台时，默认定位到最新的一条对话
+      scrollMessagesToBottom(true);
     });
 
     // 页面就绪入口
     window.addEventListener('DOMContentLoaded', async () => {
+      renderPermissionPreset();
+      renderTurnOutline();
       await loadWorkspaces();
       await loadModels();
       await loadSessionList();

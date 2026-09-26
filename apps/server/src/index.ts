@@ -6,19 +6,20 @@ import { fileURLToPath } from 'node:url';
 import { acquireInstanceLock, releaseInstanceLock } from './instance-lock.ts';
 import { ProxyDispatcher } from './network/proxy-dispatcher.ts';
 import { SqliteDatabase, SettingsStore, ProviderStore, WorkspaceStore, EventStore, SessionStore } from '../../../packages/plugins/storage-sqlite/src/index.ts';
+import type { ProviderRecord } from '../../../packages/plugins/storage-sqlite/src/index.ts';
 
 import { OpenAICompatibleProvider } from '../../../packages/plugins/provider-openai/src/index.ts';
 import { encryptSecret, decryptSecret } from './security/crypto.ts';
+import { resolveMasterKey } from './security/master-key.ts';
 import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff } from '../../../packages/core/src/index.ts';
 import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult } from '../../../packages/core/src/index.ts';
 import { FileTools, ShellExecutor, SearchTools } from '../../../packages/plugins/tools-coding/src/index.ts';
-import { openNativeFolderDialog, listDirectory, createDirectory } from './native-dialog.ts';
+import { openNativeFolderDialog, listDirectory, createDirectory, revealInFileManager } from './native-dialog.ts';
 import type { BaseEvent, NetworkProxyConfig } from '@harness/protocol';
 
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const DEFAULT_MASTER_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
 
 function resolveStaticDir(): string {
   const candidates = [
@@ -43,6 +44,8 @@ export interface ServerOptions {
   staticDir?: string;
   /** SSE 心跳间隔（毫秒）。可注入以便用可控时钟验证心跳与半开断链重连。 */
   heartbeatMs?: number;
+  /** 在系统文件管理器中打开目录的实现。可注入以便测试断言调用，而不真的弹出窗口。 */
+  revealFn?: (targetPath: string) => void;
 }
 
 /** 会话运行态：等待人类回答提问或裁决审批时进入等待态（TC-01-04-006 / §6.3）。 */
@@ -55,10 +58,31 @@ const MAX_ATTACHMENTS = 3;
 // 天花板：需要更大材料时应改走 D68 Spill 私有 blob 引用，而非放宽内联上限。
 const MAX_ATTACHMENT_BYTES = 64 * 1024;
 
+/**
+ * 旧版本曾使用公开硬编码主密钥加密凭据（安全工程方法论 BL-07）。
+ * 此固定值**仅用于在首次遇到历史记录时透明升级**：成功解密后立即用本机独立生成的
+ * master.key 重新加密并落盘，升级完成后不再使用。
+ */
+const LEGACY_BOOTSTRAP_KEY = '0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef';
+
 export interface ValidatedAttachment {
   filename: string;
   content: string;
   bytes: number;
+}
+
+/** 会话可选的权限预设（信任边界取值白名单）。 */
+export const PERMISSION_PRESETS: readonly PermissionPreset[] = ['readonly', 'edit', 'full'];
+
+/**
+ * 校验外部传入的权限预设。
+ * @param value - 未校验的入参。
+ * @returns 合法预设，或 undefined 表示非法（调用方应拒绝）。
+ */
+export function normalizePermissionPreset(value: unknown): PermissionPreset | undefined {
+  return typeof value === 'string' && (PERMISSION_PRESETS as readonly string[]).includes(value)
+    ? (value as PermissionPreset)
+    : undefined;
 }
 
 /**
@@ -148,6 +172,10 @@ export class HarnessServer {
   public db: SqliteDatabase;
   public settingsStore: SettingsStore;
   public readonly heartbeatMs: number;
+  /** 在系统文件管理器中打开目录的实现（可注入）。 */
+  public readonly revealFn: (targetPath: string) => void;
+  /** 应用主密钥（安全工程方法论 §4.1）：来自 env 或随机生成的 master.key，绝不硬编码。 */
+  public readonly masterKey: string;
   public providerStore: ProviderStore;
   public workspaceStore: WorkspaceStore;
   public eventStore: EventStore;
@@ -169,6 +197,9 @@ export class HarnessServer {
     // D70 决策：项目全称 Purple Grapes Harness (pgh)，数据目录命名为 ~/.pg_harness
     this.dataDir = options.dataDir ?? process.env.PGH_DATA_DIR ?? path.join(os.homedir(), '.pg_harness');
     this.heartbeatMs = options.heartbeatMs ?? 15000;
+    this.revealFn = options.revealFn ?? revealInFileManager;
+    // 主密钥解析早于数据库初始化：格式非法时立即拒绝启动，不静默降级（fail-closed）
+    this.masterKey = resolveMasterKey(this.dataDir);
     this.staticDir = options.staticDir ?? resolveStaticDir();
     if (!fs.existsSync(this.staticDir)) {
       console.warn(`[Harness] WARNING: staticDir not found: ${this.staticDir}`);
@@ -361,29 +392,66 @@ export class HarnessServer {
       return;
     }
 
+    // 读取单个 Provider 的明文凭据：仅供"配置与编辑"弹窗回显使用。
+    // 这是安全工程方法论 §13 登记的**显式例外**（默认拒绝向浏览器回传明文），
+    // 因此加了三重约束：仅回环来源、仅单个 Provider、每次读取写审计日志。
+    const providerSecretMatch = url.pathname.match(/^\/api\/providers\/([^/]+)\/secret$/);
+    if (method === 'GET' && providerSecretMatch) {
+      const remote = req.socket.remoteAddress ?? '';
+      const isLoopback = remote === '127.0.0.1' || remote === '::1' || remote === '::ffff:127.0.0.1';
+      if (!isLoopback) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 403, message: '仅允许从本机回环地址读取凭据明文' }));
+        return;
+      }
+      const providerId = decodeURIComponent(providerSecretMatch[1] as string);
+      const record = this.providerStore.get(providerId);
+      if (!record) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: 'Provider 不存在' }));
+        return;
+      }
+      const plain = this.resolveProviderApiKey(record);
+      if (plain === '') {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '该 Provider 没有可解密的凭据' }));
+        return;
+      }
+      // 审计留痕：明文每次被读出都必须可追溯（S6）
+      console.log(`[Harness][Audit] provider credential revealed: id=${providerId} name="${record.name}" from=${remote}`);
+      this.json(res, { code: 0, data: { id: providerId, apiKey: plain } });
+      return;
+    }
+
     // 3. Provider 资产管理
     if (method === 'GET' && url.pathname === '/api/providers') {
       const list = this.providerStore.list();
-      this.json(res, { code: 0, data: list });
+      this.json(res, { code: 0, data: list.map((record) => this.toPublicProvider(record)) });
       return;
     }
 
     if (method === 'POST' && url.pathname === '/api/providers') {
-      const body = await this.readJsonBody<any>(req);
-      const rawKey = body.apiKey || 'sk-test';
-      const cipher = encryptSecret(rawKey, DEFAULT_MASTER_KEY);
+      const body = await this.readJsonBody<Record<string, unknown>>(req);
+      const providerId = typeof body.id === 'string' && body.id !== '' ? body.id : `provider-${Date.now()}`;
+      const existing = this.providerStore.get(providerId);
+      const incomingKey = typeof body.apiKey === 'string' ? body.apiKey.trim() : '';
+      // 凭据语义：留空 = 保持既有 Key 不变。
+      // 旧实现用 `body.apiKey || 'sk-test'` 兜底，导致"编辑 Provider 但不重填 Key"会把真实密钥覆盖成占位串。
+      const cipher = incomingKey !== ''
+        ? encryptSecret(incomingKey, this.masterKey)
+        : (existing?.apiKeyCipher ?? '');
 
       const record = this.providerStore.upsert({
-        id: body.id || `provider-${Date.now()}`,
-        name: body.name || '未命名 Provider',
-        protocol: body.protocol || 'openai-compatible',
-        baseUrl: body.baseUrl || 'https://api.deepseek.com/v1',
+        id: providerId,
+        name: (typeof body.name === 'string' && body.name) || '未命名 Provider',
+        protocol: (typeof body.protocol === 'string' && body.protocol) || 'openai-compatible',
+        baseUrl: (typeof body.baseUrl === 'string' && body.baseUrl) || 'https://api.deepseek.com/v1',
         apiKeyCipher: cipher,
-        proxy: body.proxy || { enabled: false, mode: 'inherit' },
-        models: body.models || [],
+        proxy: (body.proxy as Record<string, unknown> | undefined) ?? { enabled: false, mode: 'inherit' },
+        models: Array.isArray(body.models) ? body.models : [],
       });
 
-      this.json(res, { code: 0, message: 'Provider saved successfully', data: record });
+      this.json(res, { code: 0, message: 'Provider saved successfully', data: this.toPublicProvider(record) });
       return;
     }
 
@@ -419,8 +487,14 @@ export class HarnessServer {
 
       const protocol = body?.protocol || 'openai-compatible';
       const rawBaseUrl = (body?.baseUrl || body?.base_url || '').trim().replace(/\/+$/, '');
-      const apiKey = (body?.apiKey || body?.api_key || '').trim();
+      let apiKey = (body?.apiKey || body?.api_key || '').trim();
       const providerProxy = body?.proxy;
+
+      // 编辑既有 Provider 时允许 Key 留空：回落到已保存凭据，避免"为了探测必须重输 Key"
+      if (apiKey === '' && typeof body?.providerId === 'string' && body.providerId !== '') {
+        const stored = this.providerStore.get(body.providerId);
+        if (stored) apiKey = this.resolveProviderApiKey(stored);
+      }
 
       if (!rawBaseUrl) {
         // 如果未填 baseUrl，默认针对官方端点给予友好兜底
@@ -430,6 +504,32 @@ export class HarnessServer {
       }
 
       await this.handleModelsDetect(res, protocol, rawBaseUrl, apiKey, providerProxy);
+      return;
+    }
+
+    // 在系统文件管理器中打开已登记的工作区目录（信任边界：仅限已登记且真实存在的目录）
+    if (method === 'POST' && url.pathname === '/api/workspaces/reveal') {
+      const body = await this.readJsonBody<{ path?: string }>(req);
+      const target = body.path ? path.resolve(body.path) : '';
+      const isRegistered = this.workspaceStore.list()
+        .some((workspace) => path.resolve(workspace.path) === target);
+      if (!target || !isRegistered) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 403, message: '仅允许在文件管理器中打开已登记的工作区目录' }));
+        return;
+      }
+      if (!fs.existsSync(target) || !fs.statSync(target).isDirectory()) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '目录不存在或不是有效目录' }));
+        return;
+      }
+      try {
+        this.revealFn(target);
+        this.json(res, { code: 0, message: '已在系统文件管理器中打开' });
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 500, message: `打开文件管理器失败: ${(err as Error).message}` }));
+      }
       return;
     }
 
@@ -563,12 +663,7 @@ export class HarnessServer {
         res.end(JSON.stringify({ code: 400, message: '尚未配置任何模型 Provider，请先前往【模型与 Provider 资产池】配置' }));
         return;
       }
-      let optimizeKey = '';
-      try {
-        optimizeKey = decryptSecret(activeProvider.apiKeyCipher, DEFAULT_MASTER_KEY);
-      } catch {
-        optimizeKey = '';
-      }
+      let optimizeKey = this.resolveProviderApiKey(activeProvider);
       const keyUsable = Boolean(
         optimizeKey && optimizeKey !== 'none' && !optimizeKey.startsWith('sk-test')
         && !optimizeKey.includes('xxx') && optimizeKey.length > 5,
@@ -757,18 +852,32 @@ export class HarnessServer {
 
     // 6. Session 管理 (落盘 sessions 表，绑定工作区不可变)
     if (method === 'POST' && url.pathname === '/api/sessions') {
-      const body = await this.readJsonBody<{ workspacePath?: string; modelId?: string; providerId?: string; title?: string }>(req);
+      const body = await this.readJsonBody<{ workspacePath?: string; modelId?: string; providerId?: string; title?: string; preset?: unknown }>(req);
       const wsPath = body.workspacePath ? path.resolve(body.workspacePath) : '';
       if (!wsPath || !fs.existsSync(wsPath)) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ code: 400, message: '请绑定真实存在的物理工作区！' }));
         return;
       }
+      // 权限预设：显式传入时校验白名单，未传入回落到全局默认
+      let initialPreset: PermissionPreset = 'edit';
+      if (body.preset !== undefined) {
+        const normalized = normalizePermissionPreset(body.preset);
+        if (!normalized) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 400, message: `权限预设必须是 ${PERMISSION_PRESETS.join(' / ')} 之一` }));
+          return;
+        }
+        initialPreset = normalized;
+      } else {
+        const globalSettings = this.settingsStore.get<{ globalPreset?: PermissionPreset }>('system.permissions');
+        initialPreset = globalSettings?.globalPreset ?? 'edit';
+      }
       const session = this.sessionStore.create({
         id: `sess_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
         title: body.title || (body as { message?: string }).message?.slice(0, 24) || '新对话',
         workspacePath: wsPath,
-        preset: 'edit',
+        preset: initialPreset,
         activeModelId: body.modelId || 'deepseek-chat',
         isArchived: false,
       });
@@ -788,7 +897,7 @@ export class HarnessServer {
       return;
     }
 
-    const sessionMsgMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/(messages|stream|abort|revert|redo|feedback|compact|state)$/);
+    const sessionMsgMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/(messages|stream|abort|revert|redo|feedback|compact|state|permission)$/);
     if (sessionMsgMatch) {
       const sessionId = decodeURIComponent(sessionMsgMatch[1] as string);
       const action = sessionMsgMatch[2] as string;
@@ -796,6 +905,27 @@ export class HarnessServer {
       if (!session) {
         res.writeHead(404, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ code: 404, message: '会话不存在' }));
+        return;
+      }
+
+      // 会话权限预设切换（只读 / 编辑 / 完全授权）：变更即落盘审计事件
+      if (method === 'PATCH' && action === 'permission') {
+        const body = await this.readJsonBody<{ preset?: unknown }>(req);
+        const preset = normalizePermissionPreset(body.preset);
+        if (!preset) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 400, message: `权限预设必须是 ${PERMISSION_PRESETS.join(' / ')} 之一` }));
+          return;
+        }
+        this.sessionStore.setPreset(sessionId, preset);
+        this.eventStore.appendEvent({
+          sessionId,
+          turnId: `turn_permission_${Date.now()}`,
+          stepIndex: 0,
+          type: 'permission/preset',
+          payload: { preset, previous: session.preset },
+        });
+        this.json(res, { code: 0, data: { sessionId, preset } });
         return;
       }
 
@@ -1018,6 +1148,7 @@ export class HarnessServer {
         providerId?: string;
         modelId?: string;
         attachments?: unknown;
+        permissionPreset?: unknown;
       }>(req);
 
       if (!body.message || !body.message.trim()) {
@@ -1049,6 +1180,10 @@ export class HarnessServer {
       // 获取当前有效 Provider 与模型
       const providers = this.providerStore.list();
       let activeProvider = providers.find((p) => p.id === body.providerId);
+      // 若未显式传入 providerId，但传入了 modelId，则优先寻找包含该模型的 Provider
+      if (!activeProvider && body.modelId) {
+        activeProvider = providers.find((p) => p.models && p.models.some((m) => m.id === body.modelId));
+      }
       if (!activeProvider && providers.length > 0) {
         activeProvider = providers[0];
       }
@@ -1070,13 +1205,28 @@ export class HarnessServer {
       }
       const activeSession = session;
 
+      // 随消息携带的权限预设（聊天框的"完全授权"开关）：校验白名单后写入会话
+      if (body.permissionPreset !== undefined) {
+        const preset = normalizePermissionPreset(body.permissionPreset);
+        if (!preset) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 400, message: `权限预设必须是 ${PERMISSION_PRESETS.join(' / ')} 之一` }));
+          return;
+        }
+        if (preset !== activeSession.preset) {
+          this.sessionStore.setPreset(activeSession.id, preset);
+          activeSession.preset = preset;
+        }
+      }
+
       // 写锁互斥：同一工作区同一时刻仅一会话可写
-      if (!this.writeLocks.tryAcquire(wsPath, activeSession.id)) {
+      const normalizedWs = path.resolve(wsPath);
+      if (!this.writeLocks.tryAcquire(normalizedWs, activeSession.id)) {
         res.writeHead(409, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({
           code: 409,
           message: '工作区正被另一会话占用写锁',
-          holder: this.writeLocks.holder(wsPath),
+          holder: this.writeLocks.holder(normalizedWs),
         }));
         return;
       }
@@ -1170,7 +1320,8 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}
         // 权限闸门：预设与自定义规则来自系统设置，每回合重新读取以即时生效（D7 / §6.1）
         const permissionSettings = this.settingsStore.get<{ globalPreset?: PermissionPreset; rules?: PermissionRule[] }>('system.permissions') ?? {};
         const permissionGate = new PermissionGate({
-          preset: permissionSettings.globalPreset ?? 'edit',
+          // 会话级预设优先于全局默认：聊天框的授权档位即写在此处
+          preset: activeSession.preset ?? permissionSettings.globalPreset ?? 'edit',
           rules: Array.isArray(permissionSettings.rules) ? permissionSettings.rules : [],
         });
         const executeTool = async (name: string, args: Record<string, unknown>): Promise<string | ToolExecutionResult> => {
@@ -1307,14 +1458,8 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}
         };
 
         // 模型调用：真实 Provider 流式解析工具调用，无 Key 时走本地状态感知
-        let realKey = '';
-        if (activeProvider) {
-          try {
-            realKey = decryptSecret(activeProvider.apiKeyCipher, DEFAULT_MASTER_KEY);
-          } catch {
-            realKey = '';
-          }
-        }
+        // 凭据解析走统一出口：透明完成旧固定主密钥向本机独立 master.key 的单向迁移
+        const realKey = activeProvider ? this.resolveProviderApiKey(activeProvider) : '';
         const hasRealKey = Boolean(
           activeProvider && realKey && realKey !== 'none' && !realKey.startsWith('sk-test') && !realKey.includes('xxx') && realKey.length > 5,
         );
@@ -1415,7 +1560,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}
         this.cancelSessionQuestions(activeSession.id, '回合已结束，提问自动作废');
         this.cancelSessionApprovals(activeSession.id, '回合已结束，未裁决的审批按 fail-closed 拒绝');
         this.sessionStates.set(activeSession.id, 'idle');
-        this.writeLocks.release(wsPath, activeSession.id);
+        this.writeLocks.release(normalizedWs, activeSession.id);
         this.turnAborts.delete(activeSession.id);
         res.end();
       }
@@ -1871,6 +2016,60 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}
       { id: '21', name: 'fetch_url + SSRF', provide: '受控网络抓取', status: 'NotWired', note: '尚未实现，网络出口当前无策略' },
       { id: '22', name: 'gateway-sse', provide: 'SSE 心跳与断线重放', status: 'Active', note: '真实接入但为内联实现（chat/send 心跳 + /stream 重放），非独立插件' },
     ];
+  }
+
+  /** 掩码规则（安全工程方法论 §4.3）：保留前 7 与后 4 位，中间以 **** 取代。 */
+  private maskSecret(plain: string): string {
+    if (plain.length <= 12) return '********';
+    return `${plain.slice(0, 7)}****${plain.slice(-4)}`;
+  }
+
+  /**
+   * 解密凭据并自动完成向独立主密钥的单向升级迁移（安全工程方法论 §4.1 / BL-07）。
+   * 优先用本机 master.key 解密；若失败且能被历史固定密钥解密，立即用新密钥重新加密落盘。
+   */
+  private resolveProviderApiKey(record: ProviderRecord): string {
+    if (!record.apiKeyCipher) return '';
+    try {
+      return decryptSecret(record.apiKeyCipher, this.masterKey);
+    } catch {
+      // 本机密钥解不出：尝试历史迁移
+    }
+
+    try {
+      const legacyPlain = decryptSecret(record.apiKeyCipher, LEGACY_BOOTSTRAP_KEY);
+      if (legacyPlain) {
+        // 单向迁移：就地升级为本机独享密文并落盘，不再依赖旧固定密钥
+        const reEncrypted = encryptSecret(legacyPlain, this.masterKey);
+        this.providerStore.upsert({ ...record, apiKeyCipher: reEncrypted });
+        return legacyPlain;
+      }
+    } catch {
+      // 既非本机密钥也非旧版密钥（第三方密钥材料），如实保持无法解密
+    }
+    return '';
+  }
+
+  /**
+   * 凭据读路径的唯一出口（安全工程方法论 §4.2 / BL-08）：
+   * **绝不回传 `apiKeyCipher`**（密文也是凭据工件），只回是否已配置、是否可解密与掩码。
+   */
+  private toPublicProvider(record: ProviderRecord): Record<string, unknown> {
+    const plain = this.resolveProviderApiKey(record);
+    const decryptable = plain !== '';
+    return {
+      id: record.id,
+      name: record.name,
+      protocol: record.protocol,
+      baseUrl: record.baseUrl,
+      proxy: record.proxy,
+      models: record.models,
+      createdAt: record.createdAt,
+      updatedAt: record.updatedAt,
+      hasApiKey: record.apiKeyCipher !== '',
+      decryptable,
+      apiKeyMasked: decryptable ? this.maskSecret(plain) : null,
+    };
   }
 
   private json(res: http.ServerResponse, data: unknown): void {

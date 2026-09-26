@@ -11,6 +11,7 @@ export type EventType =
   | 'compaction'
   | 'approval/requested'
   | 'approval/resolved'
+  | 'permission/preset'
   | 'session/aborted'
   | 'turn/completed'
   | 'question_asked'

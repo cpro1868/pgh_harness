@@ -35,19 +35,26 @@ code, pre, .font-mono {
   font-family: 'JetBrains Mono', Consolas, Monaco, monospace !important;
 }
 
-/* 全局统一极细深色滚动条 */
+/* 全局统一舒适深色滚动条 (加粗为 9px，提高可视度与抓取手感) */
 ::-webkit-scrollbar {
-  width: 5px;
-  height: 5px;
+  width: 9px;
+  height: 9px;
 }
 ::-webkit-scrollbar-track {
-  background: transparent;
+  background: rgba(10, 15, 29, 0.6);
 }
 ::-webkit-scrollbar-thumb {
-  background: #1e293b;
-  border-radius: 3px;
+  background: #334155;
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+  border-radius: 5px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
   background: #334155;
 }
 

@@ -56,9 +56,29 @@ Write-Host "[i] Project root: $ProjectRoot"
 Write-Host "[i] Log out: $LogOutFile"
 Write-Host "[i] Log err: $LogErrFile"
 
-$proc = Start-Process -FilePath "node" -ArgumentList @("--experimental-strip-types", $EntryFile, "--port", "$Port") -WorkingDirectory $ProjectRoot -WindowStyle Hidden -RedirectStandardOutput $LogOutFile -RedirectStandardError $LogErrFile -PassThru
+# 使用 cmd /c 重定向 + Start-Process -WindowStyle Hidden 完全脱离父管道，
+# 不注册任何异步事件读取（避免 PowerShell 进程因子进程句柄/任务依赖而无法退出）。
+$cmdArgs = "/c start `"PGH-Server`" /min /b node --experimental-strip-types `"$EntryFile`" --port $Port 1>>`"$LogOutFile`" 2>>`"$LogErrFile`""
+$proc = Start-Process -FilePath "cmd.exe" -ArgumentList $cmdArgs -WorkingDirectory $ProjectRoot -WindowStyle Hidden -PassThru
+Start-Sleep -Milliseconds 800
 
-Write-Host "[OK] PGH started in background (PID: $($proc.Id))."
+# 通过端口探测拿到真实的 node 进程 PID（cmd /c start 后其自身很快退出，此 PID 用于展示与记录）
+$nodePid = $null
+try {
+    $lines = & cmd.exe /c "netstat -ano -p tcp | findstr /R /C:`":$Port `"" 2>$null
+    if ($lines) {
+        foreach ($line in ($lines -split "`r?`n")) {
+            $parts = $line.Trim() -split '\s+'
+            if ($parts.Length -ge 5 -and $parts[3] -eq "LISTENING") {
+                $nodePid = $parts[4]
+                break
+            }
+        }
+    }
+} catch { }
+
+$displayPid = if ($nodePid) { $nodePid } else { $proc.Id }
+Write-Host "[OK] PGH started in background (PID: $displayPid)."
 Write-Host "[OK] URL: http://127.0.0.1:$Port/run-chat.html"
 
 if (-not $NoBrowser) {

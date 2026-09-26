@@ -1,7 +1,33 @@
-import { execSync } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+
+/** 在文件管理器中打开目录所需的外部依赖（可注入以便测试，避免真的弹出窗口）。 */
+export interface RevealDeps {
+  /** 替换 `process.platform` 做确定性测试。 */
+  platform?: NodeJS.Platform;
+  /** 替换真实 spawn。 */
+  spawnFn?: (command: string, args: string[]) => { unref?: () => void };
+}
+
+/**
+ * 在系统文件管理器中打开指定目录（Windows 资源管理器 / macOS Finder / Linux 文件管理器）。
+ * @param targetPath - 已由调用方校验过的绝对目录路径。
+ * @param deps - 平台与 spawn 注入点（测试用）。
+ * @returns 实际使用的启动命令，便于断言与日志。
+ */
+export function revealInFileManager(targetPath: string, deps: RevealDeps = {}): string {
+  const platform = deps.platform ?? process.platform;
+  const spawnFn = deps.spawnFn
+    ?? ((command: string, args: string[]) => spawn(command, args, { detached: true, stdio: 'ignore' }));
+
+  // 不经 shell、参数以数组传递：路径即使含空格或特殊字符也不会被解释为命令
+  const command = platform === 'win32' ? 'explorer.exe' : platform === 'darwin' ? 'open' : 'xdg-open';
+  const child = spawnFn(command, [targetPath]);
+  child.unref?.();
+  return command;
+}
 
 export interface DirectoryEntry {
   name: string;

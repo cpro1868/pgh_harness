@@ -129,6 +129,7 @@
             </button>
           </div>
           <span class="text-[10px] text-slate-500 font-sans mt-1 block">保存后将自动以 AES-256-GCM 独立加密落盘，内存按需解析。</span>
+          <span id="modal-provider-key-hint" class="text-[10px] mt-1 block font-sans"></span>
         </div>
 
         <!-- LLM 专项网络代理配置 -->
@@ -276,7 +277,13 @@
               <span class="text-[10px] text-emerald-400 bg-emerald-950 px-2 py-0.5 rounded">在线</span>
             </div>
             <div class="text-[11px] text-slate-400 truncate mt-1">${p.baseUrl}</div>
-            <div class="text-[10px] text-slate-500 mt-0.5 font-mono">凭据: ${p.apiKeyCipher ? p.apiKeyCipher.slice(0, 14) + '...' : '免密'}</div>
+            <div class="text-[10px] mt-0.5 font-mono">
+              ${p.decryptable
+                ? `<span class="text-slate-500">凭据: ${p.apiKeyMasked}</span>`
+                : (p.hasApiKey
+                  ? '<span class="text-amber-400">⚠️ 密钥无法解密（本机主密钥已变更），请编辑并重新输入</span>'
+                  : '<span class="text-slate-500">凭据: 免密</span>')}
+            </div>
 
             <div class="mt-3 pt-2.5 border-t border-slate-800/80 flex items-center justify-between font-sans">
               <div class="flex items-center space-x-1.5">
@@ -394,11 +401,69 @@
       }
     }
 
+    /** 渲染 API Key 输入框的凭据提示（明文永不回传，只显示掩码）。 */
+    function renderProviderKeyHint(provider) {
+      const input = document.getElementById('modal-provider-key');
+      const hint = document.getElementById('modal-provider-key-hint');
+      input.value = '';
+
+      if (!provider) {
+        input.placeholder = 'sk-...';
+        hint.textContent = '';
+        hint.className = 'text-[10px] mt-1 block font-sans';
+        return;
+      }
+
+      if (provider.decryptable && provider.apiKeyMasked) {
+        input.placeholder = `${provider.apiKeyMasked}（留空表示不修改）`;
+        hint.textContent = '✓ 已配置有效凭据；出于安全考虑不回显明文，留空保存即保持原 Key 不变。';
+        hint.className = 'text-[10px] mt-1 block font-sans text-emerald-400';
+        return;
+      }
+
+      if (provider.hasApiKey) {
+        input.placeholder = '请重新输入 API Key';
+        hint.textContent = '⚠️ 已存凭据无法用本机主密钥解密（主密钥曾变更），请重新输入。留空保存不会覆盖原值。';
+        hint.className = 'text-[10px] mt-1 block font-sans text-amber-400';
+        return;
+      }
+
+      input.placeholder = 'sk-...';
+      hint.textContent = '当前未配置凭据（免密或稍后填写）。';
+      hint.className = 'text-[10px] mt-1 block font-sans text-slate-500';
+    }
+
+    /**
+     * 编辑弹窗：载入已保存的明文凭据，**默认以密码态显示**（点击右侧眼睛才展开明文）。
+     * 明文回传属安全工程方法论 §13 登记的显式例外，因此仅在打开编辑弹窗时按需拉取、不缓存。
+     */
+    async function loadProviderSecretIntoModal(providerId) {
+      const input = document.getElementById('modal-provider-key');
+      const hint = document.getElementById('modal-provider-key-hint');
+      input.type = 'password';
+      try {
+        const res = await fetch(`/api/providers/${encodeURIComponent(providerId)}/secret`);
+        const result = await res.json();
+        if (res.ok && result.code === 0 && result.data && typeof result.data.apiKey === 'string') {
+          input.value = result.data.apiKey;
+          hint.textContent = '✓ 已载入已保存的凭据（默认密码态显示，点击右侧眼睛可查看明文）。留空保存表示不修改。';
+          hint.className = 'text-[10px] mt-1 block font-sans text-emerald-400';
+          return;
+        }
+        hint.textContent = '未能读取已保存凭据（可能已失效），请重新输入。';
+        hint.className = 'text-[10px] mt-1 block font-sans text-amber-400';
+      } catch {
+        hint.textContent = '读取已保存凭据失败，请重新输入。';
+        hint.className = 'text-[10px] mt-1 block font-sans text-amber-400';
+      }
+      input.value = '';
+    }
+
     function openNewProviderModal() {
       currentEditingProviderId = null;
       document.getElementById('modal-provider-name').value = '';
       document.getElementById('modal-provider-url').value = 'https://api.deepseek.com/v1';
-      document.getElementById('modal-provider-key').value = '';
+      renderProviderKeyHint(null);
       document.getElementById('model-select-dropdown').innerHTML = '<option value="">点击右侧按钮探测拉取可用模型...</option>';
       document.getElementById('detect-status-alert').innerHTML = '';
       document.getElementById('provider-modal').classList.remove('hidden');
@@ -411,7 +476,9 @@
       document.getElementById('modal-provider-name').value = p.name;
       document.getElementById('modal-provider-url').value = p.baseUrl;
       document.getElementById('modal-provider-protocol').value = p.protocol;
-      document.getElementById('modal-provider-key').value = '';
+      // 先按状态给出掩码提示，再按需载入明文并保持密码态显示
+      renderProviderKeyHint(p);
+      void loadProviderSecretIntoModal(id);
       document.getElementById('modal-proxy-toggle').checked = !!(p.proxy && p.proxy.enabled);
       
       const dropdown = document.getElementById('model-select-dropdown');
@@ -467,6 +534,8 @@
             protocol,
             baseUrl,
             apiKey,
+            // 留空时由后端用该 Provider 已保存的凭据探测，避免"编辑时不重填 Key 就无法探测"
+            providerId: currentEditingProviderId || undefined,
             proxy: {
               enabled: proxyEnabled,
               mode: proxyMode,
@@ -550,7 +619,6 @@
         name,
         protocol,
         baseUrl,
-        apiKey: apiKey || 'none',
         proxy: {
           enabled: proxyEnabled,
           mode: proxyMode,
@@ -558,6 +626,8 @@
         },
         models,
       };
+      // 仅在用户真的输入了新 Key 时提交该字段：留空表示保持既有凭据不变
+      if (apiKey !== '') payload.apiKey = apiKey;
 
       try {
         const res = await fetch('/api/providers', {
