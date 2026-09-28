@@ -31,7 +31,7 @@ test('TC-01-08-003: 最小可运行服务集成验证 (健康检查、代理设�
     const body = await res.json() as { code: number; status: string; version: string };
     assert.equal(body.code, 0);
     assert.equal(body.status, 'ok');
-    assert.equal(body.version, '0.1.1');
+    assert.equal(body.version, '0.2.0');
   });
 
   await t.test('API: PUT /api/settings/proxy 成功保存代理配置', async () => {

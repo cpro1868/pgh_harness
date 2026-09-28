@@ -6,4 +6,7 @@ export * from './question-broker.ts';
 export * from './approval-broker.ts';
 export * from './permission-gate.ts';
 export * from './line-diff.ts';
+export * from './pipeline/pipeline-runner.ts';
+export * from './pipeline/lock-delegator.ts';
+export * from './pipeline/artifact-manager.ts';
 

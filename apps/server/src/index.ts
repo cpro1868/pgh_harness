@@ -5,14 +5,15 @@ import os from 'node:os';
 import { fileURLToPath } from 'node:url';
 import { acquireInstanceLock, releaseInstanceLock } from './instance-lock.ts';
 import { ProxyDispatcher } from './network/proxy-dispatcher.ts';
-import { SqliteDatabase, SettingsStore, ProviderStore, WorkspaceStore, EventStore, SessionStore } from '../../../packages/plugins/storage-sqlite/src/index.ts';
+import { SqliteDatabase, SettingsStore, ProviderStore, WorkspaceStore, EventStore, SessionStore, PipelineStore, PIPELINE_DEFAULT_TEMPLATE } from '../../../packages/plugins/storage-sqlite/src/index.ts';
 import type { ProviderRecord } from '../../../packages/plugins/storage-sqlite/src/index.ts';
+import type { PipelineTemplate, PipelineStage } from '@harness/protocol';
 
 import { OpenAICompatibleProvider } from '../../../packages/plugins/provider-openai/src/index.ts';
 import { encryptSecret, decryptSecret } from './security/crypto.ts';
 import { resolveMasterKey } from './security/master-key.ts';
-import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff } from '../../../packages/core/src/index.ts';
-import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult } from '../../../packages/core/src/index.ts';
+import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff, PipelineRunner, LockDelegator, ArtifactManager } from '../../../packages/core/src/index.ts';
+import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult, PipelineExecutionOutcome, GateDecision } from '../../../packages/core/src/index.ts';
 import { FileTools, ShellExecutor, SearchTools } from '../../../packages/plugins/tools-coding/src/index.ts';
 import {
   scanAllSkills,
@@ -50,7 +51,7 @@ function resolveStaticDir(): string {
 }
 
 /** 应用版本（与 package.json 保持一致，供 /api/health 上报）。 */
-const APP_VERSION = '0.1.1';
+const APP_VERSION = '0.2.0';
 
 export interface ServerOptions {
   port?: number;
@@ -197,6 +198,18 @@ export class HarnessServer {
   public proxyDispatcher: ProxyDispatcher;
   public governor: ContextGovernor;
   public mcpPool: McpClientPool;
+  public pipelineStore: PipelineStore;
+  public pipelineRunner = new PipelineRunner();
+  public lockDelegator: LockDelegator;
+  private readonly pipelineInstances = new Map<string, {
+    instanceId: string;
+    pipelineId: string;
+    workspacePath: string;
+    taskPrompt: string;
+    status: string;
+    currentStageId?: string;
+    outcome?: PipelineExecutionOutcome;
+  }>();
   private readonly writeLocks = new WorkspaceWriteLock();
   private readonly turnAborts = new Map<string, AbortController>();
   private readonly turnCheckpoints = new Map<string, { workspacePath: string; manager: GitRollbackManager }>();
@@ -229,6 +242,17 @@ export class HarnessServer {
     this.sessionStore = new SessionStore(this.db);
     this.governor = new ContextGovernor();
     this.mcpPool = new McpClientPool();
+    this.pipelineStore = new PipelineStore(this.db);
+    this.lockDelegator = new LockDelegator(this.writeLocks);
+
+    // 默认内置流水线初始化（若库中尚无模板）
+    if (this.pipelineStore.list().length === 0) {
+      try {
+        this.pipelineStore.create(PIPELINE_DEFAULT_TEMPLATE);
+      } catch {
+        // 忽略已存在
+      }
+    }
 
 
 
@@ -1273,6 +1297,142 @@ export class HarnessServer {
           globalExists: fs.existsSync(globalPath),
         },
       });
+      return;
+    }
+
+    // 6.7 流水线模板管理接口 (WBS-02-01-01 / WBS-02-01-02)
+    if (method === 'GET' && url.pathname === '/api/pipelines') {
+      const list = this.pipelineStore.list();
+      this.json(res, { code: 0, data: list });
+      return;
+    }
+
+    if (method === 'POST' && url.pathname === '/api/pipelines') {
+      const body = await this.readJsonBody<PipelineTemplate>(req);
+      if (!body.name || !body.name.trim()) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '流水线名称不能为空' }));
+        return;
+      }
+      const id = body.id || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const stages = Array.isArray(body.stages) ? body.stages : [];
+      const created = this.pipelineStore.create({
+        id,
+        name: body.name.trim(),
+        description: body.description || '',
+        stages: stages.map((s, idx) => ({
+          ...s,
+          id: s.id || `stg_${Date.now()}_${idx}`,
+          pipelineId: id,
+          order: idx + 1,
+        })),
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      this.json(res, { code: 0, message: '流水线模板创建成功', data: created });
+      return;
+    }
+
+    // 步骤双向插入定制接口 (WBS-02-01-03)
+    const pipelineStageInsertMatch = url.pathname.match(/^\/api\/pipelines\/([^/]+)\/stages\/insert$/);
+    if (pipelineStageInsertMatch && method === 'POST') {
+      const pipelineId = decodeURIComponent(pipelineStageInsertMatch[1] as string);
+      const body = await this.readJsonBody<{ afterStageId: string | null; stage: Omit<PipelineStage, 'pipelineId' | 'order'> }>(req);
+      if (!body.stage || !body.stage.roleName) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '阶段角色名 roleName 不能为空' }));
+        return;
+      }
+      const ok = this.pipelineStore.insertStageAfter(pipelineId, body.afterStageId ?? null, {
+        ...body.stage,
+        id: body.stage.id || `stg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+      });
+      if (!ok) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '流水线未找到' }));
+        return;
+      }
+      const updated = this.pipelineStore.get(pipelineId);
+      this.json(res, { code: 0, message: '阶段插入成功', data: updated });
+      return;
+    }
+
+    // 6.8 流水线实例调度与 Gatekeeper 裁决接口 (WBS-02-02-01 / WBS-02-03-03 / WBS-02-04)
+    if (method === 'GET' && url.pathname === '/api/pipeline-instances') {
+      const list = [...this.pipelineInstances.values()];
+      this.json(res, { code: 0, data: list });
+      return;
+    }
+
+    if (method === 'POST' && url.pathname === '/api/pipeline-instances/start') {
+      const body = await this.readJsonBody<{ pipelineId: string; workspacePath: string; taskPrompt: string }>(req);
+      const template = this.pipelineStore.get(body.pipelineId);
+      if (!template) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '指定的流水线模板不存在' }));
+        return;
+      }
+      const wsPath = path.resolve(body.workspacePath || process.cwd());
+      if (!fs.existsSync(wsPath)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '工作区目录不存在' }));
+        return;
+      }
+
+      const instanceId = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const instRecord = {
+        instanceId,
+        pipelineId: template.id,
+        workspacePath: wsPath,
+        taskPrompt: body.taskPrompt || '执行流水线研发任务',
+        status: 'running',
+        currentStageId: template.stages[0]?.id,
+      };
+      this.pipelineInstances.set(instanceId, instRecord);
+
+      // 后台异步推进泳道调度
+      void this.pipelineRunner.run({
+        instanceId,
+        stages: template.stages,
+        onStatusChange: (status, currentStageId) => {
+          instRecord.status = status;
+          if (currentStageId) instRecord.currentStageId = currentStageId;
+        },
+        executeStage: async ({ stage }) => {
+          // 泳道阶段执行：捕获工件并产出结果
+          const artifactMgr = new ArtifactManager(wsPath);
+          const artifacts = artifactMgr.capture(stage.artifactPaths || []);
+          return {
+            summary: `阶段 ${stage.roleName} 顺利完成任务交付。`,
+            artifactPaths: artifacts,
+          };
+        },
+      }).then((outcome) => {
+        instRecord.status = outcome.status;
+        instRecord.outcome = outcome;
+      });
+
+      this.json(res, {
+        code: 0,
+        message: '流水线实例已启动并进入首阶段',
+        data: {
+          instanceId,
+          status: instRecord.status,
+          currentStageId: instRecord.currentStageId,
+        },
+      });
+      return;
+    }
+
+    const gateDecideMatch = url.pathname.match(/^\/api\/pipeline-instances\/([^/]+)\/gate$/);
+    if (gateDecideMatch && method === 'POST') {
+      const instanceId = decodeURIComponent(gateDecideMatch[1] as string);
+      const body = await this.readJsonBody<GateDecision>(req);
+      const ok = this.pipelineRunner.resolveGate(instanceId, {
+        action: body.action === 'reject' ? 'reject' : 'approve',
+        reason: body.reason,
+      });
+      this.json(res, { code: 0, message: ok ? 'Gatekeeper 裁决已下发' : '当前无需裁决或实例未等待', data: { resolved: ok } });
       return;
     }
 

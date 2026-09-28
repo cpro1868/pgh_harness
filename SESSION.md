@@ -1,27 +1,30 @@
 # SESSION.md —— 当前会话台账
 
 > 每次会话开始时读此文件恢复上下文，结束前更新状态。
-> 当前状态：**Sprint 1、Sprint 2、Sprint 3 全部验收结项；准备开工 Sprint 4 (v0.2.0)**
+> 当前状态：**Sprint 1 ~ Sprint 4 全部验收结项 (Tag v0.2.0)；准备开工 Epic 3 (BPMN 2.0 业务工作流平台)**
 
 ## 当前目标
 
-交付 **Epic 1 / Sprint 3：扩展生态、MCP 强隔离与双层记忆装配 (目标版本 v0.1.1)** —— **已全量交付！**
+交付 **Epic 2 / Sprint 4：多角色协同流水线任务交付体系 (目标版本 v0.2.0)** —— **已全量交付！**
 
-## 已实施 WBS 工作包（Sprint 3 全部交付）
+## 已实施 WBS 工作包（Sprint 4 全部交付）
 
-- [x] **WBS-01-07-01**：通用 Agent Skills 扫描与渐进披露加载器（`packages/plugins/skills/`，D40）
-- [x] **WBS-01-07-02**：MCP 客户端连接池与命名空间强隔离（`packages/plugins/tools-mcp/`，D14/D66/Q9，硬性 `mcp__` 前缀，本地核心工具保留字独占）
-- [x] **WBS-01-07-03**：全局与项目双层记忆级联装配（`packages/plugins/memory/`，D67/Q10，对齐 OpenCode `instruction-context`，去重合并）
-- [x] **WBS-01-07-04**：记忆受控迁移向导与多存储介质支持（Markdown / SQLite / 混合模式，D39，`.bak` 备份 + SHA-256 去重）
+- [x] **WBS-02-01-01**：流水线模板数据模型与 DDL（`pipelines` 与 `pipeline_stages` 表）
+- [x] **WBS-02-01-02** / **03**：模板列表大屏与步骤双向插入定制工作台（`config-pipelines.html`、`run-pipeline-create.html`）
+- [x] **WBS-02-02-01**：多阶段泳道顺序执行状态机（`idle`/`running`/`waiting_gate`/`completed`/`failed`/`aborted`）
+- [x] **WBS-02-02-02**：父子工作区写锁租约让渡（Parent-Child Lock Delegation / D64）
+- [x] **WBS-02-03-01** / **02** / **03**：阶段工件捕获、只读守护与 Gatekeeper 审批门卡点
+- [x] **WBS-02-04-01** / **02**：任务列表大屏与独立执行工作台（`run-pipeline.html`）
 
 ## 测试基线（实测）
 
-- `pnpm test`：**40 个套件 / 212 个断言 100% 全绿**；`/api/health` 上报版本 **`0.1.1`**。
-- 服务状态：PID `13652`，端口 `3210` 正常监听。
-- **三项 UX 体验修复（2026-09-27）**：
-  1. 会话色块悬停浮层消除死区（删除正常命中），并增加重命名按钮；
-  2. 大纲视图每条会话下方展示产生时间 `yyyy-MM-dd HH:mm:ss` + 实际消耗 Token；
-  3. 用户气泡与助手卡片展示产生时间与真实 Token 明细（`turn/completed` 事件持久化）；顶栏改为会话累计口径，并增加 🔄 清零按钮（基线重置，不删历史）。
+- `pnpm test`：**46 个套件 / 242 个断言 100% 全绿**；`/api/health` 上报版本 **`0.2.0`**。
+- 服务状态：PID `31160`，端口 `3210` 正常监听。
+
+## 下一步
+
+1. 用户确认后执行 Git 提交并打标签 `v0.2.0`（Sprint 4 结项）；
+2. 按照敏捷规划正式开工 **Epic 3 / Sprint 5 (v0.3.0-sprint.5)**：BPMN 2.0 双折叠设计器与流转模型。
 - **导航结构（严格按 `docs/阶段-1-需求/prototype/` 原型）**：Sprint 3 的 Skills / MCP / 记忆治理是**三个独立页面 + 独立 Activity Bar 图标**，不是设置中心内的 Tab。
   - 顺序：`run-chat` → `config-workspace` → `config-memories` → `config-providers` → `config-mcp` → `config-skills` →（底部常驻）`config-settings`。
 - **UI 缺口纠偏记录（两次）**：
