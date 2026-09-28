@@ -159,15 +159,30 @@ test('TC-02-02: 对话闭环集成 (会话落盘 + ReAct 工具循环 + SSE 事�
   await t.test('事件已持久化: messages 增量查询可回放', async () => {
     const res = await fetch(`http://127.0.0.1:${testPort}/api/sessions/${sessionId}/messages?after=0`);
     assert.equal(res.status, 200);
-    const body = (await res.json()) as { code: number; data: Array<{ type: string; seq: number }> };
+    const body = (await res.json()) as { code: number; data: Array<{ type: string; seq: number; payload?: unknown; createdAt?: number }> };
     assert.equal(body.code, 0);
     const types = body.data.map((e) => e.type);
     assert.ok(types.includes('message/user'));
     assert.ok(types.includes('tool/call'));
     assert.ok(types.includes('tool/result'));
     assert.ok(types.includes('message/assistant'));
+    assert.ok(types.includes('turn/completed'));
     const seqs = body.data.map((e) => e.seq);
     assert.deepEqual(seqs, [...seqs].sort((a, b) => a - b));
+
+    // 验证每条事件包含 createdAt 时间戳
+    for (const ev of body.data) {
+      assert.equal(typeof ev.createdAt, 'number', '每条事件必须包含 createdAt 时间戳');
+      assert.ok(ev.createdAt! > 0);
+    }
+
+    // 验证 turn/completed 事件持久化了 inputTokens、outputTokens 与 totalTokens
+    const completedEv = body.data.find((e) => e.type === 'turn/completed');
+    assert.ok(completedEv, '必须包含 turn/completed 事件');
+    const p = completedEv!.payload as { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+    assert.equal(typeof p.inputTokens, 'number', 'turn/completed 必须持久化 inputTokens');
+    assert.equal(typeof p.outputTokens, 'number', 'turn/completed 必须持久化 outputTokens');
+    assert.equal(typeof p.totalTokens, 'number', 'turn/completed 必须持久化 totalTokens');
   });
 
   await t.test('断线续传: stream?after=0&follow=0 可一次性重放历史事件', async () => {
@@ -206,6 +221,24 @@ test('TC-02-02: 对话闭环集成 (会话落盘 + ReAct 工具循环 + SSE 事�
     assert.ok(feedback, '应写入 message/feedback 事件');
     assert.equal(feedback!.payload.rating, 'up');
     assert.equal(feedback!.payload.turnId, turnId);
+  });
+
+  await t.test('POST /api/sessions/:id/usage/reset：用量清零并记录基线', async () => {
+    const resetRes = await fetch(`http://127.0.0.1:${testPort}/api/sessions/${sessionId}/usage/reset`, {
+      method: 'POST',
+    });
+    assert.equal(resetRes.status, 200);
+    const resetJson = (await resetRes.json()) as { code: number; data: { baselineSeq: number; tokens: number; cost: string } };
+    assert.equal(resetJson.code, 0);
+    assert.equal(resetJson.data.tokens, 0);
+    assert.equal(resetJson.data.cost, '$0.000');
+    assert.ok(resetJson.data.baselineSeq > 0);
+
+    // GET /api/sessions 能查到该基线
+    const listRes = await fetch(`http://127.0.0.1:${testPort}/api/sessions`);
+    const listJson = (await listRes.json()) as { data: Array<{ id: string; usageBaselineSeq?: number }> };
+    const target = listJson.data.find((s) => s.id === sessionId);
+    assert.equal(target?.usageBaselineSeq, resetJson.data.baselineSeq);
   });
 
   await t.test('手动压缩上下文：写入基线 compaction 事件与机械摘要', async () => {

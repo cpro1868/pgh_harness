@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="ico/pgh.svg">
+  <title>Skills 技能库 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans">
+
+  <!-- 统一 40px 顶栏 -->
+  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs">
+    <div class="flex items-center space-x-2.5">
+      <img src="ico/pgh.svg" alt="Purple Grapes Harness" class="w-6 h-6 rounded shadow-sm">
+      <span class="font-bold text-white tracking-wide text-xs">Purple Grapes Harness</span>
+      <span class="text-slate-600">/</span>
+      <span class="text-slate-400 font-medium">Skills 技能库 (渐进披露架构)</span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button onclick="openImportModal()" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-1 shadow-sm transition">
+        <span>⬇️</span><span>导入本地 Skill 包</span>
+      </button>
+      <button onclick="loadSkills()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 flex items-center space-x-1 font-mono">
+        <span>🔄</span><span>重新扫描目录</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+
+    <!-- 全系统严格一致的 48px 一级侧边栏 -->
+    <aside class="activity-bar">
+      <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      </a>
+      <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </a>
+      <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+      </a>
+      <a href="config-skills.html" class="activity-btn active" title="Skills 技能库">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </a>
+      <div class="flex-1"></div>
+      <a href="config-settings.html" class="activity-btn" title="系统全局设置 (Settings)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </a>
+    </aside>
+
+    <!-- 主面板 -->
+    <main class="flex-1 p-8 max-w-5xl w-full mx-auto space-y-6 overflow-y-auto">
+      <div>
+        <h1 class="text-2xl font-bold text-white tracking-tight">Skills 技能指令包清单与管理</h1>
+        <p class="text-xs text-slate-400 mt-1">
+          采用业界通用的 <b>Agent Skills 标准规范 (YAML Front-matter + Markdown)</b>。渐进披露机制：系统提示仅注入 Name 与 Description（零 Token 冗余）；模型命中触发词后自主调用
+          <code class="bg-slate-800 px-1 py-0.5 rounded font-mono text-blue-300">skill(name)</code> 动态加载正文规约。
+        </p>
+      </div>
+
+      <!-- 标准层级过滤标签 -->
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3 text-xs">
+        <div class="flex items-center space-x-2">
+          <button onclick="setFilter('all')" id="filter-all" class="px-3 py-1 rounded bg-blue-600 text-white font-medium">全部技能 (<span id="count-all">0</span>)</button>
+          <button onclick="setFilter('project')" id="filter-project" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">项目工作区 (.agents/skills/ 或 .harness/)</button>
+          <button onclick="setFilter('global')" id="filter-global" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">用户全局 (~/.config/agents/skills/)</button>
+          <button onclick="setFilter('enabled')" id="filter-enabled" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">已启用</button>
+        </div>
+        <span class="text-slate-500 font-mono text-[11px]">符合标准 agent-skills-spec v1.0</span>
+      </div>
+
+      <!-- Skills 列表 -->
+      <section id="skills-list" class="space-y-4 font-mono text-xs">
+        <div class="p-6 text-center text-slate-500">正在扫描技能目录...</div>
+      </section>
+    </main>
+  </div>
+
+  <!-- 导入本地 Skill 包 模态弹窗 -->
+  <div id="import-skill-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="max-w-xl w-full rounded-xl bg-[#0f1523] border border-slate-700 shadow-2xl overflow-hidden">
+      <div class="px-6 py-4 bg-[#131b2e] border-b border-slate-800 flex items-center justify-between">
+        <div>
+          <h3 class="text-sm font-bold text-white">导入本地 Skill 包</h3>
+          <p class="text-[11px] text-slate-400 font-sans mt-0.5">校验源目录下的 SKILL.md（YAML Front-matter + Markdown），支持完整拷贝或目录联接安装。</p>
+        </div>
+        <button onclick="closeImportModal()" class="text-slate-400 hover:text-white">✕</button>
+      </div>
+
+      <div class="p-6 space-y-4 text-xs font-mono">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1 font-sans">源技能包绝对路径 (须包含 SKILL.md)：</label>
+          <input id="import-source-dir" type="text" placeholder="例如: C:\Users\me\skills\my-skill" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-blue-500">
+        </div>
+        <div>
+          <label class="block text-slate-300 font-medium mb-1 font-sans">安装目标工作区 (留空则装入用户全局目录)：</label>
+          <select id="import-target-ws" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200">
+            <option value="">(用户全局 ~/.pg_harness/skills)</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-slate-300 font-medium mb-1 font-sans">安装方式：</label>
+          <select id="import-mode" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200">
+            <option value="copy">完整文件拷贝 (copy)</option>
+            <option value="link">目录联接 / 软链 (link)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="px-6 py-3.5 bg-[#090d18] border-t border-slate-800 flex items-center justify-between text-xs">
+        <span id="import-status" class="text-emerald-400 font-mono"></span>
+        <div class="flex space-x-2">
+          <button onclick="closeImportModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">取消</button>
+          <button onclick="submitImport()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold shadow-sm">校验并安装</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let allSkills = [];
+    let currentFilter = 'all';
+    let primaryWorkspace = '';
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    function setFilter(filter) {
+      currentFilter = filter;
+      ['all', 'project', 'global', 'enabled'].forEach((f) => {
+        const btn = document.getElementById('filter-' + f);
+        btn.className = f === filter
+          ? 'px-3 py-1 rounded bg-blue-600 text-white font-medium'
+          : 'px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300';
+      });
+      renderSkills();
+    }
+
+    function visibleSkills() {
+      if (currentFilter === 'project') return allSkills.filter((s) => s.scope === 'project');
+      if (currentFilter === 'global') return allSkills.filter((s) => s.scope === 'global');
+      if (currentFilter === 'enabled') return allSkills.filter((s) => s.enabled !== false);
+      return allSkills;
+    }
+
+    async function loadSkills() {
+      const listEl = document.getElementById('skills-list');
+      listEl.innerHTML = '<div class="p-6 text-center text-slate-500">正在扫描技能目录...</div>';
+      try {
+        const res = await fetch(`/api/skills?workspace=${encodeURIComponent(primaryWorkspace)}`);
+        const json = await res.json();
+        if (json.code !== 0 || !Array.isArray(json.data)) throw new Error(json.message || '扫描失败');
+        allSkills = json.data;
+        document.getElementById('count-all').textContent = String(allSkills.length);
+        renderSkills();
+      } catch (err) {
+        listEl.innerHTML = `<div class="p-4 rounded bg-rose-950/40 border border-rose-900/60 text-rose-300">扫描失败: ${escapeHtml(err.message)}</div>`;
+      }
+    }
+
+    function renderSkills() {
+      const listEl = document.getElementById('skills-list');
+      const skills = visibleSkills();
+
+      if (skills.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-8 rounded-xl bg-[#0f1523] border border-slate-800 text-center space-y-2">
+            <div class="text-2xl">📦</div>
+            <div class="text-slate-300 font-sans font-medium">当前筛选条件下没有可用的技能包</div>
+            <p class="text-[11px] text-slate-500 font-sans max-w-lg mx-auto">
+              标准技能目录形态为 <code>&lt;name&gt;/SKILL.md</code>。可放置在项目级
+              <code>.agents/skills/</code> / <code>.skills/</code> / <code>.harness/skills/</code>，
+              或用户全局 <code>~/.config/agents/skills/</code> / <code>~/.pg_harness/skills/</code>。
+            </p>
+          </div>`;
+        return;
+      }
+
+      listEl.innerHTML = '';
+      skills.forEach((skill) => {
+        const isEnabled = skill.enabled !== false;
+        const isProject = skill.scope === 'project';
+        const scopeLabel = isProject ? '项目级' : '用户全局';
+        const scopeCls = isProject
+          ? 'bg-blue-950 text-blue-300 border border-blue-800/40'
+          : 'bg-purple-950 text-purple-300 border border-purple-800/40';
+
+        const card = document.createElement('div');
+        card.className = `border rounded-xl bg-[#0f1523] p-5 shadow-lg space-y-3 transition ${isEnabled ? 'border-slate-800 hover:border-slate-700' : 'border-slate-800/60 opacity-70'}`;
+        card.innerHTML = `
+          <div class="flex items-start justify-between gap-4">
+            <div class="space-y-1 min-w-0">
+              <div class="flex items-center space-x-2.5 flex-wrap">
+                <span class="${isEnabled ? 'text-purple-400' : 'text-slate-500'} font-bold text-sm">${escapeHtml(skill.name)}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded ${scopeCls}">${scopeLabel}</span>
+                <span class="text-[10px] px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">v${escapeHtml(skill.version || '0.0.0')}</span>
+                <span class="text-[10px] ${isEnabled ? 'text-emerald-400' : 'text-slate-500'} flex items-center">
+                  <span class="w-1.5 h-1.5 rounded-full ${isEnabled ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'} mr-1"></span>
+                  ${isEnabled ? '模型调用已启用' : '已停用（不注入上下文）'}
+                </span>
+              </div>
+              <p class="text-slate-300 font-sans text-xs pt-1">${escapeHtml(skill.description || '(无描述)')}</p>
+            </div>
+            <div class="flex items-center space-x-2 font-sans flex-shrink-0">
+              <button onclick="toggleSkill('${escapeHtml(skill.name)}', ${isEnabled ? 'false' : 'true'})" class="px-3 py-1 rounded text-xs border transition ${isEnabled ? 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700' : 'bg-emerald-700 hover:bg-emerald-600 text-white border-emerald-600'}">
+                ${isEnabled ? '停用' : '启用'}
+              </button>
+              <button onclick="copyInvocation('${escapeHtml(skill.name)}')" title="复制 /skill 快捷指令" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded text-xs border border-slate-700">📋 指令</button>
+            </div>
+          </div>
+
+          <div class="text-[11px] text-slate-500 font-mono flex items-center space-x-4 border-t border-slate-800/60 pt-2">
+            <span class="truncate" title="${escapeHtml(skill.dirPath)}">路径: ${escapeHtml(skill.skillMdPath || skill.dirPath)}</span>
+          </div>
+        `;
+        listEl.appendChild(card);
+      });
+    }
+
+    async function toggleSkill(name, enabled) {
+      try {
+        const res = await fetch(`/api/skills/${encodeURIComponent(name)}/toggle`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled }),
+        });
+        const json = await res.json();
+        if (json.code !== 0) alert('操作失败: ' + json.message);
+      } catch (err) {
+        alert('网络异常: ' + err.message);
+      }
+      loadSkills();
+    }
+
+    function copyInvocation(name) {
+      const text = `/skill ${name} `;
+      navigator.clipboard.writeText(text).then(
+        () => alert(`已复制快捷指令：${text}\n可直接粘贴到对话工作台发送。`),
+        () => prompt('请手动复制快捷指令：', text),
+      );
+    }
+
+    function openImportModal() { document.getElementById('import-skill-modal').classList.remove('hidden'); }
+    function closeImportModal() {
+      document.getElementById('import-skill-modal').classList.add('hidden');
+      document.getElementById('import-status').textContent = '';
+    }
+
+    async function submitImport() {
+      const statusEl = document.getElementById('import-status');
+      const sourceDir = document.getElementById('import-source-dir').value.trim();
+      const workspacePath = document.getElementById('import-target-ws').value;
+      const mode = document.getElementById('import-mode').value;
+      if (!sourceDir) { statusEl.textContent = '请填写源技能包绝对路径'; return; }
+
+      statusEl.textContent = '正在校验并安装...';
+      try {
+        const res = await fetch('/api/skills/install', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sourceDir, workspacePath, mode }),
+        });
+        const json = await res.json();
+        statusEl.textContent = json.code === 0 ? `✓ ${json.message}` : `✗ ${json.message}`;
+        if (json.code === 0) { loadSkills(); setTimeout(closeImportModal, 1200); }
+      } catch (err) {
+        statusEl.textContent = `✗ 异常: ${err.message}`;
+      }
+    }
+
+    async function init() {
+      // 解析主工作区（与对话工作台默认工作区一致），并填充导入目标下拉
+      try {
+        const res = await fetch('/api/workspaces');
+        const json = await res.json();
+        if (json.code === 0 && Array.isArray(json.data) && json.data.length > 0) {
+          primaryWorkspace = json.data[0].path;
+          const sel = document.getElementById('import-target-ws');
+          json.data.forEach((ws) => {
+            const opt = document.createElement('option');
+            opt.value = ws.path;
+            opt.textContent = `${ws.name || ws.path} (${ws.path})`;
+            sel.appendChild(opt);
+          });
+        }
+      } catch { /* 无工作区时仍可按全局技能模式工作 */ }
+      await loadSkills();
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>

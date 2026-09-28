@@ -14,6 +14,20 @@ import { resolveMasterKey } from './security/master-key.ts';
 import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff } from '../../../packages/core/src/index.ts';
 import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult } from '../../../packages/core/src/index.ts';
 import { FileTools, ShellExecutor, SearchTools } from '../../../packages/plugins/tools-coding/src/index.ts';
+import {
+  scanAllSkills,
+  buildSkillsPromptFragment,
+  loadSkillContent,
+  installSkill,
+  isValidSkillName,
+  filterEnabledSkills,
+  parseExplicitSkillInvocation,
+  skillContextBlock,
+} from '../../../packages/plugins/skills/src/index.ts';
+import type { SkillMeta } from '../../../packages/plugins/skills/src/index.ts';
+import { McpClientPool, MCP_PREFIX } from '../../../packages/plugins/tools-mcp/src/index.ts';
+import type { McpServerConfig } from '../../../packages/plugins/tools-mcp/src/index.ts';
+import { MemoryCascade, migrateMemory } from '../../../packages/plugins/memory/src/index.ts';
 import { openNativeFolderDialog, listDirectory, createDirectory, revealInFileManager } from './native-dialog.ts';
 import type { BaseEvent, NetworkProxyConfig } from '@harness/protocol';
 
@@ -36,7 +50,7 @@ function resolveStaticDir(): string {
 }
 
 /** 应用版本（与 package.json 保持一致，供 /api/health 上报）。 */
-const APP_VERSION = '0.1.0';
+const APP_VERSION = '0.1.1';
 
 export interface ServerOptions {
   port?: number;
@@ -182,6 +196,7 @@ export class HarnessServer {
   public sessionStore: SessionStore;
   public proxyDispatcher: ProxyDispatcher;
   public governor: ContextGovernor;
+  public mcpPool: McpClientPool;
   private readonly writeLocks = new WorkspaceWriteLock();
   private readonly turnAborts = new Map<string, AbortController>();
   private readonly turnCheckpoints = new Map<string, { workspacePath: string; manager: GitRollbackManager }>();
@@ -213,6 +228,7 @@ export class HarnessServer {
     this.eventStore = new EventStore(this.db);
     this.sessionStore = new SessionStore(this.db);
     this.governor = new ContextGovernor();
+    this.mcpPool = new McpClientPool();
 
 
 
@@ -288,6 +304,14 @@ export class HarnessServer {
       });
       this.server!.on('error', reject);
     });
+
+    // 自动连接已配置的 MCP 服务器（非阻塞，失败静默标记并在面板中可查）
+    const configuredMcp = this.settingsStore.get<McpServerConfig[]>('system.mcpServers') ?? [];
+    if (configuredMcp.length > 0) {
+      void this.mcpPool.connectAll(configuredMcp).catch((err) => {
+        console.warn('[Harness] MCP 初始化连接失败:', (err as Error).message);
+      });
+    }
   }
 
   public async stop(): Promise<void> {
@@ -297,6 +321,7 @@ export class HarnessServer {
       });
       this.server = null;
     }
+    await this.mcpPool.closeAll().catch(() => undefined);
     this.db.close();
     releaseInstanceLock(this.dataDir);
   }
@@ -887,13 +912,48 @@ export class HarnessServer {
 
     if (method === 'GET' && url.pathname === '/api/sessions') {
       const list = this.sessionStore.list();
+      const baselines = this.settingsStore.get<Record<string, number>>('session.usageBaseline') ?? {};
       this.json(res, {
         code: 0,
         data: list.map((session) => ({
           ...session,
           state: this.sessionStates.get(session.id) ?? 'idle',
+          usageBaselineSeq: baselines[session.id] ?? 0,
         })),
       });
+      return;
+    }
+
+    // 会话重命名（PATCH /api/sessions/:id）
+    const sessionItemMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)$/);
+    if (sessionItemMatch && method === 'PATCH') {
+      const sessionId = decodeURIComponent(sessionItemMatch[1] as string);
+      const body = await this.readJsonBody<{ title?: unknown }>(req);
+      const title = typeof body.title === 'string' ? body.title.trim() : '';
+      if (!title) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '标题不能为空' }));
+        return;
+      }
+      if (!this.sessionStore.setTitle(sessionId, title.slice(0, 80))) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '会话不存在' }));
+        return;
+      }
+      this.json(res, { code: 0, data: { sessionId, title: title.slice(0, 80) } });
+      return;
+    }
+
+    // 用量清零：把「当前最大 seq」记为统计基线，此后只累计其后的 turn/completed（追加式事件不删改）
+    const usageResetMatch = url.pathname.match(/^\/api\/sessions\/([^/]+)\/usage\/reset$/);
+    if (usageResetMatch && method === 'POST') {
+      const sessionId = decodeURIComponent(usageResetMatch[1] as string);
+      const events = this.eventStore.getEventsAfter(sessionId, 0);
+      const maxSeq = events.length > 0 ? Number((events[events.length - 1] as BaseEvent).seq) : 0;
+      const baselines = this.settingsStore.get<Record<string, number>>('session.usageBaseline') ?? {};
+      baselines[sessionId] = maxSeq;
+      this.settingsStore.set('session.usageBaseline', baselines);
+      this.json(res, { code: 0, data: { sessionId, baselineSeq: maxSeq, tokens: 0, cost: '$0.000' } });
       return;
     }
 
@@ -1121,6 +1181,143 @@ export class HarnessServer {
       }
     }
 
+    // 6.3 Skills 技能目录查询端点（WBS-01-07-01 / D40）
+    if (method === 'GET' && url.pathname === '/api/skills') {
+      const wsPath = url.searchParams.get('workspace') || '';
+      const skills = scanAllSkills(wsPath || process.cwd());
+      const disabled = new Set(this.settingsStore.get<string[]>('system.disabledSkills') ?? []);
+      this.json(res, {
+        code: 0,
+        data: skills.map((s) => ({
+          ...s,
+          dirPath: s.dirPath,
+          enabled: !disabled.has(s.name),
+        })),
+      });
+      return;
+    }
+
+    // 6.3.1 Skills 启用/禁用开关端点
+    if (method === 'PATCH' && url.pathname.startsWith('/api/skills/') && url.pathname.endsWith('/toggle')) {
+      const match = url.pathname.match(/^\/api\/skills\/([^/]+)\/toggle$/);
+      const rawName = match ? decodeURIComponent(match[1] as string) : '';
+      if (!isValidSkillName(rawName)) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '技能名格式不合法' }));
+        return;
+      }
+      const body = await this.readJsonBody<{ enabled?: boolean }>(req);
+      const currentList = this.settingsStore.get<string[]>('system.disabledSkills') ?? [];
+      const disabledSet = new Set(currentList);
+      // 若客户端显式提供 enabled 则按其设定；否则反转当前状态
+      const shouldEnable = typeof body.enabled === 'boolean' ? body.enabled : disabledSet.has(rawName);
+      if (shouldEnable) {
+        disabledSet.delete(rawName);
+      } else {
+        disabledSet.add(rawName);
+      }
+      const updated = [...disabledSet];
+      this.settingsStore.set('system.disabledSkills', updated);
+      this.json(res, {
+        code: 0,
+        message: `技能 "${rawName}" 已${shouldEnable ? '启用' : '禁用'}`,
+        data: { name: rawName, enabled: shouldEnable },
+      });
+      return;
+    }
+
+    // 6.4 Skills 本地导入端点（支持完整拷贝或软链方式安装本地原子技能包）
+    if (method === 'POST' && url.pathname === '/api/skills/install') {
+      const body = await this.readJsonBody<{ sourceDir?: string; workspacePath?: string; mode?: 'copy' | 'link' }>(req);
+      const sourceDir = (body.sourceDir ?? '').trim();
+      const targetWs = (body.workspacePath ?? '').trim();
+      if (!sourceDir) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 sourceDir 参数' }));
+        return;
+      }
+      // 目标：优先使用当前活跃工作区的 .pg_harness/skills，否则写入用户全局目录
+      const targetRoot = targetWs
+        ? path.join(path.resolve(targetWs), '.pg_harness', 'skills')
+        : path.join(os.homedir(), '.pg_harness', 'skills');
+      try {
+        const result = installSkill(path.resolve(sourceDir), targetRoot, body.mode === 'link' ? 'link' : 'copy');
+        this.json(res, { code: 0, message: `技能 "${result.skillName}" 已安装到 ${result.destPath}`, data: result });
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: (err as Error).message }));
+      }
+      return;
+    }
+
+    // 6.4.1 记忆条目查询接口（供设置中心「记忆与经验治理」面板展示）
+    if (method === 'GET' && url.pathname === '/api/memory') {
+      const wsPath = (url.searchParams.get('workspace') || '').trim();
+      if (!wsPath) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 workspace 参数' }));
+        return;
+      }
+      const resolved = path.resolve(wsPath);
+      const projectPath = path.join(resolved, '.harness', 'memory.md');
+      const globalPath = path.join(os.homedir(), '.harness', 'memory.md');
+      const cascade = new MemoryCascade(resolved);
+      const entries = await cascade.assemble(undefined, 200);
+      this.json(res, {
+        code: 0,
+        data: {
+          entries,
+          projectPath,
+          globalPath,
+          projectExists: fs.existsSync(projectPath),
+          globalExists: fs.existsSync(globalPath),
+        },
+      });
+      return;
+    }
+
+    // 6.5 MCP 服务器管理接口 (WBS-01-07-02 / D14)
+    if (method === 'GET' && url.pathname === '/api/mcp/servers') {
+      const servers = this.settingsStore.get<McpServerConfig[]>('system.mcpServers') ?? [];
+      const tools = this.mcpPool.getTools();
+      this.json(res, { code: 0, data: { servers, tools } });
+      return;
+    }
+
+    if (method === 'POST' && url.pathname === '/api/mcp/servers') {
+      const body = await this.readJsonBody<{ servers?: McpServerConfig[] }>(req);
+      const servers = Array.isArray(body.servers) ? body.servers : [];
+      this.settingsStore.set('system.mcpServers', servers);
+      // 动态重连连接池
+      await this.mcpPool.closeAll();
+      const counts = await this.mcpPool.connectAll(servers);
+      this.json(res, { code: 0, message: 'MCP 服务器配置已更新', data: { counts, tools: this.mcpPool.getTools() } });
+      return;
+    }
+
+    // 6.6 记忆受控迁移向导接口 (WBS-01-07-04 / D39)
+    if (method === 'POST' && url.pathname === '/api/memory/migrate') {
+      const body = await this.readJsonBody<{ workspacePath?: string; targetDbPath?: string; mode?: 'lossless-migrate' | 'fresh-start' }>(req);
+      const wsPath = (body.workspacePath ?? '').trim();
+      if (!wsPath) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 workspacePath' }));
+        return;
+      }
+      try {
+        const result = await migrateMemory({
+          workspacePath: path.resolve(wsPath),
+          targetDbPath: body.targetDbPath ? path.resolve(body.targetDbPath) : undefined,
+          mode: body.mode ?? 'lossless-migrate',
+        });
+        this.json(res, { code: 0, message: '记忆迁移/备份处理完成', data: result });
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 500, message: (err as Error).message }));
+      }
+      return;
+    }
+
     // 6.2 删除会话接口 (级联清理 session, events 表)
     if (method === 'DELETE' && url.pathname.startsWith('/api/sessions/')) {
       const sessionId = decodeURIComponent(url.pathname.split('/')[3] as string);
@@ -1238,9 +1435,44 @@ export class HarnessServer {
         projectRules = fs.readFileSync(projectAgentsMdPath, 'utf8');
       }
 
+      // 扫描工作区与全局技能，注入已启用的技能清单到系统提示（渐进披露：只注入元数据）
+      const activeSkills = scanAllSkills(wsPath);
+      const disabledSkillsList = this.settingsStore.get<string[]>('system.disabledSkills') ?? [];
+      const disabledSkillsSet = new Set(disabledSkillsList);
+      const skillsFragment = buildSkillsPromptFragment(activeSkills, disabledSkillsSet);
+
+      // 双层记忆级联装配：根据用户消息检索召回 Top-5 记忆条目并注入
+      const memoryCascade = new MemoryCascade(wsPath);
+      const memoryFragment = await memoryCascade.toPromptFragment(body.message);
+
+      // 显式 /skill <name> 指令预先提取：若用户显式指定，直接将技能正文作为首轮上下文注入
+      const explicitSkill = parseExplicitSkillInvocation(body.message);
+      let explicitSkillBlock = '';
+      if (explicitSkill) {
+        const targetMeta = activeSkills.find((s) => s.name === explicitSkill.skillName);
+        if (!targetMeta) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            code: 400,
+            message: `未找到指定的技能 "${explicitSkill.skillName}"（当前工作区已扫描到: ${activeSkills.map((s) => s.name).join(', ') || '无'}）`,
+          }));
+          return;
+        }
+        if (disabledSkillsSet.has(targetMeta.name)) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({
+            code: 400,
+            message: `技能 "${targetMeta.name}" 当前已被禁用，请先在设置中开启后再使用`,
+          }));
+          return;
+        }
+        const loaded = loadSkillContent(targetMeta);
+        explicitSkillBlock = `\n\n${skillContextBlock(targetMeta, loaded.body)}`;
+      }
+
       const systemPrompt = `You are Purple Grapes Harness (PGH), an autonomous software engineering coding agent.
 Working Directory: ${wsPath}
-${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}
+${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skillsFragment}${memoryFragment}${explicitSkillBlock}
 
 [Tool Usage Guidelines]:
 1. You have access to local coding tools: read_file, edit_file, write_file, glob, grep, bash.
@@ -1451,8 +1683,27 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}
                 this.sessionStates.set(activeSession.id, 'running');
               }
             }
-            default:
+            case 'skill': {
+              // 渐进披露加载技能正文（WBS-01-07-01 / D40）
+              const skillName = String(args.name ?? '').trim();
+              if (!skillName) throw new Error('skill 工具需要 name 参数');
+              const disabledSet = new Set(this.settingsStore.get<string[]>('system.disabledSkills') ?? []);
+              if (disabledSet.has(skillName)) {
+                throw new Error(`技能 "${skillName}" 已被用户禁用，拒绝加载`);
+              }
+              const allSkills = scanAllSkills(wsPath);
+              const found = allSkills.find(s => s.name === skillName);
+              if (!found) throw new Error(`未找到技能 "${skillName}"（可用: ${allSkills.map(s => s.name).join(', ') || '无'}）`);
+              const content = loadSkillContent(found);
+              return `[Skill: ${content.meta.name}]\n\n${content.body}`;
+            }
+            default: {
+              // MCP 命名空间强隔离工具路由（WBS-01-07-02 / D14 / D66）
+              if (name.startsWith(MCP_PREFIX) && this.mcpPool.isMcpTool(name)) {
+                return await this.mcpPool.callTool(name, args);
+              }
               throw new Error(`未知工具: ${name}`);
+            }
           }
           return output;
         };
@@ -1545,13 +1796,16 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}
 
         const result = await loop.run();
         this.sessionStore.touch(activeSession.id);
+        const totalTokens = result.inputTokens + result.outputTokens;
         sendEvent('done', {
           turnId,
           sessionId: activeSession.id,
           stoppedReason: result.stoppedReason,
           stepsUsed: result.stepsUsed,
-          tokens: result.inputTokens + result.outputTokens,
-          cost: `$${((result.inputTokens + result.outputTokens) * 0.000002).toFixed(4)}`,
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+          tokens: totalTokens,
+          cost: `$${(totalTokens * 0.000002).toFixed(4)}`,
         });
       } catch (err) {
         sendEvent('error', { message: (err as Error).message });
@@ -1584,7 +1838,14 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}
       res.end(JSON.stringify({ code: 403, message: 'Forbidden' }));
       return;
     }
-    if (rawPath === '/favicon.ico') {
+    // 品牌图标（单一来源：仓库根目录 ico/pgh.svg），并接管浏览器默认的 /favicon.ico 请求
+    if (rawPath === '/favicon.ico' || rawPath === '/favicon.svg' || rawPath === '/ico/pgh.svg') {
+      const logoPath = path.resolve(__dirname, '../../../ico/pgh.svg');
+      if (fs.existsSync(logoPath)) {
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml', 'Cache-Control': 'public, max-age=86400' });
+        fs.createReadStream(logoPath).pipe(res);
+        return;
+      }
       res.writeHead(204);
       res.end();
       return;

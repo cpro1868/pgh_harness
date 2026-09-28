@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="100%" height="100%">
+  <defs>
+    <!-- 背景渐变：暗夜深紫 -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#120726" />
+      <stop offset="100%" stop-color="#06020D" />
+    </linearGradient>
+
+    <!-- 葡萄珠发光渐变 (电光紫到深莓紫) -->
+    <linearGradient id="grapeGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#E879F9" />
+      <stop offset="40%" stop-color="#A855F7" />
+      <stop offset="100%" stop-color="#6B21A8" />
+    </linearGradient>
+
+    <!-- 顶层葡萄高亮渐变 -->
+    <linearGradient id="grapeCore" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#F472B6" />
+      <stop offset="100%" stop-color="#9333EA" />
+    </linearGradient>
+
+    <!-- 挽具与外框科技青紫渐变 -->
+    <linearGradient id="harnessFrame" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818CF8" />
+      <stop offset="100%" stop-color="#4F46E5" />
+    </linearGradient>
+
+    <!-- 发光滤镜 -->
+    <filter id="purpleGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="6" stdDeviation="12" flood-color="#A855F7" flood-opacity="0.4" />
+      <feDropShadow dx="0" dy="2" stdDeviation="6" flood-color="#38BDF8" flood-opacity="0.2" />
+    </filter>
+  </defs>
+
+  <!-- 1. 背景底板 (Squircle 圆角矩形) -->
+  <rect x="24" y="24" width="464" height="464" rx="104" fill="url(#bgGrad)" stroke="#2E1065" stroke-width="4"/>
+
+  <!-- 2. 沙箱边界：外层挽具束缚圈 (虚线防护栏) -->
+  <polygon points="256,64 416,156 416,340 256,432 96,340 96,156" 
+           fill="none" 
+           stroke="#4C1D95" 
+           stroke-width="3" 
+           stroke-dasharray="10 8" 
+           opacity="0.8"/>
+
+  <!-- 3. Harness 安全挂扣 / 顶端吊环果梗 -->
+  <g transform="translate(0, -4)">
+    <!-- 扣环挂钩 -->
+    <path d="M 230 112 C 230 90 282 90 282 112 L 282 136 L 230 136 Z" 
+          fill="none" 
+          stroke="url(#harnessFrame)" 
+          stroke-width="8" 
+          stroke-linecap="round"/>
+    <!-- 闪电切角挂销 -->
+    <polygon points="266,92 246,122 260,122 250,146 274,112 260,112" fill="#38BDF8" />
+  </g>
+
+  <!-- 4. 拓扑连线 (数据流 / 事件溯源总线 DAG) -->
+  <g stroke="#7E22CE" stroke-width="3" opacity="0.65">
+    <!-- 第一层到第二层 -->
+    <line x1="206" y1="184" x2="226" y2="244" />
+    <line x1="256" y1="184" x2="226" y2="244" />
+    <line x1="256" y1="184" x2="286" y2="244" />
+    <line x1="306" y1="184" x2="286" y2="244" />
+    <!-- 第二层到底层 -->
+    <line x1="226" y1="244" x2="256" y2="304" />
+    <line x1="286" y1="244" x2="256" y2="304" />
+    <!-- 底层到终端节点 -->
+    <line x1="256" y1="304" x2="256" y2="360" />
+  </g>
+
+  <!-- 5. 葡萄集群 (Purple Grape Cluster / 节点矩阵) -->
+  <g filter="url(#purpleGlow)">
+    <!-- 第一排（3 颗） -->
+    <circle cx="206" cy="184" r="24" fill="url(#grapeGrad)" stroke="#E879F9" stroke-width="2"/>
+    <circle cx="256" cy="184" r="24" fill="url(#grapeCore)" stroke="#F472B6" stroke-width="2.5"/>
+    <circle cx="306" cy="184" r="24" fill="url(#grapeGrad)" stroke="#E879F9" stroke-width="2"/>
+
+    <!-- 第二排（2 颗） -->
+    <circle cx="226" cy="244" r="24" fill="url(#grapeGrad)" stroke="#E879F9" stroke-width="2"/>
+    <circle cx="286" cy="244" r="24" fill="url(#grapeGrad)" stroke="#E879F9" stroke-width="2"/>
+
+    <!-- 第三排（1 颗） -->
+    <circle cx="256" cy="304" r="24" fill="url(#grapeGrad)" stroke="#E879F9" stroke-width="2"/>
+
+    <!-- 底部收口端点 (终态物化产物节点) -->
+    <circle cx="256" cy="360" r="14" fill="#38BDF8" stroke="#FFFFFF" stroke-width="2"/>
+  </g>
+
+  <!-- 6. Harness 左右束缚机械支架 (约束爪与卡扣) -->
+  <g fill="none" stroke="url(#harnessFrame)" stroke-width="7" stroke-linecap="round">
+    <!-- 左侧约束卡爪 -->
+    <path d="M 136 210 L 166 244 L 140 280" />
+    <!-- 右侧约束卡爪 -->
+    <path d="M 376 210 L 346 244 L 372 280" />
+  </g>
+
+  <!-- 7. 晶体节点高光微点 -->
+  <circle cx="200" cy="176" r="4" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="250" cy="176" r="4" fill="#FFFFFF" opacity="0.9"/>
+  <circle cx="300" cy="176" r="4" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="220" cy="236" r="4" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="280" cy="236" r="4" fill="#FFFFFF" opacity="0.8"/>
+  <circle cx="250" cy="296" r="4" fill="#FFFFFF" opacity="0.8"/>
+</svg>

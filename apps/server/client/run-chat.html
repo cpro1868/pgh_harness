@@ -2,6 +2,7 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="ico/pgh.svg">
   <title>主会话工作台 - Purple Grapes Harness (PGH)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
@@ -82,7 +83,7 @@
   <!-- 统一 40px 顶栏 -->
   <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs select-none">
     <div class="flex items-center space-x-2.5">
-      <div class="w-6 h-6 rounded bg-purple-600 flex items-center justify-center font-bold text-white text-[11px] font-mono shadow-sm">PG</div>
+      <img src="ico/pgh.svg" alt="Purple Grapes Harness" class="w-6 h-6 rounded shadow-sm">
       <span class="font-bold text-white tracking-wide text-xs">Purple Grapes Harness</span>
       <span class="text-slate-600">/</span>
       <!-- 工作区锁定指示 (对齐 deepseek-harness，支持在顶栏切换工作区，绝不阻塞输入区) -->
@@ -95,10 +96,18 @@
     </div>
 
     <div class="flex items-center space-x-3 text-[11px]">
-      <div class="flex items-center space-x-1.5 font-mono text-slate-400">
+      <div class="flex items-center space-x-1.5 font-mono text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
         <span>Token: <b id="session-tokens" class="text-emerald-400">0</b></span>
         <span>·</span>
         <span>费用: <b id="session-cost" class="text-emerald-400">$0.000</b></span>
+        <button
+          type="button"
+          onclick="resetSessionUsage()"
+          title="将当前统计用量清零（记录当前基线，后续只统计新轮次，不删除历史事件）"
+          class="ml-1 px-1.5 py-0.2 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 text-[10px] transition"
+        >
+          🔄 清零
+        </button>
       </div>
       <!-- 模型选择 -->
       <select id="topbar-model-select" class="bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500">
@@ -135,11 +144,20 @@
       <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则 (Workspaces)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
       </a>
-      <a href="config-providers.html" class="activity-btn" title="Provider 资产池">
+      <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
       </a>
+      <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+      </a>
+      <a href="config-skills.html" class="activity-btn" title="Skills 技能库">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </a>
       <div class="flex-1"></div>
-      <a href="config-settings.html" class="activity-btn" title="系统设置中心">
+      <a href="config-settings.html" class="activity-btn" title="系统全局设置 (Settings)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
       </a>
     </aside>
@@ -226,6 +244,18 @@
                   <option value="edit">✏️ 标准（需审批）</option>
                   <option value="full">⚡ 完全授权</option>
                 </select>
+
+                <!-- 快捷选择当前可用的 Skill 并填入输入框 -->
+                <div class="relative inline-block text-[11px]">
+                  <select
+                    id="composer-skill-select"
+                    onchange="handleSelectSkillToComposer(this.value)"
+                    title="选择技能快捷指令注入输入框（执行 /skill <name>）"
+                    class="px-2 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-900/50 text-[11px] font-mono focus:outline-none focus:border-purple-500 cursor-pointer"
+                  >
+                    <option value="">🧩 快捷使用 Skill...</option>
+                  </select>
+                </div>
               </div>
 
               <!-- 对齐 deepseek-harness 的 Send / Stop 二合一动态状态机按钮 -->
@@ -502,6 +532,97 @@
       return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
     }
 
+    /** 格式化日期时间为 yyyy-MM-dd HH:mm:ss 严格标准形式。 */
+    function formatDateTime(input) {
+      if (!input) return '--';
+      const d = typeof input === 'number' || typeof input === 'string' ? new Date(input) : input;
+      if (Number.isNaN(d.getTime())) return '--';
+      const pad = (n) => String(n).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const MM = pad(d.getMonth() + 1);
+      const dd = pad(d.getDate());
+      const HH = pad(d.getHours());
+      const mm = pad(d.getMinutes());
+      const ss = pad(d.getSeconds());
+      return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+    }
+
+    /** 单价（美元 / token），与后端 done 事件口径保持一致。 */
+    const TOKEN_UNIT_PRICE_USD = 0.000002;
+    /** 当前会话的用量统计基线 seq（清零标记）：只累计 seq 大于它的 turn/completed。 */
+    let activeUsageBaseline = 0;
+
+    /** 渲染顶栏 Token 与费用（会话累计口径）。 */
+    function renderUsageBar(tokens) {
+      const value = Math.max(0, Number(tokens) || 0);
+      const tokensEl = document.getElementById('session-tokens');
+      const costEl = document.getElementById('session-cost');
+      if (tokensEl) tokensEl.textContent = String(value);
+      if (costEl) costEl.textContent = `$${(value * TOKEN_UNIT_PRICE_USD).toFixed(4)}`;
+    }
+
+    /** 从服务端同步当前会话的用量统计基线。 */
+    async function syncUsageBaselineFromServer(sessionId) {
+      try {
+        const res = await fetch('/api/sessions');
+        const body = await res.json();
+        const record = (body.data || []).find((item) => item.id === sessionId);
+        activeUsageBaseline = record && typeof record.usageBaselineSeq === 'number' ? record.usageBaselineSeq : 0;
+      } catch {
+        activeUsageBaseline = 0;
+      }
+    }
+
+    /** 从事件集合统计「基线之后」的累计 Token（追加式事件为唯一事实来源，避免本地累加漂移）。 */
+    function sumUsageFromEvents(events) {
+      let sum = 0;
+      for (const ev of events) {
+        if (ev.type !== 'turn/completed') continue;
+        if (typeof ev.seq === 'number' && ev.seq <= activeUsageBaseline) continue;
+        sum += Number((ev.payload || {}).totalTokens || 0);
+      }
+      return sum;
+    }
+
+    /** 回合结束后按落盘事实施刷新顶栏用量。 */
+    async function refreshSessionUsage() {
+      if (!activeSessionId) {
+        renderUsageBar(0);
+        return;
+      }
+      try {
+        const res = await fetch(`/api/sessions/${activeSessionId}/messages?after=0`);
+        const result = await res.json();
+        if (result.code === 0 && Array.isArray(result.data)) {
+          renderUsageBar(sumUsageFromEvents(result.data));
+        }
+      } catch {
+        // 刷新失败保留上次显示，不阻断主流程
+      }
+    }
+
+    /** 手动清零当前会话的 Token / 费用统计（只重置基线，不删除历史事件）。 */
+    async function resetSessionUsage() {
+      if (!activeSessionId) {
+        showInfoBanner('当前没有活动会话，无需清零。');
+        return;
+      }
+      if (!confirm('确定清零当前会话的 Token 与费用统计吗？\n\n只重置统计基线，不删除任何历史事件与对话内容。')) return;
+      try {
+        const res = await fetch(`/api/sessions/${activeSessionId}/usage/reset`, { method: 'POST' });
+        const result = await res.json();
+        if (result.code === 0) {
+          activeUsageBaseline = Number(result.data?.baselineSeq || 0);
+          renderUsageBar(0);
+          showInfoBanner('已清零：后续只统计新产生的轮次用量。');
+        } else {
+          showErrorBanner('清零失败: ' + result.message);
+        }
+      } catch (err) {
+        showErrorBanner('清零请求异常: ' + err.message);
+      }
+    }
+
     /** 距底部多少像素以内算"贴底"，超过就认为用户在往上翻阅。 */
     const AUTOSCROLL_NEAR_BOTTOM_PX = 120;
 
@@ -737,25 +858,36 @@
         <span class="text-white font-bold text-xs tracking-tight pointer-events-none drop-shadow-sm">${escapeHtml(badgeText)}</span>
         <span class="text-[9px] text-slate-300/80 font-mono truncate px-1 max-w-[90%] pointer-events-none">${escapeHtml(title.slice(0, 4))}</span>
 
-        <!-- 悬停全貌卡片（ChatGPT 浮层，向左展开，带 pointer-events 允许点击删除） -->
-        <div class="session-preview hidden group-hover:block absolute right-full top-0 mr-2 w-56 bg-[#0f172a] border border-slate-700 rounded-lg p-3 z-50 shadow-2xl text-left space-y-1.5 transition-all">
-          <div class="text-xs text-white font-semibold leading-snug line-clamp-2">${escapeHtml(title)}</div>
-          <div class="flex items-center space-x-1 text-[10px] text-blue-300 font-mono truncate">
-            <span>📁</span><span class="truncate">${escapeHtml(wsShort)}</span>
-          </div>
-          <div class="text-[9px] text-slate-400 font-mono">更新: ${timeStr}</div>
-          <div class="pt-1 border-t border-slate-800">
-            <button
-              type="button"
-              class="w-full px-2 py-1 text-[10px] text-rose-400 hover:text-white hover:bg-rose-600/80 rounded border border-rose-900/50 transition text-center flex items-center justify-center space-x-1 cursor-pointer"
-              onclick="deleteSession(event, '${sess.id}')"
-            >
-              <span>🗑️</span><span>删除此会话</span>
-            </button>
+        <!-- 悬停浮层：外层紧贴色块边缘（无间隙，避免鼠标穿越死区导致浮层消失、删除按钮点不到），内层保留视觉间距 -->
+        <div class="session-preview hidden group-hover:block absolute right-full top-0 z-50 pr-2">
+          <div class="w-56 bg-[#0f172a] border border-slate-700 rounded-lg p-3 shadow-2xl text-left space-y-1.5">
+            <div class="text-xs text-white font-semibold leading-snug line-clamp-2">${escapeHtml(title)}</div>
+            <div class="flex items-center space-x-1 text-[10px] text-blue-300 font-mono truncate">
+              <span>📁</span><span class="truncate">${escapeHtml(wsShort)}</span>
+            </div>
+            <div class="text-[9px] text-slate-400 font-mono">创建: ${escapeHtml(formatDateTime(sess.createdAt))}</div>
+            <div class="text-[9px] text-slate-400 font-mono">更新: ${escapeHtml(formatDateTime(sess.updatedAt || sess.createdAt))}</div>
+            <div class="pt-1 border-t border-slate-800 flex items-center gap-1.5">
+              <button
+                type="button"
+                class="flex-1 px-2 py-1 text-[10px] text-slate-300 hover:text-white hover:bg-slate-700 rounded border border-slate-600 transition text-center flex items-center justify-center space-x-1 cursor-pointer"
+                onclick="renameSession(event, '${sess.id}', '${escapeHtml(title).replace(/'/g, "&#39;")}')"
+              >
+                <span>✏️</span><span>重命名</span>
+              </button>
+              <button
+                type="button"
+                class="flex-1 px-2 py-1 text-[10px] text-rose-400 hover:text-white hover:bg-rose-600/80 rounded border border-rose-900/50 transition text-center flex items-center justify-center space-x-1 cursor-pointer"
+                onclick="deleteSession(event, '${sess.id}')"
+              >
+                <span>🗑️</span><span>删除</span>
+              </button>
+            </div>
           </div>
         </div>
       `;
 
+      // 悬停时给色块加高亮态（浮层延迟关闭，尽量避免误触丢失）
       block.addEventListener('click', (e) => {
         if (e.target.closest('button')) return;
         switchSession(sess.id);
@@ -771,6 +903,36 @@
       const select = document.getElementById('topbar-workspace-select');
       if (select) select.value = targetPath;
       createNewSession();
+    }
+
+    async function renameSession(event, sessionId, currentTitle) {
+      if (event) event.stopPropagation();
+      const next = prompt('请输入会话新标题：', currentTitle || '');
+      if (next === null) return;
+      const trimmed = next.trim();
+      if (!trimmed) {
+        showErrorBanner('会话标题不能为空');
+        return;
+      }
+      try {
+        const res = await fetch(`/api/sessions/${sessionId}`, {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ title: trimmed }),
+        });
+        const result = await res.json();
+        if (result.code === 0) {
+          if (activeSessionId === sessionId) {
+            const titleEl = document.getElementById('active-session-title');
+            if (titleEl) titleEl.textContent = trimmed;
+          }
+          await loadSessionList();
+        } else {
+          showErrorBanner('重命名失败: ' + result.message);
+        }
+      } catch (err) {
+        showErrorBanner('重命名请求异常: ' + err.message);
+      }
     }
 
     async function deleteSession(event, sessionId) {
@@ -798,10 +960,14 @@
       activeSessionId = null;
       lastTurnId = null;
       lastKnownSeq = 0;
+      activeUsageBaseline = 0;
       stopSessionWatch();
       // 新会话回到安全的默认档位（标准：写操作需审批），避免沿用上一次的"完全授权"
       activePermissionPreset = 'edit';
       renderPermissionPreset();
+      renderUsageBar(0);
+      const titleEl = document.getElementById('active-session-title');
+      if (titleEl) titleEl.textContent = '新对话';
       // 清空右侧轮次大纲
       outlineTurns = [];
       renderTurnOutline();
@@ -816,6 +982,7 @@
       activeSessionId = sessionId;
       await loadSessionList();
       await syncPermissionPresetFromServer(sessionId);
+      await syncUsageBaselineFromServer(sessionId);
 
       try {
         const res = await fetch(`/api/sessions/${sessionId}/messages?after=0`);
@@ -825,6 +992,7 @@
           return;
         }
         renderConversation(result.data);
+        renderUsageBar(sumUsageFromEvents(result.data));
         startSessionWatch(sessionId);
       } catch (err) {
         console.error('Switch session error:', err);
@@ -914,8 +1082,10 @@
         const meta = [
           toolCount > 0 ? `🔧 ${toolCount}` : '',
           turn.steps ? `${turn.steps} 步` : '',
+          turn.totalTokens ? `${turn.totalTokens} tokens` : '',
           turn.stoppedReason && turn.stoppedReason !== 'completed' ? turn.stoppedReason : '',
         ].filter(Boolean).join(' · ');
+        const turnTimeStr = formatDateTime(turn.startedAt || turn.completedAt);
 
         const item = document.createElement('button');
         item.type = 'button';
@@ -926,7 +1096,10 @@
             <span class="truncate max-w-[80px]">${escapeHtml(String(turn.model || ''))}</span>
           </div>
           <div class="text-[11px] text-slate-300 leading-snug">${escapeHtml(preview)}</div>
-          ${meta ? `<div class="text-[10px] text-slate-500 font-mono">${escapeHtml(meta)}</div>` : ''}
+          ${meta ? `<div class="text-[10px] text-slate-400 font-mono">${escapeHtml(meta)}</div>` : ''}
+          <div class="text-[9px] text-slate-500 font-mono flex items-center space-x-1 pt-0.5">
+            <span>🕒</span><span>${escapeHtml(turnTimeStr)}</span>
+          </div>
         `;
         item.addEventListener('click', () => jumpToTurn(turn.turnId, item));
         list.appendChild(item);
@@ -977,9 +1150,16 @@
         if (!ev.turnId) continue;
         let turn = byId.get(ev.turnId);
         if (!turn) {
-          turn = { turnId: ev.turnId, user: '', assistant: '', model: '', tools: [], attachments: [], questions: [], answers: [], approvals: [], decisions: [], todos: null, feedback: null, steps: 0, stoppedReason: '' };
+          turn = { turnId: ev.turnId, user: '', assistant: '', model: '', tools: [], attachments: [], questions: [], answers: [], approvals: [], decisions: [], todos: null, feedback: null, steps: 0, stoppedReason: '', startedAt: 0, completedAt: 0, inputTokens: 0, outputTokens: 0, totalTokens: 0 };
           byId.set(ev.turnId, turn);
           turns.push(turn);
+        }
+        // 每轮起始时间取该轮首条事件时间（事件日志 created_at 为唯一事实来源）
+        if (typeof ev.createdAt === 'number' && (turn.startedAt === 0 || ev.createdAt < turn.startedAt)) {
+          turn.startedAt = ev.createdAt;
+        }
+        if (typeof ev.createdAt === 'number' && ev.createdAt > turn.completedAt) {
+          turn.completedAt = ev.createdAt;
         }
         if (ev.type === 'message/user') {
           turn.user = String((ev.payload || {}).content || '');
@@ -1005,6 +1185,10 @@
         } else if (ev.type === 'turn/completed') {
           turn.steps = Number((ev.payload || {}).stepsUsed || 0);
           turn.stoppedReason = String((ev.payload || {}).stoppedReason || '');
+          const p = ev.payload || {};
+          if (typeof p.inputTokens === 'number') turn.inputTokens = p.inputTokens;
+          if (typeof p.outputTokens === 'number') turn.outputTokens = p.outputTokens;
+          if (typeof p.totalTokens === 'number') turn.totalTokens = p.totalTokens;
         } else if (ev.type === 'message/feedback') {
           turn.feedback = String((ev.payload || {}).rating || '');
         }
@@ -1046,8 +1230,10 @@
       }
 
       for (const turn of turns) {
-        if (turn.user) appendUserBubble(turn.user, turn.attachments);
+        if (turn.user) appendUserBubble(turn.user, turn.attachments, turn.startedAt);
         const card = createAssistantCard(turn.turnId, turn.model, Boolean(lastTurn) && turn.turnId === lastTurn.turnId);
+        // 回填该轮的产出时间与真实 Token 消耗（来自落盘 turn/completed 事件，非估算）
+        card.setMeta({ createdAt: turn.startedAt, inputTokens: turn.inputTokens, outputTokens: turn.outputTokens, totalTokens: turn.totalTokens });
 
         // 历史会话默认将工具调用、输出及 Diff 细节折叠收缩（details 包裹），点击才展开查看
         if (turn.tools && turn.tools.length > 0) {
@@ -1250,6 +1436,12 @@
       downloadMarkdown(`pgh-turn-${turnId}.md`, turnsToMarkdown([target], 'Purple Grapes Harness 单轮对话导出'));
     }
 
+    /**
+     * 创建助手回合卡片。
+     * @param turnId 回合标识
+     * @param model 模型名
+     * @param isLast 是否为当前最新回合（决定是否显示重做按钮）
+     */
     function createAssistantCard(turnId, model, isLast) {
       const el = document.createElement('div');
       el.className = 'p-4 rounded-xl bg-[#0c1220] border border-slate-800 text-xs space-y-3 shadow-lg font-sans';
@@ -1260,7 +1452,10 @@
             <span class="w-2 h-2 rounded-full bg-purple-500 animate-pulse"></span>
             <span>PGH AGENT</span>
           </span>
-          <span class="text-[10px] text-slate-500 font-mono">已捕获 Git 检查点 🔒</span>
+          <span class="text-[10px] text-slate-500 font-mono flex items-center gap-2">
+            <span data-role="created-time" title="本回合启动时间">🕒 <span data-role="created-time-text">--</span></span>
+            <span>已捕获 Git 检查点 🔒</span>
+          </span>
         </div>
         <div data-role="reasoning-box" class="hidden border border-purple-900/40 rounded bg-[#090d18] p-2.5 text-xs font-mono">
           <div data-role="reasoning-toggle" class="flex items-center justify-between text-purple-300 text-[11px] cursor-pointer select-none">
@@ -1273,6 +1468,7 @@
         <div data-role="content" class="prose-dark leading-relaxed font-sans"><span class="text-slate-500 animate-pulse">正在调度智能体引擎处理...</span></div>
         <div class="pt-2 border-t border-slate-800/60 space-y-1">
           <div data-role="model-line" class="text-[10px] text-slate-500 font-mono">模型：${escapeHtml(model || '待确定')}</div>
+          <div data-role="usage-line" class="text-[10px] text-slate-500 font-mono">本轮消耗：-- （回合结束后统计）</div>
           <div class="flex items-center justify-end space-x-1">
             <button type="button" data-act="up" title="答得好（点赞）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-emerald-400 transition text-[11px]">👍</button>
             <button type="button" data-act="down" title="有待加强（点踩）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-rose-400 transition text-[11px]">👎</button>
@@ -1287,6 +1483,8 @@
       const reasoningBox = el.querySelector('[data-role="reasoning-box"]');
       const reasoningContent = el.querySelector('[data-role="reasoning-content"]');
       const modelLine = el.querySelector('[data-role="model-line"]');
+      const usageLine = el.querySelector('[data-role="usage-line"]');
+      const createdTimeText = el.querySelector('[data-role="created-time-text"]');
       const upBtn = el.querySelector('[data-act="up"]');
       const downBtn = el.querySelector('[data-act="down"]');
       const redoBtn = el.querySelector('[data-act="redo"]');
@@ -1310,6 +1508,24 @@
           if (!name) return;
           controller.model = name;
           modelLine.textContent = `模型：${name}`;
+        },
+        /**
+         * 回填该回合的产出时间与真实 Token 消耗。
+         * @param meta createdAt / inputTokens / outputTokens / totalTokens（缺失字段自动回退 0）
+         */
+        setMeta(meta) {
+          const m = meta || {};
+          if (typeof m.createdAt === 'number' && m.createdAt > 0) {
+            createdTimeText.textContent = formatDateTime(m.createdAt);
+          }
+          const input = Number(m.inputTokens || 0);
+          const output = Number(m.outputTokens || 0);
+          const total = Number(m.totalTokens || 0);
+          if (total > 0 || input > 0 || output > 0) {
+            usageLine.innerHTML = `本轮消耗：↑ 输入 <span class="text-sky-300">${input}</span> · ↓ 输出 <span class="text-emerald-300">${output}</span> · Σ 合计 <span class="text-amber-300">${total}</span>`;
+          } else {
+            usageLine.textContent = '本轮消耗：--（未上报 token 用量）';
+          }
         },
         setFeedback(rating) {
           upBtn.className = idleBtn + (rating === 'up' ? 'bg-slate-800 text-emerald-400' : 'text-slate-500 hover:text-emerald-400');
@@ -1642,7 +1858,13 @@
       return card;
     }
 
-    function appendUserBubble(text, attachmentNames) {
+    /**
+     * 用户消息气泡。
+     * @param text 用户输入正文
+     * @param attachmentNames 附件文件名列表
+     * @param createdAt 该条消息产生时间（毫秒时间戳）；缺省取当前时间
+     */
+    function appendUserBubble(text, attachmentNames, createdAt) {
       const streamBox = document.getElementById('messages-stream-container');
       const bubble = document.createElement('div');
       bubble.className = 'p-3 rounded-lg bg-blue-950/40 border border-blue-800/40 text-xs text-white max-w-2xl ml-auto space-y-1 shadow-sm font-sans';
@@ -1650,7 +1872,13 @@
       const chips = names.length > 0
         ? `<div class="pt-1 flex flex-wrap gap-1">${names.map((n) => `<span class="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[10px] font-mono text-slate-400">📄 ${escapeHtml(n)}</span>`).join('')}</div>`
         : '';
-      bubble.innerHTML = `<div class="font-bold text-blue-300 text-[10px] font-mono">YOU</div><div class="whitespace-pre-wrap">${escapeHtml(text)}</div>${chips}`;
+      const timeStr = formatDateTime(createdAt || Date.now());
+      bubble.innerHTML = `
+        <div class="flex items-center justify-between gap-3">
+          <span class="font-bold text-blue-300 text-[10px] font-mono">YOU</span>
+          <span class="text-[9px] text-slate-500 font-mono" title="消息产生时间">🕒 ${escapeHtml(timeStr)}</span>
+        </div>
+        <div class="whitespace-pre-wrap">${escapeHtml(text)}</div>${chips}`;
       streamBox.appendChild(bubble);
       scrollMessagesToBottom();
       return bubble;
@@ -1763,6 +1991,8 @@
               lastTurnId = data.turnId;
               card.setTurnId(data.turnId);
               card.setModel(data.model);
+              // 本回合启动时间：用于卡片顶部展示
+              card.setMeta({ createdAt: Date.now() });
               if (data.sessionId && !activeSessionId) {
                 activeSessionId = data.sessionId;
                 loadSessionList();
@@ -1805,8 +2035,14 @@
                 card.setTurnId(data.turnId);
               }
             } else if (eventType === 'done') {
-              document.getElementById('session-tokens').textContent = data.tokens || '0';
-              document.getElementById('session-cost').textContent = data.cost || '$0.000';
+              // 本轮真实消耗回填到卡片（服务端 turn/completed 落盘口径一致）
+              card.setMeta({
+                inputTokens: Number(data.inputTokens || 0),
+                outputTokens: Number(data.outputTokens || 0),
+                totalTokens: Number(data.tokens || 0),
+              });
+              // 顶栏改为「会话累计」而非「最后一轮」，避免历史数据被覆盖丢失
+              void refreshSessionUsage();
               loadSessionList();
             } else if (eventType === 'error') {
               showErrorBanner(data.message || '模型通信故障');
@@ -2196,6 +2432,55 @@
       scrollMessagesToBottom(true);
     });
 
+    // 加载当前工作区已启用的 Skills，供输入框快捷下拉选择
+    async function loadSkillsToComposer() {
+      const select = document.getElementById('composer-skill-select');
+      if (!select) return;
+      try {
+        const wsParam = encodeURIComponent(activeWorkspacePath || '');
+        const res = await fetch(`/api/skills?workspace=${wsParam}`);
+        const json = await res.json();
+        if (json.code === 0 && Array.isArray(json.data)) {
+          select.innerHTML = '<option value="">🧩 快捷使用 Skill...</option>';
+          const enabledSkills = json.data.filter((s) => s.enabled !== false);
+          if (enabledSkills.length === 0) {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.textContent = '(暂无已启用的 Skill)';
+            opt.disabled = true;
+            select.appendChild(opt);
+            return;
+          }
+          enabledSkills.forEach((s) => {
+            const opt = document.createElement('option');
+            opt.value = s.name;
+            opt.textContent = `${s.name} (${s.scope === 'project' ? '项目' : '全局'})`;
+            opt.title = s.description || '';
+            select.appendChild(opt);
+          });
+        }
+      } catch (err) {
+        console.warn('Load skills to composer failed:', err);
+      }
+    }
+
+    function handleSelectSkillToComposer(skillName) {
+      if (!skillName) return;
+      const textarea = document.getElementById('composer-textarea');
+      if (!textarea) return;
+      const current = textarea.value.trim();
+      // 如果当前没有 /skill 开头，则插入 /skill <name> 
+      if (!current.startsWith('/skill ')) {
+        textarea.value = `/skill ${skillName} ${current}`.trimStart();
+      } else {
+        // 替换已有的 /skill 前缀
+        textarea.value = current.replace(/^\/skill\s+\S+/, `/skill ${skillName}`);
+      }
+      textarea.focus();
+      // 重置下拉框
+      document.getElementById('composer-skill-select').value = '';
+    }
+
     // 页面就绪入口
     window.addEventListener('DOMContentLoaded', async () => {
       renderPermissionPreset();
@@ -2203,6 +2488,7 @@
       await loadWorkspaces();
       await loadModels();
       await loadSessionList();
+      await loadSkillsToComposer();
       setupKeyboardListener();
       await checkBootstrap();
     });

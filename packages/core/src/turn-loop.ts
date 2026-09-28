@@ -123,7 +123,15 @@ export class TurnLoop {
           append('stream/chunk', { turnId: this.options.turnId, type: 'content', chunk: finalContent });
         }
         append('message/assistant', { content: finalContent, model: this.options.model });
-        append('turn/completed', { turnId: this.options.turnId, stepsUsed, model: this.options.model });
+        append('turn/completed', {
+          turnId: this.options.turnId,
+          stepsUsed,
+          model: this.options.model,
+          stoppedReason: 'completed',
+          inputTokens,
+          outputTokens,
+          totalTokens: inputTokens + outputTokens,
+        });
         emit('turn-end', { stoppedReason: 'completed' });
         return { finalContent, stepsUsed, stoppedReason: 'completed', inputTokens, outputTokens };
       }
@@ -153,7 +161,15 @@ export class TurnLoop {
         if (repeatCount >= 3) {
           finalContent = '检测到重复工具调用，已中断以防死循环，请换一种方式描述需求。';
           append('message/assistant', { content: finalContent, model: this.options.model });
-          append('turn/completed', { turnId: this.options.turnId, stepsUsed, model: this.options.model, stoppedReason: 'repeat-loop' });
+          append('turn/completed', {
+            turnId: this.options.turnId,
+            stepsUsed,
+            model: this.options.model,
+            stoppedReason: 'repeat-loop',
+            inputTokens,
+            outputTokens,
+            totalTokens: inputTokens + outputTokens,
+          });
           emit('turn-end', { stoppedReason: 'repeat-loop' });
           return { finalContent, stepsUsed, stoppedReason: 'repeat-loop', inputTokens, outputTokens };
         }
@@ -194,7 +210,15 @@ export class TurnLoop {
 
     finalContent = '已达单回合最大步数（25 步），已停止并保留已产出内容。';
     append('message/assistant', { content: finalContent, model: this.options.model });
-    append('turn/completed', { turnId: this.options.turnId, stepsUsed, stoppedReason: 'max-steps', model: this.options.model });
+    append('turn/completed', {
+      turnId: this.options.turnId,
+      stepsUsed,
+      stoppedReason: 'max-steps',
+      model: this.options.model,
+      inputTokens,
+      outputTokens,
+      totalTokens: inputTokens + outputTokens,
+    });
     emit('turn-end', { stoppedReason: 'max-steps' });
     return { finalContent, stepsUsed, stoppedReason: 'max-steps', inputTokens, outputTokens };
   }

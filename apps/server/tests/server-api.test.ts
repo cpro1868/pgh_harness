@@ -31,7 +31,7 @@ test('TC-01-08-003: 最小可运行服务集成验证 (健康检查、代理设�
     const body = await res.json() as { code: number; status: string; version: string };
     assert.equal(body.code, 0);
     assert.equal(body.status, 'ok');
-    assert.equal(body.version, '0.1.0');
+    assert.equal(body.version, '0.1.1');
   });
 
   await t.test('API: PUT /api/settings/proxy 成功保存代理配置', async () => {
@@ -99,6 +99,71 @@ test('TC-01-08-003: 最小可运行服务集成验证 (健康检查、代理设�
     assert.equal(target?.proxy.enabled, false);
   });
 
+
+  await t.test('API: DELETE /api/sessions/:id 成功完全级联删除会话与历史事件', async () => {
+    // 1. 创建会话
+    const postRes = await fetch(`http://127.0.0.1:${testPort}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '待删除会话',
+        workspacePath: 'G:\\Projects\\Agent\\harness',
+      }),
+    });
+    assert.equal(postRes.status, 200);
+    const postBody = await postRes.json() as { code: number; data: { id: string } };
+    assert.equal(postBody.code, 0);
+    const sid = postBody.data.id;
+
+    // 2. 确认在列表中存在
+    const listBefore = await fetch(`http://127.0.0.1:${testPort}/api/sessions`);
+    const listJsonBefore = await listBefore.json() as { code: number; data: Array<{ id: string }> };
+    assert.ok(listJsonBefore.data.some((s) => s.id === sid));
+
+    // 3. 执行 DELETE
+    const delRes = await fetch(`http://127.0.0.1:${testPort}/api/sessions/${encodeURIComponent(sid)}`, {
+      method: 'DELETE',
+    });
+    assert.equal(delRes.status, 200);
+    const delJson = await delRes.json() as { code: number };
+    assert.equal(delJson.code, 0);
+
+    // 4. 确认在列表中已移除
+    const listAfter = await fetch(`http://127.0.0.1:${testPort}/api/sessions`);
+    const listJsonAfter = await listAfter.json() as { code: number; data: Array<{ id: string }> };
+    assert.ok(!listJsonAfter.data.some((s) => s.id === sid));
+  });
+
+  await t.test('API: PATCH /api/sessions/:id 重命名会话标题', async () => {
+    // 1. 创建会话
+    const postRes = await fetch(`http://127.0.0.1:${testPort}/api/sessions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        title: '初始标题',
+        workspacePath: 'G:\\Projects\\Agent\\harness',
+      }),
+    });
+    const postBody = (await postRes.json()) as { code: number; data: { id: string } };
+    const sid = postBody.data.id;
+
+    // 2. PATCH 重命名
+    const patchRes = await fetch(`http://127.0.0.1:${testPort}/api/sessions/${encodeURIComponent(sid)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: '修改后的标题' }),
+    });
+    assert.equal(patchRes.status, 200);
+    const patchBody = (await patchRes.json()) as { code: number; data: { title: string } };
+    assert.equal(patchBody.code, 0);
+    assert.equal(patchBody.data.title, '修改后的标题');
+
+    // 3. 再次查询验证
+    const listRes = await fetch(`http://127.0.0.1:${testPort}/api/sessions`);
+    const listBody = (await listRes.json()) as { data: Array<{ id: string; title: string }> };
+    const found = listBody.data.find((s) => s.id === sid);
+    assert.equal(found?.title, '修改后的标题');
+  });
 
   await t.test('静态资源托管: GET /config-settings.html 成功返回独立纯净前端应用', async () => {
     const res = await fetch(`http://127.0.0.1:${testPort}/config-settings.html`);

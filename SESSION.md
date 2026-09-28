@@ -1,51 +1,37 @@
 # SESSION.md —— 当前会话台账
 
 > 每次会话开始时读此文件恢复上下文，结束前更新状态。
-> 当前状态：**Sprint 1、Sprint 2 已正式验收结项 (Tag v0.1.0)；Sprint 3 (v0.1.1) 正式就绪开工**
+> 当前状态：**Sprint 1、Sprint 2、Sprint 3 全部验收结项；准备开工 Sprint 4 (v0.2.0)**
 
 ## 当前目标
 
-交付 **Epic 1 / Sprint 3：扩展生态、MCP 强隔离与双层记忆装配 (目标版本 v0.1.1)**。
-围绕生态集成与经验沉淀，贯通 Skills 渐进披露、MCP 命名空间强隔离、全局与项目双层记忆装配，以及记忆受控迁移向导。
-遵循最高行为准则 `AGENTS.md`、强制安全规范 `docs/规范/安全工程方法论.md`，全量执行 TDD 先行与零 Native 编译纪律。
+交付 **Epic 1 / Sprint 3：扩展生态、MCP 强隔离与双层记忆装配 (目标版本 v0.1.1)** —— **已全量交付！**
 
-## 待实施 WBS 工作包（Sprint 3 核心范围）
+## 已实施 WBS 工作包（Sprint 3 全部交付）
 
-1. **WBS-01-07-01**：通用 Agent Skills 扫描与渐进披露加载器（`packages/plugins/skills/`，D40）
-2. **WBS-01-07-02**：MCP 客户端连接池与命名空间强隔离（`packages/plugins/tools-mcp/`，D14/D66/Q9，硬性 `mcp__` 前缀，本地核心工具保留字独占）
-3. **WBS-01-07-03**：全局与项目双层记忆级联装配（`packages/plugins/memory/`，D67/Q10，对齐 OpenCode `instruction-context`，去重合并）
-4. **WBS-01-07-04**：记忆受控迁移向导与多存储介质支持（Markdown / SQLite / 混合模式，D39，`.bak` 备份 + SHA-256 去重）
-
-## 已完成
-
-- [x] **启动/关闭脚本统一规范化 + 主会话 UX 五项优化（2026-09-25）**：`AGENTS.md` 明确运维三档命令；`stop-dev.ps1` 内置 `kill-port.ts`；`start-bg.ps1` 改用 `cmd /c start /b` 彻底解决后台启动脚本卡死；历史会话恢复最后模型、默认滚底、工具细节默认折叠、滚动条加粗 9px、对话区拓宽至 `max-w-6xl`；34 套件/168 断言通过（PID 23732）。
-- [x] **会话导出 Markdown 严格层级规范化与服务热更（2026-09-25）**：实现 `demoteMarkdownHeadings` 算法，严格保证外层 `## 轮次 N` 与 `### 助手/用户` 时，正文内标题从 `####` 开始往后按级别逐级递降，且严格跳过代码块防止污染代码；34 套件/168 断言通过，热重启服务于端口 3210 (PID 19264)。
-- [x] **Provider 编辑弹窗按需回显明文凭据（2026-09-22，登记例外 E-01）**：新增 `GET /api/providers/:id/secret`，打开编辑弹窗时按需拉取一次并**默认以密码态显示**，点眼睛查看明文；三重约束（仅回环来源、仅单个 Provider、每次读取写审计日志），列表接口仍只回掩码。该放宽已按安全工程方法论 §13.1 正式登记，`AGENTS.md` §0.1.2 同步披露。注：`reference/deepseek-harness` 本身不向浏览器回传明文（`role('secret')` + `set: true`），本项为相对参考实现的主动放宽。
-- [x] **右侧轮次大纲面板（2026-09-22）**：主会话右侧新增「本会话轮次大纲」（`w-60 border-l`，可收起），逐轮显示序号/模型/提问摘要/工具次数·步数·停止原因，点击平滑跳转并高亮；数据在回合结束后从服务端事件重取（单一事实源，不做增量维护）。经用户确认口径为"当前会话轮次大纲 + 跳转"，与左侧跨会话列表不重复。
-- [x] **修复流式输出不跟随滚动（2026-09-22）**：根因是自动滚动一直写在不可滚动的内层容器上（真实滚动容器是外层 `#messages-scroll-area`），实现之初即无效；现统一到 `scrollMessagesToBottom()`，并做到"贴底才跟随、用户发消息强制滚底"，不打断向上翻阅。
-- [x] **修复编辑 Provider 会毁掉已存凭据（2026-09-22）**：旧后端以 `apiKey || 'sk-test'` 兜底、前端以 `apiKey || 'none'` 提交，导致"只改名称不重填 Key"会静默覆盖真实密钥；现定义"留空 = 保持既有凭据不变"，前端改为掩码+状态提示且仅在新输入时提交该字段，探测接口留空时回落已存凭据。明文仍绝不回传前端。
-- [x] **工作区清单「📂 打开目录」（2026-09-22）**：新增 `POST /api/workspaces/reveal`，跨平台（explorer / open / xdg-open）在系统文件管理器中打开目录；**信任边界只允许已登记工作区**（未登记 403、目录缺失 404）；`spawn` 数组传参杜绝命令注入；打开实现可注入以便测试不弹窗。5 条新断言全绿。
-- [x] **会话级授权档位（2026-09-22）**：聊天框新增「🔒 只读 / ✏️ 标准（需审批）/ ⚡ 完全授权」三档选择（对齐 deepseek-harness 沙箱模式）；档位持久化在会话上（`PATCH /api/sessions/:id/permission`，白名单校验），切换写入 `permission/preset` 审计事件；权限闸门改为会话档位优先于全局默认；**完全授权只免审批，硬性红线仍拒绝**；新建会话回到安全默认档位。6 条新断言全绿。
-- [x] **Sprint 2 完整闭环与交付收口 (v0.1.0 结项)**：ReAct 调度大循环 `TurnLoop`、六大本地工具、真实流式协议与标准工具回填、会话/事件落盘、SSE 长期订阅 15s 心跳与半开重连、Git Checkpoint 与 Revert Turn、无上限滚动压缩、主工作台 UX 对齐 deepseek-harness、Todo 进度卡片与行级 Diff 审阅卡、破冰向导、安全方法论上位化、BL-07/08 闭合、仓库初始化并打标签 `v0.1.0`。
-- [x] **Sprint 1 垂直切片最小可运行版本达成 (v0.1.0-sprint.1 结项)**
+- [x] **WBS-01-07-01**：通用 Agent Skills 扫描与渐进披露加载器（`packages/plugins/skills/`，D40）
+- [x] **WBS-01-07-02**：MCP 客户端连接池与命名空间强隔离（`packages/plugins/tools-mcp/`，D14/D66/Q9，硬性 `mcp__` 前缀，本地核心工具保留字独占）
+- [x] **WBS-01-07-03**：全局与项目双层记忆级联装配（`packages/plugins/memory/`，D67/Q10，对齐 OpenCode `instruction-context`，去重合并）
+- [x] **WBS-01-07-04**：记忆受控迁移向导与多存储介质支持（Markdown / SQLite / 混合模式，D39，`.bak` 备份 + SHA-256 去重）
 
 ## 测试基线（实测）
 
-- `pnpm test`：**35 个套件 / 168 个断言 100% 全绿**；`/api/health` 上报版本 **`0.1.0`**。
-- 真机验证：DeepSeek Provider 正常调用；`toPublicProvider()` 返回脱敏掩码且无密文字段；`~/.pg_harness/master.key` 真实生成生效；组件拓扑接口返回 Active 15 / NotWired 7。
-
-## 进行中
-
-- [ ] 等待用户确认后，将当前工作区改动提交并同步更新 v0.1.0 标签（当前状态干净无冲突）。
+- `pnpm test`：**40 个套件 / 212 个断言 100% 全绿**；`/api/health` 上报版本 **`0.1.1`**。
+- 服务状态：PID `13652`，端口 `3210` 正常监听。
+- **三项 UX 体验修复（2026-09-27）**：
+  1. 会话色块悬停浮层消除死区（删除正常命中），并增加重命名按钮；
+  2. 大纲视图每条会话下方展示产生时间 `yyyy-MM-dd HH:mm:ss` + 实际消耗 Token；
+  3. 用户气泡与助手卡片展示产生时间与真实 Token 明细（`turn/completed` 事件持久化）；顶栏改为会话累计口径，并增加 🔄 清零按钮（基线重置，不删历史）。
+- **导航结构（严格按 `docs/阶段-1-需求/prototype/` 原型）**：Sprint 3 的 Skills / MCP / 记忆治理是**三个独立页面 + 独立 Activity Bar 图标**，不是设置中心内的 Tab。
+  - 顺序：`run-chat` → `config-workspace` → `config-memories` → `config-providers` → `config-mcp` → `config-skills` →（底部常驻）`config-settings`。
+- **UI 缺口纠偏记录（两次）**：
+  1. MCP 与记忆治理在 Sprint 3 首轮交付时**只有后端 API、没有界面** → 已补齐页面；
+  2. 第二版错误地把三者塞进设置中心 Tab → **已回退**，改为原型定义的独立页面（新增 `GET /api/memory` 只读接口，含 2 项红灯测试）。
 
 ## 下一步
 
-1. 用户确认后执行 Git 提交并更新标签；
-2. 按照敏捷规划正式开工 **Sprint 3 (v0.1.1)**：
-   - `WBS-01-07-01`：通用 Agent Skills 扫描与渐进披露加载器（`packages/plugins/skills/`）
-   - `WBS-01-07-02`：MCP 客户端连接池与 `mcp__` 命名空间隔离（`packages/plugins/tools-mcp/`）
-   - `WBS-01-07-03`：双层记忆级联装配（`packages/plugins/memory/`）
-   - `WBS-01-07-04`：记忆受控迁移向导
+1. 用户确认后执行 Git 提交并打标签 `v0.1.1`（Sprint 3 结项）；
+2. 按照敏捷规划正式开工 **Epic 2 / Sprint 4 (v0.2.0)**：多角色流水线任务（Role Pipeline）。
 
 ## 阻塞点
 

@@ -63,6 +63,18 @@ export class SessionStore {
   }
 
   /**
+   * 重命名会话标题。
+   * @param id - 会话标识。
+   * @param title - 新标题。
+   * @returns 是否命中了会话。
+   */
+  public setTitle(id: string, title: string): boolean {
+    const stmt = this.db.raw.prepare('UPDATE sessions SET title = ?, updated_at = ? WHERE id = ?;');
+    const info = stmt.run(title, Date.now(), id);
+    return Number(info.changes ?? 0) > 0;
+  }
+
+  /**
    * 更新会话的权限预设（只读 / 编辑 / 完全授权）。
    * @param id - 会话标识。
    * @param preset - 目标预设，由调用方完成取值校验。
