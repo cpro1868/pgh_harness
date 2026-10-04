@@ -21,6 +21,8 @@ export interface PipelineStage {
   id: string;
   pipelineId: string;
   order: number;
+  /** 步骤语义化名称（如「需求分析与规格提炼」），可与 roleName 不同 */
+  name?: string;
   roleName: string;
   promptTemplate: string;
   modelId?: string;
@@ -39,4 +41,58 @@ export interface PipelineTemplate {
   createdAt: number;
   updatedAt: number;
 }
+
+export type PipelineInstanceStatus = 'draft' | 'idle' | 'running' | 'waiting_gate' | 'paused' | 'completed' | 'failed' | 'aborted';
+
+export interface PipelineRoleActivityLog {
+  id: string;
+  stageId: string;
+  stageOrder: number;
+  roleName: string;
+  actor: 'agent' | 'human' | 'system';
+  type: 'thought' | 'tool_call' | 'tool_result' | 'summary' | 'instruction' | 'gate';
+  title?: string;
+  content: string;
+  toolName?: string;
+  toolArgs?: string;
+  isError?: boolean;
+  timestamp: number;
+}
+
+export interface PipelineArtifactItem {
+  stageId: string;
+  roleName: string;
+  path: string;
+  sizeBytes?: number;
+  description?: string;
+  timestamp: number;
+}
+
+export interface PipelineInstanceModel {
+  instanceId: string;
+  name: string;
+  pipelineId: string;
+  pipelineName: string;
+  workspacePath: string;
+  taskPrompt: string;
+  status: PipelineInstanceStatus;
+  currentStageId?: string;
+  currentStageOrder: number;
+  stages: PipelineStage[];
+  logs: PipelineRoleActivityLog[];
+  artifacts: PipelineArtifactItem[];
+  gateRecords: Array<{
+    stageId: string;
+    roleName: string;
+    action: 'approve' | 'reject';
+    reason?: string;
+    timestamp: number;
+  }>;
+  tokensUsed: number;
+  error?: string;
+  createdAt: number;
+  startedAt?: number;
+  updatedAt: number;
+}
+
 

@@ -2,18 +2,19 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { acquireInstanceLock, releaseInstanceLock } from './instance-lock.ts';
 import { ProxyDispatcher } from './network/proxy-dispatcher.ts';
 import { SqliteDatabase, SettingsStore, ProviderStore, WorkspaceStore, EventStore, SessionStore, PipelineStore, PIPELINE_DEFAULT_TEMPLATE } from '../../../packages/plugins/storage-sqlite/src/index.ts';
-import type { ProviderRecord } from '../../../packages/plugins/storage-sqlite/src/index.ts';
+import type { ProviderRecord, PipelineInstanceModel } from '../../../packages/plugins/storage-sqlite/src/index.ts';
 import type { PipelineTemplate, PipelineStage } from '@harness/protocol';
 
 import { OpenAICompatibleProvider } from '../../../packages/plugins/provider-openai/src/index.ts';
 import { encryptSecret, decryptSecret } from './security/crypto.ts';
 import { resolveMasterKey } from './security/master-key.ts';
 import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff, PipelineRunner, LockDelegator, ArtifactManager } from '../../../packages/core/src/index.ts';
-import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult, PipelineExecutionOutcome, GateDecision } from '../../../packages/core/src/index.ts';
+import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult, PipelineExecutionOutcome, GateDecision, StageArtifactSnapshot, StageRunResult } from '../../../packages/core/src/index.ts';
 import { FileTools, ShellExecutor, SearchTools } from '../../../packages/plugins/tools-coding/src/index.ts';
 import {
   scanAllSkills,
@@ -211,6 +212,18 @@ export class HarnessServer {
     outcome?: PipelineExecutionOutcome;
   }>();
   private readonly writeLocks = new WorkspaceWriteLock();
+  /**
+   * 流水线运行时上下文：每个实例持有唯一的 ArtifactManager（守护状态需跨阶段保持）、
+   * 上游阶段工件快照、以及运行中的人类干预指令队列。
+   */
+  private readonly pipelineContexts = new Map<string, {
+    artifactMgr: ArtifactManager;
+    snapshots: StageArtifactSnapshot[];
+    pendingInstructions: string[];
+    workspacePath: string;
+    /** 与 runner 共享的权威内存实例对象：所有路由必须在同一对象上变更，避免双写覆盖 */
+    inst: PipelineInstanceModel;
+  }>();
   private readonly turnAborts = new Map<string, AbortController>();
   private readonly turnCheckpoints = new Map<string, { workspacePath: string; manager: GitRollbackManager }>();
   private readonly questionBroker = new QuestionBroker();
@@ -251,6 +264,34 @@ export class HarnessServer {
         this.pipelineStore.create(PIPELINE_DEFAULT_TEMPLATE);
       } catch {
         // 忽略已存在
+      }
+    }
+
+    // 迁移补丁（一次性）：补齐内置模板缺失的阶段语义 name；清理已不在当前 Provider 配置中的失效 modelId
+    const stdTemplate = this.pipelineStore.get('pipeline_std_rd');
+    if (stdTemplate) {
+      const configuredModelIds = new Set(
+        this.providerStore.list().flatMap((p) => (p.models || []).map((m) => m.id)),
+      );
+      let patched = false;
+      const stages = stdTemplate.stages.map((s) => {
+        const needName = s.name === undefined;
+        const needModelClear = Boolean(s.modelId) && !configuredModelIds.has(s.modelId as string);
+        if (!needName && !needModelClear) return s;
+        patched = true;
+        const next: typeof s = { ...s };
+        if (needName) {
+          next.name = PIPELINE_DEFAULT_TEMPLATE.stages.find((d) => d.id === s.id)?.name;
+        }
+        if (needModelClear) {
+          delete next.modelId;
+        }
+        return next;
+      });
+      if (patched) {
+        try {
+          this.pipelineStore.update('pipeline_std_rd', { stages });
+        } catch { /* ignore */ }
       }
     }
 
@@ -553,6 +594,70 @@ export class HarnessServer {
       }
 
       await this.handleModelsDetect(res, protocol, rawBaseUrl, apiKey, providerProxy);
+      return;
+    }
+
+    // 模型连通性测试：对指定 Provider + 模型发起一次最小真实补全（非流式），验证端点/密钥/模型真实可用
+    if (method === 'POST' && url.pathname === '/api/providers/test') {
+      const body = await this.readJsonBody<{
+        providerId?: string;
+        modelId?: string;
+        baseUrl?: string;
+        apiKey?: string;
+        protocol?: string;
+        proxy?: { enabled: boolean; mode: 'inherit' | 'custom' | 'direct'; customConfig?: object };
+      }>(req);
+
+      const modelId = (body.modelId || '').trim();
+      if (!modelId) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 modelId，无法测试连通性' }));
+        return;
+      }
+
+      const stored = typeof body.providerId === 'string' && body.providerId !== ''
+        ? this.providerStore.get(body.providerId)
+        : undefined;
+      const protocol = body.protocol || stored?.protocol || 'openai-compatible';
+      const baseUrl = (body.baseUrl || stored?.baseUrl || '').trim().replace(/\/+$/, '');
+      const proxy = body.proxy ?? stored?.proxy;
+      // 允许弹窗内新填 Key；留空则回落到已保存凭据（明文永不出机）
+      let apiKey = (body.apiKey || '').trim();
+      if (apiKey === '' && stored) apiKey = this.resolveProviderApiKey(stored);
+
+      if (!baseUrl) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 baseUrl，无法测试连通性' }));
+        return;
+      }
+
+      if (protocol !== 'openai-compatible') {
+        this.json(res, {
+          code: 0,
+          data: { ok: false, modelId, message: 'Anthropic 原生协议的对话链路尚未接通，暂无法测试连通性' },
+        });
+        return;
+      }
+
+      const started = Date.now();
+      try {
+        const reply = await this.completeOnce(
+          { baseUrl, proxy },
+          apiKey,
+          modelId,
+          [{ role: 'user', content: 'ping' }],
+        );
+        this.json(res, {
+          code: 0,
+          data: { ok: true, modelId, latencyMs: Date.now() - started, reply: reply.slice(0, 120) },
+        });
+      } catch (err) {
+        // 真实失败原因如实回传（不含本机凭据），供前端红色提示
+        this.json(res, {
+          code: 0,
+          data: { ok: false, modelId, latencyMs: Date.now() - started, message: (err as Error).message.slice(0, 300) },
+        });
+      }
       return;
     }
 
@@ -1274,7 +1379,7 @@ export class HarnessServer {
       return;
     }
 
-    // 6.4.1 记忆条目查询接口（供设置中心「记忆与经验治理」面板展示）
+    // 6.4.1 记忆条目与存储策略接口（供「记忆与经验治理」面板展示与修改参数）
     if (method === 'GET' && url.pathname === '/api/memory') {
       const wsPath = (url.searchParams.get('workspace') || '').trim();
       if (!wsPath) {
@@ -1283,13 +1388,23 @@ export class HarnessServer {
         return;
       }
       const resolved = path.resolve(wsPath);
-      const projectPath = path.join(resolved, '.harness', 'memory.md');
+      const wsRecord = this.workspaceStore.getByPath(resolved);
+      const savedConfig = this.settingsStore.get<Record<string, any>>('workspace.memoryConfigs')?.[resolved] || {};
+
+      const mode = savedConfig.mode || 'file';
+      const projectPath = mode === 'sqlite'
+        ? (savedConfig.sqlitePath ? (path.isAbsolute(savedConfig.sqlitePath) ? savedConfig.sqlitePath : path.join(resolved, savedConfig.sqlitePath)) : path.join(resolved, '.harness', 'project-memory.sqlite'))
+        : path.join(resolved, '.harness', 'memory.md');
       const globalPath = path.join(os.homedir(), '.harness', 'memory.md');
-      const cascade = new MemoryCascade(resolved);
+
+      const cascade = new MemoryCascade(resolved, undefined, { mode, sqlitePath: projectPath });
       const entries = await cascade.assemble(undefined, 200);
+
       this.json(res, {
         code: 0,
         data: {
+          mode,
+          config: savedConfig,
           entries,
           projectPath,
           globalPath,
@@ -1297,6 +1412,44 @@ export class HarnessServer {
           globalExists: fs.existsSync(globalPath),
         },
       });
+      return;
+    }
+
+    // 6.4.2 修改记忆存储参数（直接保存参数，不触发向导迁移）
+    if (method === 'POST' && url.pathname === '/api/memory/config') {
+      const body = await this.readJsonBody<{
+        workspacePath: string;
+        mode: string;
+        filePath?: string;
+        sqlitePath?: string;
+        sqliteTable?: string;
+        sqliteFts?: boolean;
+        gitAutoAdd?: boolean;
+        embeddingModel?: string;
+        similarityThreshold?: number;
+      }>(req);
+
+      const wsPath = (body.workspacePath || '').trim();
+      if (!wsPath) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 workspacePath' }));
+        return;
+      }
+      const resolved = path.resolve(wsPath);
+      const allConfigs = this.settingsStore.get<Record<string, any>>('workspace.memoryConfigs') || {};
+      allConfigs[resolved] = {
+        mode: body.mode || 'file',
+        filePath: body.filePath,
+        sqlitePath: body.sqlitePath,
+        sqliteTable: body.sqliteTable,
+        sqliteFts: body.sqliteFts,
+        gitAutoAdd: body.gitAutoAdd,
+        embeddingModel: body.embeddingModel,
+        similarityThreshold: body.similarityThreshold,
+        updatedAt: Date.now(),
+      };
+      this.settingsStore.set('workspace.memoryConfigs', allConfigs);
+      this.json(res, { code: 0, message: '记忆存储参数已更新', data: allConfigs[resolved] });
       return;
     }
 
@@ -1315,21 +1468,54 @@ export class HarnessServer {
         return;
       }
       const id = body.id || `pl_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      const stages = Array.isArray(body.stages) ? body.stages : [];
+      const stages = (Array.isArray(body.stages) ? body.stages : []).map((s, idx) => ({
+        ...s,
+        id: s.id || `stg_${Date.now()}_${idx}`,
+        pipelineId: id,
+        order: idx + 1,
+      }));
+
+      // upsert：已存在则整体更新，不存在则创建（修复已有模板保存时的 UNIQUE 约束 500）
+      const exists = Boolean(this.pipelineStore.get(id));
+      if (exists) {
+        this.pipelineStore.update(id, {
+          name: body.name.trim(),
+          description: body.description || '',
+          stages,
+        });
+        const updated = this.pipelineStore.get(id);
+        this.json(res, { code: 0, message: '流水线模板已更新', data: updated });
+        return;
+      }
+
       const created = this.pipelineStore.create({
         id,
         name: body.name.trim(),
         description: body.description || '',
-        stages: stages.map((s, idx) => ({
-          ...s,
-          id: s.id || `stg_${Date.now()}_${idx}`,
-          pipelineId: id,
-          order: idx + 1,
-        })),
+        stages,
         createdAt: Date.now(),
         updatedAt: Date.now(),
       });
       this.json(res, { code: 0, message: '流水线模板创建成功', data: created });
+      return;
+    }
+
+    // 删除流水线模板（内置推荐模板受保护，禁止删除）
+    const pipelineDeleteMatch = url.pathname.match(/^\/api\/pipelines\/([^/]+)$/);
+    if (pipelineDeleteMatch && method === 'DELETE') {
+      const pipelineId = decodeURIComponent(pipelineDeleteMatch[1] as string);
+      if (pipelineId === PIPELINE_DEFAULT_TEMPLATE.id) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 403, message: '内置推荐模板不可删除' }));
+        return;
+      }
+      const removed = this.pipelineStore.delete(pipelineId);
+      if (!removed) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '流水线未找到' }));
+        return;
+      }
+      this.json(res, { code: 0, message: '流水线模板已删除' });
       return;
     }
 
@@ -1359,69 +1545,405 @@ export class HarnessServer {
 
     // 6.8 流水线实例调度与 Gatekeeper 裁决接口 (WBS-02-02-01 / WBS-02-03-03 / WBS-02-04)
     if (method === 'GET' && url.pathname === '/api/pipeline-instances') {
-      const list = [...this.pipelineInstances.values()];
-      this.json(res, { code: 0, data: list });
+      const dbList = this.pipelineStore.listInstances();
+      this.json(res, { code: 0, data: dbList });
       return;
     }
 
-    if (method === 'POST' && url.pathname === '/api/pipeline-instances/start') {
-      const body = await this.readJsonBody<{ pipelineId: string; workspacePath: string; taskPrompt: string }>(req);
+    // 保存任务规格草稿（第一点：先设计任务的规格，保存后才进行任务的跑取）
+    if (method === 'POST' && url.pathname === '/api/pipeline-instances/draft') {
+      const body = await this.readJsonBody<{
+        name?: string;
+        pipelineId: string;
+        workspacePath: string;
+        taskPrompt?: string;
+        stages?: PipelineStage[];
+      }>(req);
+
       const template = this.pipelineStore.get(body.pipelineId);
-      if (!template) {
-        res.writeHead(404, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ code: 404, message: '指定的流水线模板不存在' }));
-        return;
-      }
       const wsPath = path.resolve(body.workspacePath || process.cwd());
-      if (!fs.existsSync(wsPath)) {
-        res.writeHead(400, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ code: 400, message: '工作区目录不存在' }));
-        return;
-      }
+      const stages = Array.isArray(body.stages) && body.stages.length > 0
+        ? body.stages
+        : template?.stages || PIPELINE_DEFAULT_TEMPLATE.stages;
 
       const instanceId = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
-      const instRecord = {
+      const now = Date.now();
+      const draftInstance: PipelineInstanceModel = {
         instanceId,
-        pipelineId: template.id,
+        name: (body.name || '').trim() || `${template?.name || '研发流水线'} - ${new Date(now).toLocaleTimeString()}`,
+        pipelineId: body.pipelineId,
+        pipelineName: template?.name || '自定义流水线',
         workspacePath: wsPath,
-        taskPrompt: body.taskPrompt || '执行流水线研发任务',
-        status: 'running',
-        currentStageId: template.stages[0]?.id,
+        taskPrompt: (body.taskPrompt || '').trim(),
+        status: 'draft',
+        currentStageId: stages[0]?.id,
+        currentStageOrder: 1,
+        stages: stages.map((s, idx) => ({ ...s, order: idx + 1 })),
+        logs: [
+          {
+            id: `log_${Date.now()}_0`,
+            stageId: stages[0]?.id || '',
+            stageOrder: 1,
+            roleName: 'System',
+            actor: 'system',
+            type: 'instruction',
+            content: `流水线任务规格已设计保存（共 ${stages.length} 个角色阶段），等待下达明确指令启动。`,
+            timestamp: now,
+          },
+        ],
+        artifacts: [],
+        gateRecords: [],
+        tokensUsed: 0,
+        createdAt: now,
+        updatedAt: now,
       };
-      this.pipelineInstances.set(instanceId, instRecord);
 
-      // 后台异步推进泳道调度
+      this.pipelineStore.saveInstance(draftInstance);
+      this.json(res, { code: 0, message: '任务规格草稿已保存', data: draftInstance });
+      return;
+    }
+
+    // 启动/恢复执行流水线任务实例（第三点：必须接入明确用户指令才能开始跑）
+    const instanceStartMatch = url.pathname.match(/^\/api\/pipeline-instances\/([^/]+)\/start$/);
+    if ((instanceStartMatch && method === 'POST') || (method === 'POST' && url.pathname === '/api/pipeline-instances/start')) {
+      const targetInstanceId = instanceStartMatch ? decodeURIComponent(instanceStartMatch[1] as string) : undefined;
+      const body = await this.readJsonBody<{
+        pipelineId?: string;
+        workspacePath?: string;
+        taskPrompt?: string;
+        instruction?: string;
+        name?: string;
+        stages?: PipelineStage[];
+      }>(req);
+
+      let inst: PipelineInstanceModel | undefined;
+      if (targetInstanceId) {
+        inst = this.pipelineStore.getInstance(targetInstanceId);
+        if (!inst) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 404, message: '指定的流水线实例不存在' }));
+          return;
+        }
+      } else {
+        // 直接从 POST /api/pipeline-instances/start 传入
+        const template = body.pipelineId ? this.pipelineStore.get(body.pipelineId) : undefined;
+        const wsPath = path.resolve(body.workspacePath || process.cwd());
+        const stages = Array.isArray(body.stages) && body.stages.length > 0
+          ? body.stages
+          : template?.stages || PIPELINE_DEFAULT_TEMPLATE.stages;
+
+        const newId = `inst_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+        const now = Date.now();
+        inst = {
+          instanceId: newId,
+          name: (body.name || '').trim() || (body.taskPrompt?.slice(0, 30)) || '流水线研发任务',
+          pipelineId: body.pipelineId || 'pipeline_std_rd',
+          pipelineName: template?.name || '标准软件工程四阶段研发泳道',
+          workspacePath: wsPath,
+          taskPrompt: (body.taskPrompt || '').trim(),
+          status: 'draft',
+          currentStageId: stages[0]?.id,
+          currentStageOrder: 1,
+          stages: stages.map((s, idx) => ({ ...s, order: idx + 1 })),
+          logs: [],
+          artifacts: [],
+          gateRecords: [],
+          tokensUsed: 0,
+          createdAt: now,
+          updatedAt: now,
+        };
+      }
+
+      // 严格校验第三点：启动过程必须接入明确的用户指令
+      const finalInstruction = (body.instruction || body.taskPrompt || inst.taskPrompt || '').trim();
+      if (!finalInstruction) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '流水线启动前必须输入明确的任务执行指令（Instruction）' }));
+        return;
+      }
+
+      // fail-closed：工作区若被其他活跃写者（如聊天会话）占用，拒绝启动，绝不无锁硬跑
+      if (!this.writeLocks.tryAcquire(inst.workspacePath, inst.instanceId)) {
+        res.writeHead(409, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          code: 409,
+          message: `工作区正在被其他任务写入（持有者: ${this.writeLocks.holder(inst.workspacePath) ?? '未知'}），请稍后重试`,
+        }));
+        return;
+      }
+
+      inst.taskPrompt = finalInstruction;
+      inst.status = 'running';
+      inst.startedAt = Date.now();
+      inst.updatedAt = Date.now();
+      inst.logs.push({
+        id: `log_${Date.now()}_init`,
+        stageId: inst.stages[0]?.id || '',
+        stageOrder: 1,
+        roleName: '人类操作者',
+        actor: 'human',
+        type: 'instruction',
+        content: `下达启动指令: ${finalInstruction}`,
+        timestamp: Date.now(),
+      });
+      this.pipelineStore.saveInstance(inst);
+
+      // 后台异步推进泳道调度（真实 Agent 执行：WBS-02-02-01 / 02-03-01 / 02-03-02 / 02-04-02）
+      const capturedInst = inst;
+      const wsPath = capturedInst.workspacePath;
+      const instanceId = capturedInst.instanceId;
+
+      // 每个实例唯一的工件管理器与上游快照（只读守护状态需跨阶段保持）
+      const pipelineCtx = {
+        artifactMgr: new ArtifactManager(wsPath),
+        snapshots: [] as StageArtifactSnapshot[],
+        pendingInstructions: [] as string[],
+        workspacePath: wsPath,
+        inst: capturedInst,
+      };
+      this.pipelineContexts.set(instanceId, pipelineCtx);
+
       void this.pipelineRunner.run({
         instanceId,
-        stages: template.stages,
+        stages: capturedInst.stages,
         onStatusChange: (status, currentStageId) => {
-          instRecord.status = status;
-          if (currentStageId) instRecord.currentStageId = currentStageId;
+          capturedInst.status = status;
+          if (currentStageId) {
+            capturedInst.currentStageId = currentStageId;
+            const idx = capturedInst.stages.findIndex((s) => s.id === currentStageId);
+            if (idx >= 0) capturedInst.currentStageOrder = idx + 1;
+          }
+          capturedInst.updatedAt = Date.now();
+          this.pipelineStore.saveInstance(capturedInst);
         },
-        executeStage: async ({ stage }) => {
-          // 泳道阶段执行：捕获工件并产出结果
-          const artifactMgr = new ArtifactManager(wsPath);
-          const artifacts = artifactMgr.capture(stage.artifactPaths || []);
-          return {
-            summary: `阶段 ${stage.roleName} 顺利完成任务交付。`,
-            artifactPaths: artifacts,
-          };
+        // 审定放行的上游工件在下游强制只读（D54 / WBS-02-03-02）
+        onGateResolved: (stage, decision, artifacts) => {
+          if (decision.action === 'approve') {
+            pipelineCtx.artifactMgr.approve(stage.id, artifacts);
+          }
+          // 审批裁决实时留痕（S6）：运行中即写入活动日志，工作台可即时回放人类决策
+          capturedInst.logs.push({
+            id: `log_${Date.now()}_gate_${stage.id}_${decision.action}`,
+            stageId: stage.id,
+            stageOrder: stage.order,
+            roleName: '人类操作者 (Gatekeeper)',
+            actor: 'human',
+            type: 'gate',
+            content: decision.action === 'approve'
+              ? `✅ 审批放行阶段「${stage.roleName}」的交付工件，允许唤醒下游阶段。`
+              : `↩️ 打回阶段「${stage.roleName}」重做：${decision.reason || '未提供原因'}`,
+            timestamp: Date.now(),
+          });
+          capturedInst.updatedAt = Date.now();
+          this.pipelineStore.saveInstance(capturedInst);
+        },
+        executeStage: async ({ stage, stageIndex, reworkReason, signal }) => {
+          // 父子写锁租约让渡：父(实例) → 子(阶段)，执行完毕归还
+          const stageHolder = `${instanceId}:${stage.id}`;
+          this.writeLocks.tryAcquire(wsPath, instanceId);
+          this.lockDelegator.delegate(wsPath, instanceId, stageHolder);
+          try {
+            return await this.runPipelineStage({
+              inst: capturedInst,
+              stage,
+              stageIndex,
+              reworkReason,
+              signal,
+              ctx: pipelineCtx,
+            });
+          } finally {
+            this.lockDelegator.reclaim(wsPath, stageHolder);
+          }
         },
       }).then((outcome) => {
-        instRecord.status = outcome.status;
-        instRecord.outcome = outcome;
+        capturedInst.status = outcome.status;
+        capturedInst.gateRecords = outcome.gateRecords;
+        capturedInst.error = outcome.error;
+      }).catch((err) => {
+        capturedInst.status = 'failed';
+        capturedInst.error = (err as Error).message;
+      }).finally(() => {
+        capturedInst.updatedAt = Date.now();
+        this.writeLocks.release(wsPath, instanceId);
+        this.pipelineContexts.delete(instanceId);
+        this.pipelineStore.saveInstance(capturedInst);
       });
 
       this.json(res, {
         code: 0,
         message: '流水线实例已启动并进入首阶段',
-        data: {
-          instanceId,
-          status: instRecord.status,
-          currentStageId: instRecord.currentStageId,
-        },
+        data: capturedInst,
       });
       return;
+    }
+
+    // 实例停止操作（第四点：停止、删除操作）
+    const instanceAbortMatch = url.pathname.match(/^\/api\/pipeline-instances\/([^/]+)\/abort$/);
+    if (instanceAbortMatch && method === 'POST') {
+      const instanceId = decodeURIComponent(instanceAbortMatch[1] as string);
+      const body = await this.readJsonBody<{ reason?: string }>(req);
+      const reason = (body.reason || '用户手动终止任务').trim();
+      const abortCtx = this.pipelineContexts.get(instanceId);
+      const inst = abortCtx?.inst ?? this.pipelineStore.getInstance(instanceId);
+      if (!inst) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '实例不存在' }));
+        return;
+      }
+      this.pipelineRunner.abort(instanceId, reason);
+      inst.status = 'aborted';
+      inst.updatedAt = Date.now();
+      inst.logs.push({
+        id: `log_${Date.now()}_abort`,
+        stageId: inst.currentStageId || '',
+        stageOrder: inst.currentStageOrder,
+        roleName: 'System',
+        actor: 'system',
+        type: 'gate',
+        content: `任务已停止：${reason}`,
+        timestamp: Date.now(),
+      });
+      this.pipelineStore.saveInstance(inst);
+      // 释放工作区写锁与运行时上下文
+      if (abortCtx) {
+        this.writeLocks.release(abortCtx.workspacePath, instanceId);
+        this.pipelineContexts.delete(instanceId);
+      }
+      this.json(res, { code: 0, message: '任务已成功停止', data: inst });
+      return;
+    }
+
+    // 暂停 / 恢复任务（原型 run-pipeline-detail 顶栏「暂停」按钮）
+    const instancePauseMatch = url.pathname.match(/^\/api\/pipeline-instances\/([^/]+)\/(pause|resume)$/);
+    if (instancePauseMatch && method === 'POST') {
+      const instanceId = decodeURIComponent(instancePauseMatch[1] as string);
+      const action = instancePauseMatch[2] as 'pause' | 'resume';
+      // 优先操作与 runner 共享的权威内存对象，避免双写覆盖（否则 runner 回写会丢失暂停状态与审计日志）
+      const pauseCtx = this.pipelineContexts.get(instanceId);
+      const inst = pauseCtx?.inst ?? this.pipelineStore.getInstance(instanceId);
+      if (!inst) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '实例不存在' }));
+        return;
+      }
+      const ok = action === 'pause' ? this.pipelineRunner.pause(instanceId) : this.pipelineRunner.resume(instanceId);
+      if (!ok) {
+        res.writeHead(409, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({
+          code: 409,
+          message: action === 'pause' ? '当前状态不可暂停（仅运行中/待审批可暂停）' : '当前实例未处于暂停状态',
+        }));
+        return;
+      }
+      inst.status = action === 'pause' ? 'paused' : 'running';
+      inst.updatedAt = Date.now();
+      inst.logs.push({
+        id: `log_${Date.now()}_${action}`,
+        stageId: inst.currentStageId || '',
+        stageOrder: inst.currentStageOrder,
+        roleName: 'System',
+        actor: 'system',
+        type: 'gate',
+        content: action === 'pause'
+          ? `任务已暂停：当前阶段产物与活动记录已保留，恢复后从阶段边界继续。`
+          : `任务已恢复运行。`,
+        timestamp: Date.now(),
+      });
+      this.pipelineStore.saveInstance(inst);
+      this.json(res, { code: 0, message: action === 'pause' ? '任务已暂停' : '任务已恢复', data: inst });
+      return;
+    }
+
+    // 工作区 Git 改动摘要（只读）：供原型「查看改动 Diff」与「任务元数据（当前活跃分支）」使用
+    const instanceDiffMatch = url.pathname.match(/^\/api\/pipeline-instances\/([^/]+)\/diff$/);
+    if (instanceDiffMatch && method === 'GET') {
+      const instanceId = decodeURIComponent(instanceDiffMatch[1] as string);
+      const inst = this.pipelineStore.getInstance(instanceId);
+      if (!inst) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '实例不存在' }));
+        return;
+      }
+      const runGit = (args: string[]): string =>
+        execFileSync('git', args, { cwd: inst.workspacePath, stdio: 'pipe', timeout: 10_000 }).toString('utf8');
+      try {
+        const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']).trim();
+        const stat = runGit(['diff', '--stat']).trim();
+        const diff = runGit(['diff']).slice(0, 20000);
+        this.json(res, {
+          code: 0,
+          data: { available: true, branch, stat, diff, truncated: diff.length >= 20000 },
+        });
+      } catch (err) {
+        // fail-soft：非 Git 仓库或 git 不可用时如实返回不可用，不阻断工作台
+        this.json(res, {
+          code: 0,
+          data: { available: false, reason: (err as Error).message.slice(0, 200) },
+        });
+      }
+      return;
+    }
+
+    // 向当前负责角色下达干预指令 (第二点监控：监控各个角色在干什么，并支持人机干预)
+    const instanceInstructMatch = url.pathname.match(/^\/api\/pipeline-instances\/([^/]+)\/instruction$/);
+    if (instanceInstructMatch && method === 'POST') {
+      const instanceId = decodeURIComponent(instanceInstructMatch[1] as string);
+      const body = await this.readJsonBody<{ message?: string; instruction?: string }>(req);
+      const message = (body.message || body.instruction || '').trim();
+      if (!message) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '指令内容不能为空' }));
+        return;
+      }
+      const instructCtx = this.pipelineContexts.get(instanceId);
+      const inst = instructCtx?.inst ?? this.pipelineStore.getInstance(instanceId);
+      if (!inst) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '实例不存在' }));
+        return;
+      }
+      inst.logs.push({
+        id: `log_${Date.now()}_human_cmd`,
+        stageId: inst.currentStageId || '',
+        stageOrder: inst.currentStageOrder,
+        roleName: '人类操作者 (干预)',
+        actor: 'human',
+        type: 'instruction',
+        content: message,
+        timestamp: Date.now(),
+      });
+      inst.updatedAt = Date.now();
+      this.pipelineStore.saveInstance(inst);
+
+      // 运行中的阶段会在下一步推理前抽取该指令并实时注入上下文（WBS-02-04-02）
+      if (instructCtx && (inst.status === 'running' || inst.status === 'paused')) {
+        instructCtx.pendingInstructions.push(message);
+      }
+      this.json(res, { code: 0, message: '干预指令已发送并归档', data: inst });
+      return;
+    }
+
+    // 获取单条实例详情 (用于 run-pipeline-detail 独立监控大屏)
+    const instanceDetailMatch = url.pathname.match(/^\/api\/pipeline-instances\/([^/]+)$/);
+    if (instanceDetailMatch) {
+      const instanceId = decodeURIComponent(instanceDetailMatch[1] as string);
+      if (method === 'GET') {
+        const inst = this.pipelineStore.getInstance(instanceId);
+        if (!inst) {
+          res.writeHead(404, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 404, message: '实例不存在' }));
+          return;
+        }
+        this.json(res, { code: 0, data: inst });
+        return;
+      }
+      if (method === 'DELETE') {
+        // 第四点：支持删除操作
+        this.pipelineRunner.abort(instanceId, '任务已被删除');
+        const ok = this.pipelineStore.deleteInstance(instanceId);
+        this.json(res, { code: 0, message: ok ? '任务实例已删除' : '实例未找到或已被删除' });
+        return;
+      }
     }
 
     const gateDecideMatch = url.pathname.match(/^\/api\/pipeline-instances\/([^/]+)\/gate$/);
@@ -1432,6 +1954,18 @@ export class HarnessServer {
         action: body.action === 'reject' ? 'reject' : 'approve',
         reason: body.reason,
       });
+      const inst = this.pipelineStore.getInstance(instanceId);
+      if (inst) {
+        inst.gateRecords.push({
+          stageId: inst.currentStageId || '',
+          roleName: 'Gatekeeper',
+          action: body.action === 'reject' ? 'reject' : 'approve',
+          reason: body.reason,
+          timestamp: Date.now(),
+        });
+        inst.updatedAt = Date.now();
+        this.pipelineStore.saveInstance(inst);
+      }
       this.json(res, { code: 0, message: ok ? 'Gatekeeper 裁决已下发' : '当前无需裁决或实例未等待', data: { resolved: ok } });
       return;
     }
@@ -1464,12 +1998,24 @@ export class HarnessServer {
         res.end(JSON.stringify({ code: 400, message: '缺少 workspacePath' }));
         return;
       }
+      const resolved = path.resolve(wsPath);
       try {
         const result = await migrateMemory({
-          workspacePath: path.resolve(wsPath),
+          workspacePath: resolved,
           targetDbPath: body.targetDbPath ? path.resolve(body.targetDbPath) : undefined,
           mode: body.mode ?? 'lossless-migrate',
         });
+
+        // 迁移成功后同步更新并持久化当前工作区的介质模式
+        const allConfigs = this.settingsStore.get<Record<string, any>>('workspace.memoryConfigs') || {};
+        allConfigs[resolved] = {
+          ...(allConfigs[resolved] || {}),
+          mode: result.targetMode,
+          sqlitePath: result.targetMode === 'sqlite' ? result.targetPath : undefined,
+          updatedAt: Date.now(),
+        };
+        this.settingsStore.set('workspace.memoryConfigs', allConfigs);
+
         this.json(res, { code: 0, message: '记忆迁移/备份处理完成', data: result });
       } catch (err) {
         res.writeHead(500, { 'Content-Type': 'application/json' });
@@ -1639,7 +2185,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
 2. Only invoke tools when strictly necessary to inspect or modify code within ${wsPath}.
 3. If the user asks a greeting, general inquiry, or asks to inspect/analyze an empty folder, do NOT run repetitive loop commands. If glob returns empty or the directory is empty, report that the folder is empty directly to the user and stop.
 4. Strictly forbid escaping into parent directories (..). Keep all operations strictly inside ${wsPath}.
-5. Give concise, structured, and helpful responses.`;
+5. Give concise, structured, and helpful responses.${process.platform === 'win32' ? '\n6. The "bash" tool runs via Windows PowerShell (powershell.exe): use PowerShell syntax and prefer ";" over "&&" (the "&&" operator is NOT supported here).' : '\n6. The "bash" tool runs via /bin/bash on POSIX.'}`;
 
       // 开启 SSE 流式推送到前端
       res.writeHead(200, {
@@ -1954,7 +2500,15 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
           },
         });
 
-        const result = await loop.run();
+    let result;
+    try {
+      result = await loop.run();
+    } catch (err) {
+      pushLog({ type: 'summary', actor: 'system', content: `❌ 阶段执行失败：${(err as Error).message}` });
+      inst.updatedAt = Date.now();
+      this.pipelineStore.saveInstance(inst);
+      throw err;
+    }
         this.sessionStore.touch(activeSession.id);
         const totalTokens = result.inputTokens + result.outputTokens;
         sendEvent('done', {
@@ -2443,6 +2997,235 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
   private maskSecret(plain: string): string {
     if (plain.length <= 12) return '********';
     return `${plain.slice(0, 7)}****${plain.slice(-4)}`;
+  }
+
+  /**
+   * 真实执行单个流水线阶段（WBS-02-02-01 阶段唤醒 / 02-03-01 上游上下文注入 / 02-03-02 只读守护 / 02-04-02 人机协同）。
+   * 解析 Provider/模型 → 组装角色 System Prompt 与上游上下文 → 驱动 TurnLoop 真实调用模型并执行受白名单/权限/守护约束的工具。
+   * 无可用 Provider 时如实记录提示（fail-soft，不伪装成功），保持状态机可继续与可复盘。
+   */
+  private async runPipelineStage(args: {
+    inst: PipelineInstanceModel;
+    stage: PipelineStage;
+    stageIndex: number;
+    reworkReason?: string;
+    signal?: AbortSignal;
+    ctx: { artifactMgr: ArtifactManager; snapshots: StageArtifactSnapshot[]; pendingInstructions: string[]; workspacePath: string; inst: PipelineInstanceModel };
+  }): Promise<StageRunResult> {
+    const { inst, stage, stageIndex, reworkReason, signal, ctx } = args;
+    const wsPath = ctx.workspacePath;
+
+    const pushLog = (entry: {
+      type: PipelineInstanceModel['logs'][number]['type'];
+      actor: PipelineInstanceModel['logs'][number]['actor'];
+      content: string;
+      title?: string;
+      toolName?: string;
+      toolArgs?: string;
+      isError?: boolean;
+    }): void => {
+      inst.logs.push({
+        id: `log_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`,
+        stageId: stage.id,
+        stageOrder: stage.order,
+        roleName: stage.roleName,
+        timestamp: Date.now(),
+        ...entry,
+      });
+    };
+
+    pushLog({
+      type: 'thought',
+      actor: 'agent',
+      content: reworkReason
+        ? `收到打回重做要求：${reworkReason}，开始针对性调整。`
+        : `开始执行阶段目标：${stage.promptTemplate || '(未设置提示词)'}`,
+    });
+
+    const allowedTools = new Set(
+      Array.isArray(stage.toolsAllowed) && stage.toolsAllowed.length > 0
+        ? stage.toolsAllowed
+        : ['read_file', 'glob', 'grep'],
+    );
+
+    const permissionSettings = this.settingsStore.get<{ rules?: PermissionRule[] }>('system.permissions') ?? {};
+    const permissionGate = new PermissionGate({
+      // 阶段工具白名单即人类在模板中显式授予的授权；此处以 full 跳过交互式审批，但硬性红线仍优先拒绝
+      preset: 'full',
+      rules: Array.isArray(permissionSettings.rules) ? permissionSettings.rules : [],
+    });
+    const files = new FileTools(wsPath);
+    const shell = new ShellExecutor(wsPath);
+    const search = new SearchTools(wsPath);
+
+    const executeTool = async (name: string, toolArgs: Record<string, unknown>): Promise<string> => {
+      if (!allowedTools.has(name)) {
+        throw new Error(`工具 "${name}" 不在本阶段工具白名单内（fail-closed）`);
+      }
+      const decision = permissionGate.evaluate({ tool: name, args: toolArgs });
+      if (decision.action === 'deny') {
+        throw new Error(`权限闸门拒绝：${decision.reason}`);
+      }
+      const targetPath = typeof toolArgs.path === 'string' ? String(toolArgs.path) : '';
+      if ((name === 'write_file' || name === 'edit_file') && targetPath) {
+        const full = path.resolve(wsPath, targetPath);
+        if (!ctx.artifactMgr.canEdit(full)) {
+          throw new Error(`只读守护拦截：上游已审定工件 "${targetPath}" 在下游阶段禁止修改（D54）`);
+        }
+      }
+      switch (name) {
+        case 'read_file':
+          return files.readFile(targetPath);
+        case 'write_file':
+          files.writeFile(targetPath, String(toolArgs.content ?? ''));
+          return `written: ${targetPath}`;
+        case 'edit_file':
+          files.editFile(targetPath, String(toolArgs.oldString ?? ''), String(toolArgs.newString ?? ''), Boolean(toolArgs.replaceAll ?? false));
+          return `edited: ${targetPath}`;
+        case 'glob':
+          return search.glob(String(toolArgs.pattern ?? '**/*')).join('\n');
+        case 'grep':
+          return search.grep(String(toolArgs.pattern ?? '')).map((h) => `${h.file}:${h.line ?? ''}:${h.text ?? ''}`).join('\n');
+        case 'bash': {
+          const command = String(toolArgs.command ?? '');
+          if (/(^|[\s;&|])git\s+push\b/.test(command)) {
+            throw new Error('安全红线：Agent 禁止自主执行 git push');
+          }
+          if (/\.\.[/\\]/.test(command)) {
+            throw new Error('安全沙箱拦截：禁止向父级目录穿越探索，所有操作必须限定在工作区内。');
+          }
+          const r = await shell.exec(command, { timeoutMs: 120000 });
+          return (r.stdout + (r.stderr ? `\n[stderr]\n${r.stderr}` : '')).slice(0, 8000) || `(exit ${r.exitCode})`;
+        }
+        default:
+          throw new Error(`未知工具: ${name}`);
+      }
+    };
+
+    // Provider / 模型解析：优先按阶段绑定的 modelId 匹配，其次回退到首个可用 Provider
+    const providers = this.providerStore.list();
+    let provider = stage.modelId
+      ? providers.find((p) => (p.models || []).some((m) => m.id === stage.modelId))
+      : undefined;
+    if (!provider) provider = providers[0];
+    const modelId = stage.modelId || provider?.models?.[0]?.id;
+    const realKey = provider ? this.resolveProviderApiKey(provider) : '';
+    const hasRealKey = Boolean(
+      provider && realKey && realKey !== 'none' && !realKey.startsWith('sk-test') && !realKey.includes('xxx') && realKey.length > 5,
+    );
+
+    const upstreamContext = ctx.artifactMgr.buildStageInputContext(inst.stages, stageIndex, ctx.snapshots);
+    const isWin = process.platform === 'win32';
+    const shellNote = isWin
+      ? 'The "bash" tool executes commands via Windows PowerShell (powershell.exe): use PowerShell syntax and prefer ";" over "&&" (the "&&" operator is NOT supported here).'
+      : 'The "bash" tool executes commands via /bin/bash on POSIX.';
+    const systemPrompt = `You are the "${stage.name || stage.roleName}" role in the Purple Grapes Harness multi-stage delivery pipeline.
+Working Directory: ${wsPath}
+Stage goal: ${stage.promptTemplate || "Accomplish this stage's deliverable."}
+Allowed tools (strict whitelist): ${[...allowedTools].join(', ')}
+Constraints:
+1. Operate strictly inside ${wsPath}; never escape to parent directories ("..").
+2. Only the whitelisted tools are available; any other tool call is rejected.
+3. Upstream approved artifacts are READ-ONLY; never attempt to modify them.
+4. ${shellNote}
+5. End with a concise summary of the artifacts you delivered.`;
+    const userMessage = [
+      '[任务说明]',
+      inst.taskPrompt || '(未提供任务说明)',
+      reworkReason ? `\n[打回意见]\n${reworkReason}` : '',
+      '',
+      upstreamContext,
+    ].filter((s) => s !== '').join('\n');
+
+    const chat = async (
+      messages: MessageItem[],
+      _tools: unknown[],
+      onDelta?: (kind: 'reasoning' | 'content', text: string) => void,
+    ): Promise<ChatTurnResult> => {
+      if (!(hasRealKey && provider && modelId)) {
+        throw new Error(`阶段「${stage.roleName}」无法执行：未配置可用模型，或 Provider 未提供有效 API Key`);
+      }
+      try {
+        return await this.streamChatCompletion(provider, realKey, modelId, messages, onDelta);
+      } catch (err) {
+        // 模型调用失败必须上抛，交由状态机将本阶段/实例标记为 failed（禁止把失败伪装成完成）
+        throw new Error(`调用模型失败：${(err as Error).message}`);
+      }
+    };
+
+    const loop = new TurnLoop({
+      sessionId: `${inst.instanceId}:${stage.id}`,
+      turnId: `${inst.instanceId}:${stage.id}:${Date.now()}`,
+      workspacePath: wsPath,
+      systemPrompt,
+      history: [],
+      userMessage,
+      maxSteps: 25,
+      model: modelId,
+      chat,
+      executeTool,
+      signal,
+      drainUserMessages: () => ctx.pendingInstructions.splice(0, ctx.pendingInstructions.length),
+      onEvent: (ev) => {
+        const d = ev.data as Record<string, unknown>;
+        if (ev.type === 'tool-call-start') {
+          pushLog({
+            type: 'tool_call',
+            actor: 'agent',
+            title: `▶ 调用工具 ${String(d.tool ?? '')}`,
+            content: JSON.stringify(d.args ?? {}).slice(0, 2000),
+            toolName: String(d.tool ?? ''),
+            toolArgs: JSON.stringify(d.args ?? {}),
+          });
+        } else if (ev.type === 'tool-result') {
+          pushLog({
+            type: 'tool_result',
+            actor: 'agent',
+            title: '◀ 工具执行结果',
+            content: String(d.output ?? '').slice(0, 4000),
+            isError: Boolean(d.isError),
+          });
+        }
+      },
+    });
+
+    const result = await loop.run();
+
+    const artifacts = ctx.artifactMgr.capture(stage.artifactPaths || []);
+    for (const af of artifacts) {
+      const rel = path.relative(wsPath, af);
+      if (!inst.artifacts.some((a) => a.path === rel)) {
+        let size = 0;
+        try { size = fs.statSync(af).size; } catch { /* ignore */ }
+        inst.artifacts.push({ stageId: stage.id, roleName: stage.roleName, path: rel, sizeBytes: size, timestamp: Date.now() });
+      }
+    }
+
+    const summary = (result.finalContent || '').trim() || `阶段「${stage.roleName}」执行结束（无文本输出）`;
+    pushLog({ type: 'summary', actor: 'agent', content: summary.slice(0, 4000) });
+
+    // 上游快照登记（供下游上下文注入）；同阶段重做时覆盖旧快照
+    const snapshot: StageArtifactSnapshot = {
+      stageId: stage.id,
+      roleName: stage.roleName,
+      artifactPaths: artifacts,
+      summary: summary.slice(0, 2000),
+    };
+    const snapIndex = ctx.snapshots.findIndex((s) => s.stageId === stage.id);
+    if (snapIndex >= 0) ctx.snapshots[snapIndex] = snapshot;
+    else ctx.snapshots.push(snapshot);
+
+    const tokens = (result.inputTokens || 0) + (result.outputTokens || 0);
+    inst.tokensUsed += tokens;
+    inst.updatedAt = Date.now();
+    this.pipelineStore.saveInstance(inst);
+
+    // 非审批门阶段：执行完成即视为审定放行，下游强制只读（D54）
+    if (!stage.gatekeeperRequired) {
+      ctx.artifactMgr.approve(stage.id, artifacts);
+    }
+
+    return { summary, artifactPaths: artifacts, tokensUsed: tokens };
   }
 
   /**

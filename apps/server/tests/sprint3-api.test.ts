@@ -149,4 +149,47 @@ describe('TC-01-10-005: Sprint 3 服务端 API 集成 (Skills, MCP, 记忆迁移
     const res = await fetch(`http://127.0.0.1:${testPort}/api/memory`);
     assert.equal(res.status, 400);
   });
+
+  it('POST /api/memory/config & migrate：持久化更新工作区存储模式并同步切换', async () => {
+    const ws = path.join(tmpDir, 'ws-mem-switch');
+    const harnessDir = path.join(ws, '.harness');
+    fs.mkdirSync(harnessDir, { recursive: true });
+    fs.writeFileSync(path.join(harnessDir, 'memory.md'), '## [bbbbbbbbbbbb] 迁移记忆\n\n- scope: project\n\n测试切换');
+
+    // 1. 执行向导迁移至 SQLite
+    const dbFile = path.join(harnessDir, 'project-memory.sqlite');
+    const migRes = await fetch(`http://127.0.0.1:${testPort}/api/memory/migrate`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workspacePath: ws,
+        targetDbPath: dbFile,
+        mode: 'lossless-migrate',
+      }),
+    });
+    const migJson = await migRes.json();
+    assert.equal(migJson.code, 0);
+
+    // 2. 再次查询 GET /api/memory，确认模式已同步切换为 sqlite！
+    const getRes = await fetch(`http://127.0.0.1:${testPort}/api/memory?workspace=${encodeURIComponent(ws)}`);
+    const getJson = await getRes.json();
+    assert.equal(getJson.code, 0);
+    assert.equal(getJson.data.mode, 'sqlite', '迁移后当前介质模式必须持久化变为 sqlite');
+
+    // 3. 切换为 disabled 模式
+    const cfgRes = await fetch(`http://127.0.0.1:${testPort}/api/memory/config`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        workspacePath: ws,
+        mode: 'disabled',
+      }),
+    });
+    assert.equal(cfgRes.status, 200);
+
+    const getRes2 = await fetch(`http://127.0.0.1:${testPort}/api/memory?workspace=${encodeURIComponent(ws)}`);
+    const getJson2 = await getRes2.json();
+    assert.equal(getJson2.data.mode, 'disabled', '模式必须变为 disabled');
+    assert.equal(getJson2.data.entries.length, 0, 'disabled 模式下不召回任何条目');
+  });
 });

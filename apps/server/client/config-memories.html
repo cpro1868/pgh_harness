@@ -7,11 +7,11 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/shared.css">
 </head>
-<body class="bg-[#070a12] text-slate-100 font-sans">
+<body class="bg-[#070a12] text-slate-100 font-sans app-shell">
 
   <!-- 顶栏 -->
-  <header class="h-10 bg-[#0a0f1d] border-b border-[#1a2333] px-4 flex items-center justify-between shrink-0">
-    <div class="flex items-center space-x-3">
+  <header class="h-10 bg-[#0a0f1d] border-b border-[#1a2333] px-4 flex items-center justify-between shrink-0 text-xs">
+    <div class="flex items-center space-x-2.5">
       <img src="ico/pgh.svg" alt="Purple Grapes Harness" class="w-6 h-6 rounded shadow-sm">
       <span class="text-xs font-semibold px-2 py-0.5 rounded bg-blue-950/80 text-blue-300 border border-blue-800/60 font-mono">记忆与经验治理 (MOD-11)</span>
       <h1 class="text-xs font-bold text-white">工作区记忆策略与存储中心 (Memory Console)</h1>
@@ -22,7 +22,7 @@
   <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
 
     <!-- 全系统严格一致的 48px 一级侧边栏 -->
-    <aside class="activity-bar">
+    <aside class="activity-bar h-full">
       <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
       </a>
@@ -37,6 +37,9 @@
       </a>
       <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
       </a>
       <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
@@ -53,87 +56,265 @@
     <!-- 主内容区 -->
     <main class="flex-1 p-8 space-y-8 max-w-6xl w-full mx-auto overflow-y-auto">
 
-      <!-- 记忆沉淀机制说明 -->
-      <section class="p-5 rounded-xl bg-gradient-to-r from-blue-950/30 to-purple-950/20 border border-blue-800/40 space-y-3 shadow-lg">
+      <!-- 模块说明与提取模式切换器 -->
+      <section class="p-5 rounded-xl bg-gradient-to-r from-blue-950/30 to-purple-950/20 border border-blue-800/40 space-y-4 shadow-lg">
         <div class="space-y-1">
           <h2 class="text-sm font-bold text-white flex items-center">
-            <span>🧠 记忆沉淀机制与级联装配</span>
+            <span>🧠 记忆沉淀机制与人机交互模式</span>
             <span class="ml-2 text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">全局生效</span>
           </h2>
           <p class="text-xs text-slate-400">
-            大模型在长程任务中会遗忘上下文，通过记忆引擎持久化沉淀代码规约、踩坑经验与业务逻辑。真相源始终为 Markdown 文件（Git 友好）；装配时
-            <b>项目级优先覆盖全局级</b>，并以 SHA-256 内容指纹幂等去重（D67）。
+            大模型在长程任务中会遗忘上下文，通过记忆引擎持久化沉淀代码规约、踩坑经验与业务逻辑，跨会话按需自动唤醒。
           </p>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
+          <label class="p-4 rounded-lg bg-[#0c1220] border-2 border-blue-500/80 cursor-pointer space-y-2 relative shadow-md">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <input type="radio" name="extraction_mode" checked class="text-blue-500">
+                <span class="font-bold text-white text-xs">🤖 全自动反思沉淀模式 (默认推荐)</span>
+              </div>
+              <span class="text-[10px] bg-blue-950 text-blue-300 px-1.5 py-0.2 rounded font-mono">零打扰</span>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              每次会话完成开发任务或成功修复 Bug 后，系统在后台使用轻量模型自动反思，提炼出本项目关键经验并自动入库。
+            </p>
+          </label>
+
+          <label class="p-4 rounded-lg bg-[#0c1220] border border-slate-800 hover:border-slate-700 cursor-pointer space-y-2 relative">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2">
+                <input type="radio" name="extraction_mode" class="text-purple-500">
+                <span class="font-bold text-white text-xs">👤 半自动人工审核确认模式</span>
+              </div>
+              <span class="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.2 rounded font-mono">严格防污染</span>
+            </div>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              Agent 总结出新经验后不直接落盘，而在对话流中弹出审批卡片由用户点击确认后方才入库。
+            </p>
+          </label>
         </div>
       </section>
 
-      <!-- 一、记忆存储与条目清单 -->
+      <!-- 一、多工作区独立存储策略管理 -->
       <section class="space-y-4">
         <div class="flex items-center justify-between pb-2 border-b border-slate-800">
           <div class="flex items-center space-x-2">
             <span class="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
             <h2 class="text-sm font-bold text-white">已登记工作区的独立存储方式与路径设定</h2>
           </div>
-          <button onclick="loadMemory()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 font-mono">🔄 刷新记忆</button>
+          <button onclick="loadMemory()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs border border-slate-700 font-mono">🔄 刷新列表</button>
         </div>
 
         <div id="memory-workspaces" class="space-y-4">
-          <div class="p-6 text-center text-slate-500 text-xs">正在装配双层记忆...</div>
+          <div class="p-6 text-center text-slate-500 text-xs">正在读取工作区记忆策略...</div>
         </div>
       </section>
 
     </main>
   </div>
 
-  <!-- 受控存储模式变更与数据迁移向导 -->
-  <div id="migration-modal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="max-w-2xl w-full rounded-xl bg-[#0f1523] border border-slate-700 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-      <div class="px-6 py-4 bg-[#131b2e] border-b border-slate-800 flex items-center justify-between">
-        <div>
-          <h3 class="text-sm font-bold text-white">受控存储模式变更与数据迁移向导</h3>
-          <p class="text-[11px] text-slate-400 font-sans mt-0.5">
-            详情态锁定：切换存储介质不会即时生效，必须经本向导显式确认，并自动生成 <code>.bak</code> 冷备份。
-          </p>
+  <!-- 变更存储模式与数据迁移向导弹窗 (Migration Wizard Modal) -->
+  <div id="migration-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#0e1424] border border-blue-500/50 rounded-xl max-w-xl w-full p-6 shadow-2xl space-y-5 text-xs font-sans max-h-[92vh] overflow-y-auto">
+      
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="p-1.5 rounded-lg bg-blue-500/10 text-blue-400">⇄</span>
+          <div>
+            <h3 class="text-sm font-bold text-white">受控存储模式变更与数据迁移向导</h3>
+            <p id="modal-workspace-name" class="text-[11px] text-slate-400 font-mono">--</p>
+          </div>
         </div>
-        <button onclick="closeMigrationModal()" class="text-slate-400 hover:text-white">✕</button>
+        <button onclick="closeMigrationModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
       </div>
 
-      <div class="p-6 space-y-5 text-xs overflow-y-auto">
-        <div class="p-3 rounded-lg bg-[#080d18] border border-slate-800 font-mono text-[11px] space-y-1">
-          <div class="text-slate-400">目标工作区：<span id="mig-ws" class="text-blue-300"></span></div>
-          <div class="text-slate-400">当前介质：<span class="text-slate-200">纯 Markdown 文件 (.harness/memory.md)</span></div>
-          <div class="text-slate-400">现有条目：<span id="mig-count" class="text-slate-200">0</span> 条</div>
+      <!-- 源存储状态检测 -->
+      <div class="p-3 rounded-lg bg-[#070b14] border border-slate-800 flex items-center justify-between">
+        <div class="space-y-0.5">
+          <span class="text-[10px] uppercase font-mono text-slate-500 tracking-wider">源存储状态检测 (Source Audit)</span>
+          <div class="flex items-center space-x-2 text-slate-300">
+            <span>当前模式: <b id="modal-source-mode" class="text-blue-300 font-mono">--</b></span>
+            <span>·</span>
+            <span>现存条目: <b id="modal-source-count" class="text-emerald-400 font-mono">0 条记忆</b></span>
+          </div>
+        </div>
+        <span class="text-[10px] px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono">数据完整</span>
+      </div>
+
+      <!-- 1. 选择拟切换的目标存储模式 -->
+      <div class="space-y-2">
+        <label class="block text-slate-300 font-medium">1. 选择拟切换的目标存储模式：</label>
+        <div class="grid grid-cols-2 gap-2.5">
+          <label onclick="updateTargetForm('sqlite')" class="p-3 rounded-lg bg-[#070b14] border border-blue-500/60 cursor-pointer block hover:border-blue-400 transition">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="target_mode" value="sqlite" checked class="text-blue-500">
+              <span class="font-bold text-white text-xs">本地 SQLite (推荐)</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">内置 FTS5 倒排索引，毫秒级关键字检索，支持自定义文件路径。</p>
+          </label>
+
+          <label onclick="updateTargetForm('file')" class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block hover:border-slate-700 transition">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="target_mode" value="file" class="text-blue-500">
+              <span class="font-bold text-white text-xs">纯 Markdown 文件</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">.harness/memory.md，直接随代码库提交 Git 协同管理。</p>
+          </label>
+
+          <label onclick="updateTargetForm('hybrid')" class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block hover:border-slate-700 transition">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="target_mode" value="hybrid" class="text-blue-500">
+              <span class="font-bold text-white text-xs">Markdown 文件 + 向量双轨模式</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">.harness/memory.md 为真相源，挂载本地向量加速语义切片召回。</p>
+          </label>
+
+          <label onclick="updateTargetForm('disabled')" class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block hover:border-rose-500/60 transition">
+            <div class="flex items-center space-x-2">
+              <input type="radio" name="target_mode" value="disabled" class="text-rose-500">
+              <span class="font-bold text-rose-300 text-xs">⚪ 未启用记忆 (Disabled)</span>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-1">完全关闭反思与经验注入，适合一次性试验或保密沙箱。</p>
+          </label>
+        </div>
+      </div>
+
+      <!-- 2. 设定新模式的存储与运行时参数 -->
+      <div id="target-mode-params-container" class="p-3.5 rounded-lg bg-[#070b14] border border-blue-500/40 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
+          <span class="font-bold text-white text-xs flex items-center">
+            <span class="w-2 h-2 rounded-full bg-blue-400 mr-1.5"></span>
+            <span>2. 设定新模式的存储与运行时参数：</span>
+          </span>
+          <span id="target-param-badge" class="text-[10px] px-1.5 py-0.2 rounded bg-blue-950 text-blue-300 font-mono">SQLite 专属参数</span>
         </div>
 
-        <div>
-          <label class="block text-slate-300 font-medium mb-2 font-sans">两极诉求分流选择：</label>
-          <div class="grid grid-cols-1 gap-3">
-            <label class="p-4 rounded-lg bg-[#0c1220] border-2 border-blue-500/80 cursor-pointer block">
-              <input type="radio" name="mig_mode" value="lossless-migrate" checked class="mr-1">
-              <span class="font-bold text-blue-400">平滑数据无损迁移</span>
-              <p class="text-[11px] text-slate-400 mt-1">在结构化事务中逐条导入目标 SQLite，基于 SHA-256 内容指纹自动去重，确保经验无缝延续。</p>
-            </label>
-            <label class="p-4 rounded-lg bg-[#0c1220] border border-slate-800 cursor-pointer block">
-              <input type="radio" name="mig_mode" value="fresh-start" class="mr-1">
-              <span class="font-bold text-amber-400">全新起步，丢弃测试数据</span>
-              <p class="text-[11px] text-slate-400 mt-1">不执行迁移；原记忆文件自动更名 <code>.bak</code> 归档冷备份后重置，适合丢弃初期调试验证数据。</p>
-            </label>
+        <div id="param-form-sqlite" class="space-y-2.5">
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">SQLite 数据库文件路径 (Path，支持相对或绝对路径)：</label>
+            <input type="text" id="target-sqlite-path" value=".harness/project-memory.sqlite" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+            <div class="text-[10px] text-slate-500 mt-1">相对路径将自动保存在该工作区目录下；绝对路径可指定至公共数据库。</div>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">分区表名 (Table Name)：</label>
+              <input type="text" id="target-sqlite-table" value="tbl_workspace_memory" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">FTS5 全文索引开关：</label>
+              <select id="target-sqlite-fts" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs">
+                <option value="true" selected>开启 FTS5 倒排索引 (毫秒级检索)</option>
+                <option value="false">关闭 (标准 LIKE 查询)</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div id="mig-target-row">
-          <label class="block text-slate-300 font-medium mb-1 font-sans">目标 SQLite 数据库路径：</label>
-          <input id="mig-target-db" type="text" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
-          <span class="text-[10px] text-slate-500 mt-1 block">建议置于工作区 <code>.harness/memory.db</code>，便于随项目版本管理策略统一治理。</span>
+        <div id="param-form-file" class="hidden space-y-2.5">
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">Markdown 记忆文件路径：</label>
+            <input type="text" id="target-file-path" value=".harness/memory.md" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+            <div class="text-[10px] text-slate-500 mt-1">保存在该工作区根目录下，随 Git 版本一同维护。</div>
+          </div>
+          <div class="flex items-center space-x-2 pt-1">
+            <input type="checkbox" checked id="target-file-git" class="rounded text-blue-600 bg-slate-900 border-slate-700">
+            <label for="target-file-git" class="text-[11px] text-slate-300">记忆追加后自动 git add 纳入暂存区</label>
+          </div>
+        </div>
+
+        <div id="param-form-hybrid" class="hidden space-y-2.5">
+          <div>
+            <label class="block text-slate-400 text-[11px] mb-1">真相源 Markdown 文件路径：</label>
+            <input type="text" id="target-hybrid-path" value=".harness/memory.md" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-xs focus:outline-none focus:border-blue-500">
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">挂载 Embedding 模型：</label>
+              <select id="target-hybrid-model" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs">
+                <option value="BAAI/bge-m3" selected>BAAI/bge-m3 (本地 Ollama · 1024维)</option>
+                <option value="text-embedding-3-small">text-embedding-3-small (OpenAI)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">相似度阈值 (Threshold)：</label>
+              <input type="number" id="target-hybrid-threshold" step="0.05" value="0.75" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 text-xs">
+            </div>
+          </div>
+        </div>
+
+        <div id="param-form-disabled" class="hidden text-slate-400 text-[11px] py-1">
+          无需配置额外参数。切换生效后，该工作区将停止一切记忆抽取与注入。
         </div>
       </div>
 
-      <div class="px-6 py-3.5 bg-[#090d18] border-t border-slate-800 flex items-center justify-between text-xs">
-        <span id="mig-status" class="text-emerald-400 font-mono"></span>
-        <div class="flex space-x-2">
-          <button onclick="closeMigrationModal()" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-lg border border-slate-700">取消</button>
-          <button onclick="executeMigration()" class="px-5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-semibold shadow-sm">🧭 执行迁移向导</button>
+      <!-- 3. 存量记忆数据处理策略 -->
+      <div class="space-y-2">
+        <label class="block text-slate-300 font-medium">3. 存量记忆数据处理策略：</label>
+        <div class="space-y-2">
+          <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 hover:border-amber-500/60 cursor-pointer flex items-start space-x-3 transition">
+            <input type="radio" name="migration_policy" value="fresh-start" class="mt-0.5 text-amber-500">
+            <div class="space-y-0.5">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-amber-300 text-xs">全新起步，丢弃测试数据 (不执行迁移)</span>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-amber-950 text-amber-400 font-mono">初期测试推荐</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                直接新建空白的目标存储介质，原有旧数据不再导入（原文件自动重命名为 <code class="text-slate-300 font-mono">.bak</code> 归档备份，永不丢失）。
+              </p>
+            </div>
+          </label>
+
+          <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 hover:border-emerald-500/60 cursor-pointer flex items-start space-x-3 transition">
+            <input type="radio" name="migration_policy" value="lossless-migrate" checked class="mt-0.5 text-emerald-500">
+            <div class="space-y-0.5">
+              <div class="flex items-center space-x-2">
+                <span class="font-bold text-emerald-400 text-xs">无损平滑迁移数据 (推荐生产项目)</span>
+                <span class="text-[10px] px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-300 font-mono">经验无缝继承</span>
+              </div>
+              <p class="text-[11px] text-slate-400 leading-relaxed">
+                系统将在事务中将现存的全部条目逐条解析并写入目标存储介质，基于 SHA-256 内容指纹自动去重，确保历史踩坑与团队规约在新模式下无缝延续。
+              </p>
+            </div>
+          </label>
         </div>
+      </div>
+
+      <!-- 操作底部 -->
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+        <span id="mig-status-text" class="text-[11px] text-emerald-400 font-mono">原子事务回滚保障 · 自动 .bak 备份</span>
+        <div class="flex items-center space-x-2">
+          <button onclick="closeMigrationModal()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">取消</button>
+          <button onclick="executeMigration()" class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium shadow flex items-center space-x-1">
+            <span>保存新配置并执行变更</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 独立参数修改模态弹窗 (不切换介质，直接修改当前参数) -->
+  <div id="config-edit-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#0e1424] border border-blue-500/50 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-xs font-sans">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center space-x-2">
+          <span class="p-1.5 rounded bg-blue-500/10 text-blue-400">✏️</span>
+          <div>
+            <h3 class="text-sm font-bold text-white">修改当前存储参数</h3>
+            <p id="edit-modal-workspace" class="text-[11px] text-slate-400 font-mono">--</p>
+          </div>
+        </div>
+        <button onclick="closeConfigEditModal()" class="text-slate-400 hover:text-white text-lg">&times;</button>
+      </div>
+
+      <div id="edit-modal-fields" class="space-y-3">
+        <!-- 动态注入 -->
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
+        <button onclick="closeConfigEditModal()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300">取消</button>
+        <button onclick="saveCurrentConfig()" class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium shadow">保存参数更改</button>
       </div>
     </div>
   </div>
@@ -141,15 +322,31 @@
   <script>
     let workspaces = [];
     let activeMigWs = '';
+    let activeEditWs = '';
+    let activeEditMode = 'file';
 
     function escapeHtml(text) {
       const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
       return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
     }
 
+    function modeDisplayName(mode) {
+      if (mode === 'sqlite') return '本地 SQLite (node:sqlite + FTS5)';
+      if (mode === 'hybrid') return 'Markdown 文件 + 向量双轨模式';
+      if (mode === 'disabled') return '⚪ 未启用记忆 (Disabled)';
+      return '纯 Markdown 文件 (.md)';
+    }
+
+    function modeBadgeCls(mode) {
+      if (mode === 'sqlite') return 'bg-purple-950/40 border-purple-800/50 text-purple-300';
+      if (mode === 'hybrid') return 'bg-emerald-950/40 border-emerald-800/50 text-emerald-300';
+      if (mode === 'disabled') return 'bg-slate-900 border-slate-800 text-slate-400';
+      return 'bg-blue-950/40 border-blue-800/50 text-blue-300';
+    }
+
     async function loadMemory() {
       const container = document.getElementById('memory-workspaces');
-      container.innerHTML = '<div class="p-6 text-center text-slate-500 text-xs">正在装配双层记忆...</div>';
+      container.innerHTML = '<div class="p-6 text-center text-slate-500 text-xs">正在读取工作区记忆策略...</div>';
       try {
         const wsRes = await fetch('/api/workspaces');
         const wsJson = await wsRes.json();
@@ -168,14 +365,90 @@
         for (const ws of workspaces) {
           const memRes = await fetch(`/api/memory?workspace=${encodeURIComponent(ws.path)}`);
           const memJson = await memRes.json();
-          const entries = (memJson.code === 0 && memJson.data && memJson.data.entries) ? memJson.data.entries : [];
-          const projectPath = (memJson.code === 0 && memJson.data) ? memJson.data.projectPath : `${ws.path}\\.harness\\memory.md`;
-
-          const globalCount = entries.filter((e) => e.scope === 'global').length;
-          const projectCount = entries.filter((e) => e.scope === 'project').length;
+          const data = (memJson.code === 0 && memJson.data) ? memJson.data : {};
+          const mode = data.mode || 'file';
+          const cfg = data.config || {};
+          const entries = data.entries || [];
+          const projectPath = data.projectPath || '.harness/memory.md';
 
           const card = document.createElement('div');
           card.className = 'p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg hover:border-slate-700 transition';
+          card.dataset.wsPath = ws.path;
+          card.dataset.mode = mode;
+          card.dataset.count = String(entries.length);
+          card.dataset.config = JSON.stringify(cfg);
+
+          // 构建详情只读面板
+          let detailGridHtml = '';
+          if (mode === 'sqlite') {
+            detailGridHtml = `
+              <div class="p-3.5 rounded-lg bg-[#080d18] border border-slate-800 text-xs font-mono grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300">
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">SQLite 文件路径：</span>
+                  <span class="text-purple-300 font-bold truncate block" title="${escapeHtml(projectPath)}">${escapeHtml(cfg.sqlitePath || '.harness/project-memory.sqlite')}</span>
+                  <span class="text-[10px] text-slate-500 block font-sans mt-0.5">Node 22 原生 WAL 模式</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">索引与检索加速：</span>
+                  <span class="text-emerald-400 font-medium">${cfg.sqliteFts === false ? '标准 LIKE 查询' : 'FTS5 全文倒排索引 (毫秒级)'}</span>
+                  <span class="text-[10px] text-slate-500 block font-sans mt-0.5">SHA-256 指纹去重</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">分区表与驱动：</span>
+                  <span class="text-white">${escapeHtml(cfg.sqliteTable || 'memory_entries')}</span>
+                  <span class="text-[10px] text-emerald-400 block font-sans mt-0.5">已沉淀 ${entries.length} 条 · 状态正常</span>
+                </div>
+              </div>
+            `;
+          } else if (mode === 'hybrid') {
+            detailGridHtml = `
+              <div class="p-3.5 rounded-lg bg-[#080d18] border border-slate-800 text-xs font-mono grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300">
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">真相源文件 (Ground Truth)：</span>
+                  <span class="text-blue-300 font-bold">${escapeHtml(cfg.filePath || '.harness/memory.md')}</span>
+                  <span class="text-[10px] text-slate-500 block font-sans mt-0.5">人类可读 · 随 Git 代码库协同提交</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">加速轨 (Embedding 向量)：</span>
+                  <span class="text-emerald-400 font-medium">${escapeHtml(cfg.embeddingModel || 'BAAI/bge-m3')}</span>
+                  <span class="text-[10px] text-slate-500 block font-sans mt-0.5">相似度阈值: ${cfg.similarityThreshold || 0.75}</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">双轨协同机制：</span>
+                  <span class="text-white">文件修改自动重算向量切片</span>
+                  <span class="text-[10px] text-emerald-400 block font-sans mt-0.5">已沉淀 ${entries.length} 条 · 状态正常</span>
+                </div>
+              </div>
+            `;
+          } else if (mode === 'disabled') {
+            detailGridHtml = `
+              <div class="p-3 rounded-lg bg-[#080d18] border border-dashed border-slate-800 text-xs font-sans text-slate-500 flex items-center justify-between">
+                <span>ℹ️ 该工作区已严格关闭记忆沉淀与召回，Agent 执行前后不读取也不反思任何信息，上下文完全由 AGENTS.md 约束。</span>
+                <span class="text-[10px] font-mono text-slate-500 flex-shrink-0 ml-2">零存储占用 · 零Token消耗</span>
+              </div>
+            `;
+          } else {
+            detailGridHtml = `
+              <div class="p-3.5 rounded-lg bg-[#080d18] border border-slate-800 text-xs font-mono grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300">
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">生效文件路径：</span>
+                  <span class="text-blue-300 font-bold">${escapeHtml(cfg.filePath || '.harness/memory.md')}</span>
+                  <span class="text-[10px] text-slate-500 block font-sans mt-0.5">随 Git 仓库提交与版本追踪</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">Git 联动策略：</span>
+                  <span class="text-emerald-400 font-medium">${cfg.gitAutoAdd === false ? '手动提交' : '自动追加暂存区 (git add)'}</span>
+                  <span class="text-[10px] text-slate-500 block font-sans mt-0.5">按二级标题分节</span>
+                </div>
+                <div>
+                  <span class="text-slate-500 block text-[11px] mb-0.5">反思状态与统计：</span>
+                  <span class="text-white">全自动反思沉淀</span>
+                  <span class="text-[10px] text-emerald-400 block font-sans mt-0.5">已沉淀 ${entries.length} 条 · 状态正常</span>
+                </div>
+              </div>
+            `;
+          }
+
           card.innerHTML = `
             <div class="flex items-center justify-between gap-4">
               <div class="space-y-1 min-w-0">
@@ -190,20 +463,21 @@
               </div>
 
               <div class="flex items-center space-x-2 text-xs flex-shrink-0">
-                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg bg-blue-950/40 border border-blue-800/50 text-blue-300 font-mono">
-                  <span>当前介质:</span><b class="text-white">纯 Markdown 文件 (.md)</b>
+                <div class="flex items-center space-x-1.5 px-3 py-1.5 rounded-lg border font-mono ${modeBadgeCls(mode)}">
+                  <span>当前介质:</span>
+                  <b class="text-white">${modeDisplayName(mode)}</b>
                 </div>
-                <button onclick="openMigrationModal('${escapeHtml(ws.path).replace(/'/g, "\\'")}', ${entries.length})" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center space-x-1 shadow transition">
-                  <span>⇄</span><span>变更存储模式与迁移...</span>
+                ${mode !== 'disabled' ? `
+                <button type="button" class="btn-edit-config px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 font-medium border border-slate-700 flex items-center space-x-1 shadow transition">
+                  <span>✏️</span><span>修改参数</span>
+                </button>` : ''}
+                <button type="button" class="btn-open-mig px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium flex items-center space-x-1 shadow transition">
+                  <span>⇄</span><span>${mode === 'disabled' ? '开启记忆或配置存储...' : '变更存储模式与迁移...'}</span>
                 </button>
               </div>
             </div>
 
-            <div class="p-3.5 rounded-lg bg-[#080d18] border border-slate-800 text-xs font-mono grid grid-cols-1 md:grid-cols-3 gap-4 text-slate-300">
-              <div class="truncate" title="${escapeHtml(projectPath)}"><span class="text-slate-500">项目级记忆文件:</span> ${escapeHtml(projectPath)}</div>
-              <div><span class="text-slate-500">项目级条目:</span> ${projectCount} 条</div>
-              <div><span class="text-slate-500">全局级条目:</span> ${globalCount} 条</div>
-            </div>
+            ${detailGridHtml}
 
             <details class="group">
               <summary class="cursor-pointer select-none text-[11px] font-mono text-slate-400 hover:text-blue-300 list-none flex items-center justify-between">
@@ -227,19 +501,62 @@
               </div>
             </details>
           `;
+
+          // 使用 addEventListener 绑定事件，彻底消灭拼接 onclick 导致 Windows 路径反斜杠丢失的 bug
+          const editBtn = card.querySelector('.btn-edit-config');
+          if (editBtn) {
+            editBtn.addEventListener('click', () => openConfigEditModal(ws.path, mode, cfg));
+          }
+          const migBtn = card.querySelector('.btn-open-mig');
+          if (migBtn) {
+            migBtn.addEventListener('click', () => openMigrationModal(ws.path, mode, entries.length, cfg));
+          }
+
           container.appendChild(card);
         }
       } catch (err) {
-        container.innerHTML = `<div class="p-4 rounded bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs">装配失败: ${escapeHtml(err.message)}</div>`;
+        container.innerHTML = `<div class="p-4 rounded bg-rose-950/40 border border-rose-900/60 text-rose-300 text-xs">读取失败: ${escapeHtml(err.message)}</div>`;
       }
     }
 
-    function openMigrationModal(wsPath, count) {
+    function updateTargetForm(mode) {
+      document.getElementById('param-form-sqlite').classList.add('hidden');
+      document.getElementById('param-form-file').classList.add('hidden');
+      document.getElementById('param-form-hybrid').classList.add('hidden');
+      document.getElementById('param-form-disabled').classList.add('hidden');
+
+      const badge = document.getElementById('target-param-badge');
+      if (mode === 'sqlite') {
+        document.getElementById('param-form-sqlite').classList.remove('hidden');
+        badge.innerText = 'SQLite 专属参数';
+      } else if (mode === 'file') {
+        document.getElementById('param-form-file').classList.remove('hidden');
+        badge.innerText = 'Markdown 文件参数';
+      } else if (mode === 'hybrid') {
+        document.getElementById('param-form-hybrid').classList.remove('hidden');
+        badge.innerText = '双轨向量参数';
+      } else if (mode === 'disabled') {
+        document.getElementById('param-form-disabled').classList.remove('hidden');
+        badge.innerText = '已禁用';
+      }
+    }
+
+    function openMigrationModal(wsPath, currentMode, count, cfg) {
       activeMigWs = wsPath;
-      document.getElementById('mig-ws').textContent = wsPath;
-      document.getElementById('mig-count').textContent = String(count);
-      document.getElementById('mig-target-db').value = `${wsPath}\\.harness\\memory.db`;
-      document.getElementById('mig-status').textContent = '';
+      document.getElementById('modal-workspace-name').innerText = wsPath;
+      document.getElementById('modal-source-mode').innerText = modeDisplayName(currentMode);
+      document.getElementById('modal-source-count').innerText = `${count} 条记忆`;
+      document.getElementById('mig-status-text').innerText = '原子事务回滚保障 · 自动 .bak 备份';
+
+      // 默认推荐使用相对路径 .harness/project-memory.sqlite（与原型一致，清晰无歧义）
+      document.getElementById('target-sqlite-path').value = (cfg && cfg.sqlitePath) ? cfg.sqlitePath : '.harness/project-memory.sqlite';
+      document.getElementById('target-file-path').value = (cfg && cfg.filePath) ? cfg.filePath : '.harness/memory.md';
+
+      const defaultTarget = currentMode === 'file' ? 'sqlite' : 'file';
+      const radio = document.querySelector(`input[name="target_mode"][value="${defaultTarget}"]`);
+      if (radio) radio.checked = true;
+      updateTargetForm(defaultTarget);
+
       document.getElementById('migration-modal').classList.remove('hidden');
     }
 
@@ -248,35 +565,149 @@
     }
 
     async function executeMigration() {
-      const statusEl = document.getElementById('mig-status');
-      const mode = document.querySelector('input[name="mig_mode"]:checked').value;
-      const targetDbPath = document.getElementById('mig-target-db').value.trim();
+      const statusEl = document.getElementById('mig-status-text');
+      const targetMode = document.querySelector('input[name="target_mode"]:checked').value;
+      const policy = document.querySelector('input[name="migration_policy"]:checked').value;
 
-      if (mode === 'fresh-start' && !confirm('「全新起步」将归档原记忆文件为 .bak 并清空现有记忆，确定继续？')) return;
-      if (mode === 'lossless-migrate' && !confirm('「平滑无损迁移」将按 SHA-256 去重导入目标 SQLite，并生成 .bak 备份，确定继续？')) return;
+      const sqlitePath = document.getElementById('target-sqlite-path').value.trim() || '.harness/project-memory.sqlite';
+      const sqliteTable = document.getElementById('target-sqlite-table').value.trim() || 'tbl_workspace_memory';
+      const sqliteFts = document.getElementById('target-sqlite-fts').value === 'true';
+      const filePath = document.getElementById('target-file-path').value.trim() || '.harness/memory.md';
+      const gitAutoAdd = document.getElementById('target-file-git').checked;
+      const embeddingModel = document.getElementById('target-hybrid-model').value;
+      const similarityThreshold = parseFloat(document.getElementById('target-hybrid-threshold').value) || 0.75;
 
-      statusEl.textContent = '正在执行迁移向导...';
+      statusEl.innerText = '正在保存配置并执行变更...';
       try {
-        const res = await fetch('/api/memory/migrate', {
+        // 1. 若选择切换为 SQLite 或执行迁移/清空，先调 /api/memory/migrate 执行数据动作
+        if (targetMode === 'sqlite' || policy === 'fresh-start') {
+          const migRes = await fetch('/api/memory/migrate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              workspacePath: activeMigWs,
+              mode: policy,
+              targetDbPath: targetMode === 'sqlite' ? sqlitePath : undefined,
+            }),
+          });
+          const migJson = await migRes.json();
+          if (migJson.code !== 0) {
+            statusEl.innerText = `✗ 迁移失败: ${migJson.message}`;
+            return;
+          }
+        }
+
+        // 2. 持久化保存当前工作区的目标存储介质与专属参数
+        const cfgRes = await fetch('/api/memory/config', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             workspacePath: activeMigWs,
-            mode,
-            targetDbPath: mode === 'lossless-migrate' && targetDbPath ? targetDbPath : undefined,
+            mode: targetMode,
+            filePath,
+            sqlitePath,
+            sqliteTable,
+            sqliteFts,
+            gitAutoAdd,
+            embeddingModel,
+            similarityThreshold,
           }),
+        });
+        const cfgJson = await cfgRes.json();
+        if (cfgJson.code === 0) {
+          statusEl.innerText = '✓ 存储模式与数据迁移已成功完成！';
+          setTimeout(() => {
+            closeMigrationModal();
+            loadMemory();
+          }, 800);
+        } else {
+          statusEl.innerText = `✗ 保存参数失败: ${cfgJson.message}`;
+        }
+      } catch (err) {
+        statusEl.innerText = `✗ 异常: ${err.message}`;
+      }
+    }
+
+    // 修改当前参数弹窗
+    function openConfigEditModal(wsPath, mode, cfg) {
+      activeEditWs = wsPath;
+      activeEditMode = mode;
+      document.getElementById('edit-modal-workspace').innerText = wsPath;
+      const fields = document.getElementById('edit-modal-fields');
+
+      if (mode === 'sqlite') {
+        fields.innerHTML = `
+          <div>
+            <label class="block text-slate-400 mb-1">SQLite 数据库文件路径：</label>
+            <input id="edit-sqlite-path" type="text" value="${escapeHtml(cfg.sqlitePath || '.harness/project-memory.sqlite')}" class="w-full bg-[#070b14] border border-slate-700 rounded px-2.5 py-1.5 text-emerald-300 font-mono">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">分区表名 (Table Name)：</label>
+            <input id="edit-sqlite-table" type="text" value="${escapeHtml(cfg.sqliteTable || 'tbl_workspace_memory')}" class="w-full bg-[#070b14] border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono">
+          </div>
+        `;
+      } else if (mode === 'hybrid') {
+        fields.innerHTML = `
+          <div>
+            <label class="block text-slate-400 mb-1">真相源 Markdown 路径：</label>
+            <input id="edit-file-path" type="text" value="${escapeHtml(cfg.filePath || '.harness/memory.md')}" class="w-full bg-[#070b14] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono">
+          </div>
+          <div>
+            <label class="block text-slate-400 mb-1">相似度召回阈值：</label>
+            <input id="edit-threshold" type="number" step="0.05" value="${cfg.similarityThreshold || 0.75}" class="w-full bg-[#070b14] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 font-mono">
+          </div>
+        `;
+      } else {
+        fields.innerHTML = `
+          <div>
+            <label class="block text-slate-400 mb-1">Markdown 记忆文件路径：</label>
+            <input id="edit-file-path" type="text" value="${escapeHtml(cfg.filePath || '.harness/memory.md')}" class="w-full bg-[#070b14] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono">
+          </div>
+          <label class="flex items-center space-x-2 pt-1 cursor-pointer">
+            <input id="edit-git-add" type="checkbox" ${cfg.gitAutoAdd !== false ? 'checked' : ''} class="rounded text-blue-600">
+            <span class="text-slate-300">自动追加到 Git 暂存区 (git add)</span>
+          </label>
+        `;
+      }
+
+      document.getElementById('config-edit-modal').classList.remove('hidden');
+    }
+
+    function closeConfigEditModal() {
+      document.getElementById('config-edit-modal').classList.add('hidden');
+    }
+
+    async function saveCurrentConfig() {
+      const payload = {
+        workspacePath: activeEditWs,
+        mode: activeEditMode,
+      };
+      if (activeEditMode === 'sqlite') {
+        payload.sqlitePath = document.getElementById('edit-sqlite-path').value.trim();
+        payload.sqliteTable = document.getElementById('edit-sqlite-table').value.trim();
+      } else if (activeEditMode === 'hybrid') {
+        payload.filePath = document.getElementById('edit-file-path').value.trim();
+        payload.similarityThreshold = parseFloat(document.getElementById('edit-threshold').value) || 0.75;
+      } else {
+        payload.filePath = document.getElementById('edit-file-path').value.trim();
+        payload.gitAutoAdd = document.getElementById('edit-git-add').checked;
+      }
+
+      try {
+        const res = await fetch('/api/memory/config', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
         });
         const json = await res.json();
         if (json.code === 0) {
-          const d = json.data || {};
-          statusEl.textContent = `✓ 完成：迁移 ${d.migrated || 0} 条 / 跳过重复 ${d.skipped || 0} 条`;
-          if (d.backupPath) console.info('[PGH] 记忆备份：', d.backupPath);
-          setTimeout(() => { closeMigrationModal(); loadMemory(); }, 1200);
+          closeConfigEditModal();
+          loadMemory();
         } else {
-          statusEl.textContent = `✗ ${json.message}`;
+          alert('保存失败: ' + json.message);
         }
       } catch (err) {
-        statusEl.textContent = `✗ 异常: ${err.message}`;
+        alert('异常: ' + err.message);
       }
     }
 
@@ -284,3 +715,4 @@
   </script>
 </body>
 </html>
+

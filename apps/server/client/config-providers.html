@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/shared.css">
 </head>
-<body class="bg-[#070a12] text-slate-100 font-sans">
+<body class="bg-[#070a12] text-slate-100 font-sans app-shell">
 
   <!-- 统一 40px 顶栏 -->
   <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs">
@@ -28,7 +28,7 @@
   <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
     
     <!-- 全系统严格一致的 48px 一级侧边栏 -->
-    <aside class="activity-bar">
+    <aside class="activity-bar h-full">
       <a href="run-chat.html" class="activity-btn" title="主会话工作台 (Chat)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
       </a>
@@ -43,6 +43,9 @@
       </a>
       <a href="config-providers.html" class="activity-btn active" title="模型与Provider资产">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
       </a>
       <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
@@ -93,7 +96,7 @@
               <th class="py-3 px-4 font-semibold">所属 Provider</th>
               <th class="py-3 px-4 font-semibold">上下文物理窗口 (D51)</th>
               <th class="py-3 px-4 font-semibold">能力标签</th>
-              <th class="py-3 px-4 text-right">会话中状态</th>
+              <th class="py-3 px-4 text-right">连通性测试</th>
             </tr>
           </thead>
           <tbody id="models-inventory-tbody" class="divide-y divide-slate-800/60 text-slate-300">
@@ -205,15 +208,21 @@
         <div class="pt-3 border-t border-slate-800 space-y-3 font-sans">
           <div class="flex items-center justify-between">
             <label class="text-slate-300 font-medium">可用模型选择 (Models)：</label>
-            <button onclick="detectProviderModels()" class="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/40 text-[11px] font-sans flex items-center space-x-1 transition shadow-sm">
-              <span>获取模型列表 (GET /models)</span>
-            </button>
+            <div class="flex items-center space-x-2">
+              <button onclick="testSelectedModelConnection()" class="px-2.5 py-1 rounded bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/40 text-[11px] font-sans flex items-center space-x-1 transition shadow-sm">
+                <span>⚡ 测试连接</span>
+              </button>
+              <button onclick="detectProviderModels()" class="px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/40 text-[11px] font-sans flex items-center space-x-1 transition shadow-sm">
+                <span>获取模型列表 (GET /models)</span>
+              </button>
+            </div>
           </div>
 
           <select id="model-select-dropdown" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-blue-500">
             <option value="">点击右侧按钮探测拉取可用模型...</option>
           </select>
           <div id="detect-status-alert" class="text-[11px] text-slate-400"></div>
+          <div id="test-status-alert" class="text-[11px] text-slate-400"></div>
         </div>
       </div>
 
@@ -230,6 +239,106 @@
   <script>
     let currentEditingProviderId = null;
     let localProvidersCache = [];
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    /**
+     * 模型连通性测试（真实最小补全）：失败原因以 textContent 呈现，杜绝外部内容注入。
+     */
+    async function testModelConnection(providerId, modelId, btn) {
+      const cell = btn.parentElement;
+      const resultEl = cell ? cell.querySelector('.test-result') : null;
+      const original = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = '测试中...';
+      if (resultEl) { resultEl.textContent = ''; resultEl.className = 'test-result ml-2 text-[11px] text-slate-400'; }
+      try {
+        const res = await fetch('/api/providers/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ providerId, modelId }),
+        });
+        const json = await res.json();
+        const d = json.data || {};
+        if (resultEl) {
+          if (d.ok) {
+            resultEl.textContent = `✓ 连通 (${d.latencyMs}ms)`;
+            resultEl.className = 'test-result ml-2 text-[11px] text-emerald-400';
+          } else {
+            resultEl.textContent = `✗ ${d.message || '连通失败'}`;
+            resultEl.className = 'test-result ml-2 text-[11px] text-rose-400';
+          }
+        }
+      } catch (err) {
+        if (resultEl) {
+          resultEl.textContent = '✗ ' + err.message;
+          resultEl.className = 'test-result ml-2 text-[11px] text-rose-400';
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = original;
+      }
+    }
+
+    /** 弹窗内：测试当前选中模型的连通性（使用表单当前值；Key 留空则回落已保存凭据） */
+    async function testSelectedModelConnection() {
+      const statusEl = document.getElementById('test-status-alert');
+      const dropdown = document.getElementById('model-select-dropdown');
+      const modelId = dropdown ? dropdown.value : '';
+      if (!modelId) {
+        statusEl.className = 'text-[11px] text-amber-400 mt-1';
+        statusEl.textContent = '请先「获取模型列表」并选择一个模型，再进行测试。';
+        return;
+      }
+      const protocol = document.getElementById('modal-provider-protocol').value;
+      const baseUrl = document.getElementById('modal-provider-url').value.trim();
+      const apiKey = document.getElementById('modal-provider-key').value.trim();
+      const proxyMode = document.querySelector('input[name="provider-proxy-mode"]:checked')?.value || 'inherit';
+      const proxyEnabled = document.getElementById('modal-proxy-toggle').checked;
+      let customConfig = undefined;
+      if (proxyMode === 'custom') {
+        customConfig = {
+          protocol: document.getElementById('modal-custom-proto').value,
+          host: document.getElementById('modal-custom-host').value.trim() || '127.0.0.1',
+          port: parseInt(document.getElementById('modal-custom-port').value, 10) || 7890,
+          username: document.getElementById('modal-custom-user').value.trim() || undefined,
+          password: document.getElementById('modal-custom-pwd').value || undefined,
+        };
+      }
+
+      statusEl.className = 'text-[11px] text-slate-400 mt-1';
+      statusEl.textContent = '正在发起真实连通性测试...';
+
+      try {
+        const res = await fetch('/api/providers/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            providerId: currentEditingProviderId || undefined,
+            modelId,
+            baseUrl,
+            apiKey: apiKey || undefined,
+            protocol,
+            proxy: { enabled: proxyEnabled, mode: proxyMode, customConfig },
+          }),
+        });
+        const json = await res.json();
+        const d = json.data || {};
+        if (d.ok) {
+          statusEl.className = 'text-[11px] text-emerald-400 mt-1';
+          statusEl.textContent = `✓ 连通成功 (${d.latencyMs}ms)：${d.reply || '模型已响应'}`;
+        } else {
+          statusEl.className = 'text-[11px] text-rose-400 mt-1';
+          statusEl.textContent = `✗ 连通失败：${d.message || '未知错误'}`;
+        }
+      } catch (err) {
+        statusEl.className = 'text-[11px] text-rose-400 mt-1';
+        statusEl.textContent = '✗ 请求异常：' + err.message;
+      }
+    }
 
     async function loadProvidersFromBackend() {
       try {
@@ -334,7 +443,7 @@
       providers.forEach((p) => {
         if (p.models && Array.isArray(p.models)) {
           p.models.forEach((m) => {
-            allModels.push({ ...m, providerName: p.name });
+            allModels.push({ ...m, providerName: p.name, providerId: p.id });
           });
         }
       });
@@ -361,7 +470,10 @@
             ${m.supportsTools ? '<span class="px-1.5 py-0.5 rounded bg-slate-800 text-slate-300 mr-1">Tools</span>' : ''}
             ${m.supportsReasoning ? '<span class="px-1.5 py-0.5 rounded bg-purple-900/60 text-purple-300">Reasoning</span>' : ''}
           </td>
-          <td class="py-3 px-4 text-right"><span class="text-emerald-400 font-bold">已就绪</span></td>
+          <td class="py-3 px-4 text-right whitespace-nowrap">
+            <button onclick="testModelConnection('${escapeHtml(m.providerId)}', '${escapeHtml(m.id)}', this)" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700">测试连接</button>
+            <span class="test-result ml-2 text-[11px]"></span>
+          </td>
         `;
         tbody.appendChild(tr);
       });
@@ -667,3 +779,4 @@
   </script>
 </body>
 </html>
+

@@ -2,197 +2,363 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link rel="icon" type="image/svg+xml" href="ico/pgh.svg">
-  <title>多角色流水线任务与监控 - Purple Grapes Harness (PGH)</title>
+  <title>多角色流水线任务与运行监控 - Purple Grapes Harness (PGH)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/shared.css">
 </head>
-<body class="bg-[#070a12] text-slate-100 font-sans">
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex">
 
-  <!-- 统一 40px 顶栏 -->
-  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs">
-    <div class="flex items-center space-x-2.5">
-      <img src="ico/pgh.svg" alt="Purple Grapes Harness" class="w-6 h-6 rounded shadow-sm">
-      <span class="font-bold text-white tracking-wide text-xs">Purple Grapes Harness</span>
-      <span class="text-slate-600">/</span>
-      <span class="text-slate-400 font-medium">多角色流水线运行大屏 (Pipeline Runs)</span>
-    </div>
-    <div class="flex items-center space-x-2">
-      <a href="config-pipelines.html" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs font-mono">
-        <span>📋 模板库</span>
-      </a>
-      <a href="run-pipeline-create.html" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow-sm flex items-center space-x-1">
-        <span>＋</span><span>启动新流水线任务</span>
-      </a>
-    </div>
-  </header>
+  <!-- 1. 全局最左侧活动栏 -->
+  <aside class="activity-bar">
+    <a href="run-chat.html" class="block mb-4" title="Purple Grapes Harness">
+      <img src="ico/pgh.svg" alt="PGH" class="w-9 h-9 rounded-lg shadow-sm">
+    </a>
 
-  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+    <!-- 运行态 (Run-time) -->
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="run-pipeline.html" class="activity-btn active" title="角色流水线 (Pipeline)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg></a>
 
-    <!-- 全系统严格一致的 48px 一级侧边栏 -->
-    <aside class="activity-bar">
-      <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
-      </a>
-      <a href="run-pipeline.html" class="activity-btn active" title="角色流水线 (Pipeline)">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
-      </a>
-      <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
-      </a>
-      <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
-      </a>
-      <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
-      </a>
-      <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
-      </a>
-      <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
-      </a>
-      <a href="config-skills.html" class="activity-btn" title="Skills 技能库">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
-      </a>
-      <div class="flex-1"></div>
-      <a href="config-settings.html" class="activity-btn" title="系统全局设置 (Settings)">
-        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-      </a>
-    </aside>
+    <!-- 业务资产与编排 -->
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg></a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg></a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
 
-    <!-- 主面板 -->
-    <main class="flex-1 p-8 max-w-6xl w-full mx-auto space-y-6 overflow-y-auto">
+    <div class="flex-1"></div>
+
+    <!-- 底部常驻系统全局设置 (齿轮) -->
+    <a href="config-settings.html" class="activity-btn mb-2" title="系统全局设置 (Settings)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a></aside>
+
+  <!-- 2. 主内容区 (纯粹的任务列表大屏) -->
+  <div class="flex-1 flex flex-col overflow-y-auto">
+    
+    <!-- 顶栏 -->
+    <header class="h-12 bg-[#090d18] border-b border-[#1a2333] px-6 flex items-center justify-between sticky top-0 z-40">
+      <div class="flex items-center space-x-3">
+        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 font-mono">模式A · 运行中心</span>
+        <h1 class="text-sm font-bold text-white">多角色流水线任务列表 (Pipeline Runs)</h1>
+      </div>
+
+      <div class="flex items-center space-x-3 text-xs">
+        <a href="config-pipelines.html" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center space-x-1">
+          <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
+          <span>流水线模板库</span>
+        </a>
+        <a href="run-pipeline-create.html" class="px-3.5 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold flex items-center space-x-1.5 shadow">
+          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          <span>配置步骤/角色并启动新流水线任务</span>
+        </a>
+      </div>
+    </header>
+
+    <main class="flex-1 p-6 lg:p-8 space-y-6 w-full max-w-[1720px] mx-auto">
       
-      <!-- 统计指标卡片 -->
-      <div class="grid grid-cols-1 md:grid-cols-4 gap-4 text-xs font-sans">
-        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1 shadow">
-          <div class="text-slate-400">流水线任务总数</div>
+      <!-- 统计指标 -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+          <div class="text-xs text-slate-400">总并发流水线任务</div>
           <div class="text-2xl font-extrabold text-white font-mono"><span id="metric-total">0</span> <span class="text-xs text-slate-500 font-normal">个任务</span></div>
         </div>
-        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1 shadow">
-          <div class="text-amber-400 font-medium flex items-center"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5 animate-pulse"></span>正在推进阶段</div>
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+          <div class="text-xs text-amber-400 font-medium flex items-center"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5 animate-pulse"></span>正在执行阶段</div>
           <div class="text-2xl font-extrabold text-amber-300 font-mono"><span id="metric-running">0</span> <span class="text-xs text-slate-500 font-normal">Running</span></div>
         </div>
-        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1 shadow">
-          <div class="text-purple-400 font-medium flex items-center"><span class="w-2 h-2 rounded-full bg-purple-400 mr-1.5"></span>待 Gatekeeper 放行</div>
-          <div class="text-2xl font-extrabold text-purple-300 font-mono"><span id="metric-gate">0</span> <span class="text-xs text-slate-500 font-normal">待审批</span></div>
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+          <div class="text-xs text-purple-400 font-medium flex items-center"><span class="w-2 h-2 rounded-full bg-purple-400 mr-1.5"></span>待放行 Gatekeeper</div>
+          <div class="text-2xl font-extrabold text-purple-300 font-mono"><span id="metric-gate">0</span> <span class="text-xs text-slate-500 font-normal">待人工审批</span></div>
         </div>
-        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1 shadow">
-          <div class="text-emerald-400 font-medium flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>全流程已完成</div>
-          <div class="text-2xl font-extrabold text-emerald-300 font-mono"><span id="metric-done">0</span> <span class="text-xs text-slate-500 font-normal">Completed</span></div>
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+          <div class="text-xs text-emerald-400 font-medium flex items-center">已完成交付验收</div>
+          <div class="text-2xl font-extrabold text-emerald-400 font-mono"><span id="metric-done">0</span> <span class="text-xs text-slate-500 font-normal">Completed</span></div>
         </div>
       </div>
 
-      <div class="flex items-center justify-between pb-2 border-b border-slate-800 text-xs">
-        <div class="text-slate-400 font-mono">流水线执行实例大屏</div>
-        <button onclick="loadInstances()" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 font-mono">🔄 刷新实例</button>
+      <!-- 全局流水线任务大表格 -->
+      <div class="rounded-xl bg-[#0c1220] border border-slate-800 overflow-x-auto shadow-2xl">
+        <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <h2 class="text-sm font-bold text-white">活跃流水线任务清单</h2>
+            <span class="text-xs text-slate-500">点击「进入任务工作台」穿透进入专属独立交互与监控页面</span>
+          </div>
+          <div id="quick-filter-bar" class="flex items-center space-x-2 text-xs font-mono">
+            <span class="text-slate-500">快速过滤:</span>
+            <button onclick="setFilter('all', this)" class="px-2.5 py-0.5 rounded bg-slate-800 text-purple-400 font-semibold">全部</button>
+            <button onclick="setFilter('running', this)" class="px-2.5 py-0.5 rounded text-slate-400 hover:text-white">执行中</button>
+            <button onclick="setFilter('waiting_gate', this)" class="px-2.5 py-0.5 rounded text-slate-400 hover:text-white">待审批</button>
+          </div>
+        </div>
+
+        <table class="w-full text-left text-xs font-sans">
+          <thead class="bg-[#090e1a] text-slate-400 uppercase text-[10px] font-mono border-b border-slate-800">
+            <tr>
+              <th class="py-3.5 px-4 min-w-[280px]">任务编号 / 需求目标</th>
+              <th class="py-3.5 px-4 min-w-[130px]">绑定工作区</th>
+              <th class="py-3.5 px-4 min-w-[160px]">流水线模板</th>
+              <th class="py-3.5 px-4 min-w-[180px]">当前阶段与进度</th>
+              <th class="py-3.5 px-4 min-w-[140px]">当前 Agent 角色</th>
+              <th class="py-3.5 px-4 min-w-[110px]">状态</th>
+              <th class="py-3.5 px-4 text-right min-w-[200px]">操作</th>
+            </tr>
+          </thead>
+          <tbody id="instances-table-body" class="divide-y divide-slate-800/80 text-slate-300">
+            <tr><td colspan="7" class="py-8 text-center text-slate-500 font-mono">正在读取流水线任务...</td></tr>
+          </tbody>
+        </table>
       </div>
 
-      <!-- 任务列表 -->
-      <div id="instance-list" class="space-y-4 font-mono text-xs">
-        <div class="p-6 text-center text-slate-500">正在读取流水线任务...</div>
-      </div>
     </main>
   </div>
 
+  <!-- 启动新流水线任务模态弹窗 (启动入口向导) -->
+  <div id="new-pipeline-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden">
+    <div class="bg-[#0e1424] border border-purple-500/40 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center">
+          <svg class="w-4 h-4 text-purple-400 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+          启动新多角色流水线任务 (New Pipeline Run)
+        </h3>
+        <button onclick="document.getElementById('new-pipeline-modal').classList.add('hidden')" class="text-slate-400 hover:text-white">&times;</button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">选择流水线模板：</label>
+          <select class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-white">
+            <option value="pipe_feature_delivery">Feature 全流程交付流水线 (需求→架构→编码→测试)</option>
+            <option value="pipe_bug_hunter">紧急漏洞排查与热修流水线 (根因→微创→回归)</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">绑定目标工作区目录 (Workspace)：</label>
+          <div class="flex items-center space-x-2">
+            <input type="text" value="G:\Projects\auth-service" class="flex-1 bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-[11px]">
+            <button class="px-2.5 py-1.5 rounded bg-slate-800 text-slate-200 border border-slate-700">浏览...</button>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">初始需求 / 任务目标描述：</label>
+          <textarea rows="3" placeholder="例如：针对 Issue #105，给所有对外 API 增加限流漏桶中间件并补充压测用例..." class="w-full bg-[#090d18] border border-slate-700 rounded p-2 text-white placeholder-slate-500 focus:outline-none"></textarea>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
+        <button onclick="document.getElementById('new-pipeline-modal').classList.add('hidden')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs">取消</button>
+        <a href="run-pipeline-detail.html" class="px-4 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs shadow">立即创建并启动</a>
+      </div>
+    </div>
+  </div>
+
   <script>
-    function escapeHtml(text) {
-      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
-      return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
+function escapeHtml(text) {
+  const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+  return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
+}
+
+let allInstances = [];
+let allPipelines = [];
+let currentFilter = 'all';
+
+function formatElapsed(inst) {
+  const start = inst.startedAt || inst.createdAt;
+  const finished = ['completed', 'aborted', 'failed'].includes(inst.status);
+  const end = finished ? (inst.updatedAt || Date.now()) : Date.now();
+  const sec = Math.max(0, Math.floor((end - start) / 1000));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  if (h > 0) return h + 'h ' + m + 'm ' + s + 's';
+  if (m > 0) return m + 'm ' + s + 's';
+  return s + 's';
+}
+
+function setFilter(filter, btn) {
+  currentFilter = filter;
+  const bar = document.getElementById('quick-filter-bar');
+  if (bar) {
+    Array.from(bar.querySelectorAll('button')).forEach((b) => {
+      b.className = 'px-2.5 py-0.5 rounded text-slate-400 hover:text-white';
+    });
+  }
+  if (btn) btn.className = 'px-2.5 py-0.5 rounded bg-slate-800 text-purple-400 font-semibold';
+  renderRows();
+}
+
+function statusBadgeOf(inst) {
+  if (inst.status === 'draft') {
+    return '<span class="px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700 font-mono text-[10px]">规格草稿</span>';
+  }
+  if (inst.status === 'waiting_gate') {
+    return '<span class="px-2 py-0.5 rounded bg-purple-950 text-purple-300 border border-purple-800/60 font-mono text-[10px] flex items-center w-max"><span class="w-1.5 h-1.5 rounded-full bg-purple-400 mr-1.5"></span>待审批 Gate</span>';
+  }
+  if (inst.status === 'running') {
+    return '<span class="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800/60 font-mono text-[10px] flex items-center w-max"><span class="w-1.5 h-1.5 rounded-full bg-amber-400 mr-1.5 animate-ping"></span>正在执行</span>';
+  }
+  if (inst.status === 'completed') {
+    return '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono text-[10px]">✓ 验收完成</span>';
+  }
+  return '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800/60 font-mono text-[10px]">已终止 / 失败</span>';
+}
+
+function renderRows() {
+  const tbody = document.getElementById('instances-table-body');
+  if (!tbody) return;
+  const filtered = currentFilter === 'all' ? allInstances : allInstances.filter((i) => i.status === currentFilter);
+
+  if (filtered.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="py-12 text-center text-slate-500 font-mono">'
+      + '<div class="text-2xl mb-1 font-sans">🚀</div>'
+      + '<div>' + (allInstances.length === 0 ? '暂无流水线任务，点击右上角「配置步骤/角色并启动新流水线任务」开工' : '该筛选条件下暂无任务') + '</div>'
+      + '</td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = filtered.map((inst) => {
+    const stages = inst.stages || [];
+    const curOrder = inst.currentStageOrder || 1;
+    const pct = Math.min(100, Math.round((curOrder / Math.max(1, stages.length)) * 100));
+    const currentStage = stages.find((s) => s.id === inst.currentStageId) || stages[0];
+    const isWaitingGate = inst.status === 'waiting_gate';
+    const isCompleted = inst.status === 'completed';
+    const wsShort = (inst.workspacePath || '').split(/[\\/]/).pop() || inst.workspacePath;
+    const startTs = inst.startedAt || inst.createdAt;
+    const timeStr = new Date(startTs).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const stageLabel = isCompleted ? stages.length + '/' + stages.length + ' 完成' : 'Stage ' + curOrder + '/' + stages.length;
+
+    let actions = '<a href="run-pipeline-create.html?templateId=' + encodeURIComponent(inst.pipelineId) + '" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-[11px] inline-flex items-center space-x-1">'
+      + '<svg class="w-3 h-3 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>'
+      + '<span>编辑配置</span></a>'
+      + '<a href="run-pipeline-detail.html?id=' + encodeURIComponent(inst.instanceId) + '" class="px-3 py-1 rounded ' + (isWaitingGate ? 'bg-purple-600 hover:bg-purple-500 text-white shadow' : 'bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700') + ' font-medium text-[11px] inline-flex items-center space-x-1">'
+      + '<span>' + (isWaitingGate ? '审查并批准 →' : '进入工作台 →') + '</span></a>';
+
+    if (isCompleted) {
+      actions += '<a href="run-pipeline-detail.html?id=' + encodeURIComponent(inst.instanceId) + '" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-slate-200 text-[11px]"><span>查看工件归档</span></a>';
     }
+    actions += '<button onclick="deleteInstance(\'' + escapeHtml(inst.instanceId) + '\')" class="px-2 py-1 rounded bg-slate-800 hover:bg-rose-950 text-slate-400 hover:text-rose-300 text-[11px] border border-slate-700">删除</button>';
 
-    async function loadInstances() {
-      const container = document.getElementById('instance-list');
-      container.innerHTML = '<div class="p-6 text-center text-slate-500">正在读取流水线任务...</div>';
-      try {
-        const res = await fetch('/api/pipeline-instances');
-        const json = await res.json();
-        const list = (json.code === 0 && Array.isArray(json.data)) ? json.data : [];
+    return '<tr class="hover:bg-slate-800/40 transition ' + (isWaitingGate ? 'bg-purple-950/10 border-l-2 border-l-purple-500' : '') + '">'
+      + '<td class="py-3.5 px-4">'
+      + '<div class="font-mono text-purple-300 font-bold">' + escapeHtml(inst.instanceId) + '</div>'
+      + '<div class="text-white text-xs font-medium mt-0.5">' + escapeHtml(inst.name || inst.taskPrompt) + '</div>'
+      + '<div class="text-[10px] text-slate-500 font-mono mt-0.5">启动于 ' + timeStr + ' (耗时 ' + formatElapsed(inst) + ')</div>'
+      + '</td>'
+      + '<td class="py-3.5 px-4 font-mono text-[11px] text-slate-300" title="' + escapeHtml(inst.workspacePath) + '">🔒 ' + escapeHtml(wsShort) + '</td>'
+      + '<td class="py-3.5 px-4"><span class="font-medium text-slate-200">' + escapeHtml(inst.pipelineName || inst.pipelineId) + '</span></td>'
+      + '<td class="py-3.5 px-4">'
+      + '<div class="flex items-center space-x-2">'
+      + '<div class="w-20 bg-slate-800 rounded-full h-1.5 overflow-hidden"><div class="' + (isCompleted ? 'bg-emerald-400' : 'bg-amber-400') + ' h-1.5 rounded-full" style="width: ' + pct + '%"></div></div>'
+      + '<span class="font-mono text-[11px] ' + (isCompleted ? 'text-emerald-400' : 'text-amber-300') + ' font-bold">' + stageLabel + '</span>'
+      + '</div>'
+      + '<div class="text-[10px] text-slate-400 mt-0.5">' + escapeHtml(currentStage ? currentStage.roleName : '') + '</div>'
+      + '</td>'
+      + '<td class="py-3.5 px-4 font-mono text-[11px] text-blue-300">' + escapeHtml(currentStage ? currentStage.roleName.split('(')[0].trim() : '--') + '</td>'
+      + '<td class="py-3.5 px-4">' + statusBadgeOf(inst) + '</td>'
+      + '<td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">' + actions + '</td>'
+      + '</tr>';
+  }).join('');
+}
 
-        // 指标
-        document.getElementById('metric-total').textContent = String(list.length);
-        document.getElementById('metric-running').textContent = String(list.filter((i) => i.status === 'running').length);
-        document.getElementById('metric-gate').textContent = String(list.filter((i) => i.status === 'waiting_gate').length);
-        document.getElementById('metric-done').textContent = String(list.filter((i) => i.status === 'completed').length);
+async function loadInstances() {
+  try {
+    const results = await Promise.all([fetch('/api/pipeline-instances'), fetch('/api/pipelines'), fetch('/api/workspaces')]);
+    const instJson = await results[0].json();
+    const pipeJson = await results[1].json();
+    const wsJson = await results[2].json();
 
-        if (list.length === 0) {
-          container.innerHTML = `
-            <div class="p-8 rounded-xl bg-[#0c1220] border border-slate-800 text-center space-y-2">
-              <div class="text-2xl">🚀</div>
-              <div class="text-slate-300 font-sans font-medium">当前暂无运行中的多角色流水线任务</div>
-              <p class="text-[11px] text-slate-500 font-sans">点击右上角「启动新流水线任务」开启四阶段研发闭环。</p>
-            </div>`;
-          return;
-        }
+    allInstances = (instJson.code === 0 && Array.isArray(instJson.data)) ? instJson.data : [];
+    allPipelines = (pipeJson.code === 0 && Array.isArray(pipeJson.data)) ? pipeJson.data : [];
+    const wsList = (wsJson.code === 0 && Array.isArray(wsJson.data)) ? wsJson.data : [];
 
-        container.innerHTML = '';
-        list.forEach((inst) => {
-          const statusCls = inst.status === 'completed'
-            ? 'bg-emerald-950 text-emerald-300 border-emerald-800/60'
-            : inst.status === 'waiting_gate'
-            ? 'bg-purple-950 text-purple-300 border-purple-800/60'
-            : inst.status === 'running'
-            ? 'bg-amber-950 text-amber-300 border-amber-800/60'
-            : 'bg-slate-900 text-slate-400 border-slate-700';
+    const elTotal = document.getElementById('metric-total');
+    if (elTotal) elTotal.textContent = String(allInstances.length);
+    const elRunning = document.getElementById('metric-running');
+    if (elRunning) elRunning.textContent = String(allInstances.filter((i) => i.status === 'running').length);
+    const elGate = document.getElementById('metric-gate');
+    if (elGate) elGate.textContent = String(allInstances.filter((i) => i.status === 'waiting_gate').length);
+    const elDone = document.getElementById('metric-done');
+    if (elDone) elDone.textContent = String(allInstances.filter((i) => i.status === 'completed').length);
 
-          const card = document.createElement('div');
-          card.className = 'p-5 rounded-xl bg-[#0c1220] border border-slate-800 hover:border-slate-700 transition space-y-3 shadow-lg';
-          card.innerHTML = `
-            <div class="flex items-center justify-between">
-              <div class="space-y-1 min-w-0">
-                <div class="flex items-center space-x-2">
-                  <span class="text-sm font-bold text-white">${escapeHtml(inst.instanceId)}</span>
-                  <span class="text-[10px] px-2 py-0.5 rounded font-mono border ${statusCls}">${inst.status.toUpperCase()}</span>
-                  <span class="text-[10px] text-slate-500 font-mono">模板: ${escapeHtml(inst.pipelineId)}</span>
-                </div>
-                <div class="text-xs text-slate-300 font-sans line-clamp-1">${escapeHtml(inst.taskPrompt)}</div>
-                <div class="text-[10px] text-slate-500 font-mono truncate">📁 工作区: ${escapeHtml(inst.workspacePath)}</div>
-              </div>
+    renderRows();
 
-              <div class="flex items-center space-x-2 font-sans flex-shrink-0">
-                ${inst.status === 'waiting_gate' ? `
-                  <button onclick="resolveGate('${escapeHtml(inst.instanceId)}', 'approve')" class="px-3 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow">
-                    ✓ 放行 Gatekeeper
-                  </button>
-                  <button onclick="resolveGate('${escapeHtml(inst.instanceId)}', 'reject')" class="px-3 py-1.5 rounded bg-rose-950 hover:bg-rose-900 text-rose-300 border border-rose-800/60 text-xs">
-                    ✕ 打回重做
-                  </button>
-                ` : ''}
-              </div>
-            </div>
-          `;
-          container.appendChild(card);
-        });
-      } catch (err) {
-        container.innerHTML = `<div class="p-4 rounded bg-rose-950/40 border border-rose-900/60 text-rose-300">读取失败: ${escapeHtml(err.message)}</div>`;
+    const modal = document.getElementById('new-pipeline-modal');
+    if (modal) {
+      const pipeSel = modal.querySelector('select');
+      if (pipeSel && allPipelines.length) {
+        pipeSel.innerHTML = allPipelines.map((p) => '<option value="' + escapeHtml(p.id) + '">' + escapeHtml(p.name) + ' (' + (p.stages || []).length + ' 阶段)</option>').join('');
+      }
+      const wsInput = modal.querySelector('input[type="text"]');
+      if (wsInput && wsList.length && !wsInput.value) {
+        wsInput.value = wsList[0].path;
       }
     }
-
-    async function resolveGate(instanceId, action) {
-      let reason;
-      if (action === 'reject') {
-        reason = prompt('请输入打回重做原因（将作为上下文注入给 Agent）：', '上游产出工件不完备');
-        if (reason === null) return;
-      }
-      try {
-        const res = await fetch(`/api/pipeline-instances/${encodeURIComponent(instanceId)}/gate`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action, reason }),
-        });
-        const json = await res.json();
-        if (json.code === 0) {
-          loadInstances();
-        } else {
-          alert('裁决下发失败: ' + json.message);
-        }
-      } catch (err) {
-        alert('网络异常: ' + err.message);
-      }
+  } catch (err) {
+    const tbody = document.getElementById('instances-table-body');
+    if (tbody) {
+      tbody.innerHTML = '<tr><td colspan="7" class="py-6 text-center text-rose-300 font-mono">读取任务失败: ' + escapeHtml(err.message) + '</td></tr>';
     }
+  }
+}
 
-    window.addEventListener('DOMContentLoaded', loadInstances);
+async function deleteInstance(id) {
+  if (!confirm('确定删除流水线任务 "' + id + '" 及其活动记录？此操作不可逆。')) return;
+  try {
+    const res = await fetch('/api/pipeline-instances/' + encodeURIComponent(id), { method: 'DELETE' });
+    const json = await res.json();
+    if (json.code === 0) loadInstances(); else alert('删除失败: ' + json.message);
+  } catch (err) {
+    alert('异常: ' + err.message);
+  }
+}
+
+async function createAndStartFromModal() {
+  const modal = document.getElementById('new-pipeline-modal');
+  if (!modal) return;
+  const pipelineId = modal.querySelector('select').value;
+  const workspacePath = modal.querySelector('input[type="text"]').value.trim();
+  const taskPrompt = modal.querySelector('textarea').value.trim();
+  if (!workspacePath) { alert('请填写目标工作区目录'); return; }
+  if (!taskPrompt) { alert('启动前必须输入明确的需求目标描述（用户指令）！'); return; }
+
+  try {
+    const res = await fetch('/api/pipeline-instances/start', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pipelineId, workspacePath, taskPrompt, instruction: taskPrompt }),
+    });
+    const json = await res.json();
+    if (json.code === 0) {
+      window.location.href = 'run-pipeline-detail.html?id=' + encodeURIComponent(json.data.instanceId);
+    } else {
+      alert('启动失败: ' + json.message);
+    }
+  } catch (err) {
+    alert('异常: ' + err.message);
+  }
+}
+
+window.addEventListener('DOMContentLoaded', () => {
+  // 将原型弹窗中的静态「立即创建并启动」链接改造为真实提交按钮
+  const modal = document.getElementById('new-pipeline-modal');
+  if (modal) {
+    const trigger = modal.querySelector('a.bg-purple-600');
+    if (trigger) {
+      trigger.removeAttribute('href');
+      trigger.style.cursor = 'pointer';
+      trigger.addEventListener('click', createAndStartFromModal);
+    }
+  }
+  loadInstances();
+});
+
   </script>
 </body>
 </html>
+
+
+
+

@@ -4,6 +4,20 @@ import os from 'node:os';
 import crypto from 'node:crypto';
 import * as sqliteModule from 'node:sqlite';
 
+/** 记忆存储模式定义（D39） */
+export type MemoryStorageMode = 'file' | 'sqlite' | 'hybrid' | 'disabled';
+
+export interface MemoryConfig {
+  mode: MemoryStorageMode;
+  filePath?: string;
+  sqlitePath?: string;
+  sqliteTable?: string;
+  sqliteFts?: boolean;
+  gitAutoAdd?: boolean;
+  embeddingModel?: string;
+  similarityThreshold?: number;
+}
+
 /** 一条记忆条目（全局或项目级） */
 export interface MemoryEntry {
   /** 记忆唯一 ID（SHA-256 前 12 位） */
@@ -207,14 +221,37 @@ export class SqliteMemoryAdapter implements MemoryAdapter {
 export class MemoryCascade {
   private projectAdapter: MemoryAdapter;
   private globalAdapter: MemoryAdapter;
+  private config: MemoryConfig;
 
-  constructor(workspacePath: string, globalDir?: string) {
-    this.projectAdapter = new MarkdownMemoryAdapter(workspacePath);
+  constructor(workspacePath: string, globalDir?: string, config?: Partial<MemoryConfig>) {
+    this.config = {
+      mode: config?.mode || 'file',
+      filePath: config?.filePath,
+      sqlitePath: config?.sqlitePath,
+      sqliteTable: config?.sqliteTable,
+      sqliteFts: config?.sqliteFts,
+      gitAutoAdd: config?.gitAutoAdd,
+      embeddingModel: config?.embeddingModel,
+      similarityThreshold: config?.similarityThreshold,
+    };
+
+    if (this.config.mode === 'sqlite') {
+      const dbPath = this.config.sqlitePath
+        ? (path.isAbsolute(this.config.sqlitePath) ? this.config.sqlitePath : path.join(workspacePath, this.config.sqlitePath))
+        : path.join(workspacePath, '.harness', 'project-memory.sqlite');
+      this.projectAdapter = new SqliteMemoryAdapter(dbPath);
+    } else {
+      this.projectAdapter = new MarkdownMemoryAdapter(workspacePath);
+    }
+
     this.globalAdapter = new MarkdownMemoryAdapter(globalDir ?? os.homedir());
   }
 
   /** 装配：合并全局与项目记忆，项目级覆盖同 ID */
   public async assemble(query?: string, topK = 10): Promise<MemoryEntry[]> {
+    if (this.config.mode === 'disabled') {
+      return [];
+    }
     const project = await this.projectAdapter.list();
     const global = await this.globalAdapter.list();
     // 项目级优先，全局补充
@@ -237,6 +274,9 @@ export class MemoryCascade {
 
   /** 项目级记忆写入 */
   public async appendProject(content: string, source?: string): Promise<MemoryEntry> {
+    if (this.config.mode === 'disabled') {
+      throw new Error('当前工作区已禁用记忆存储');
+    }
     return this.projectAdapter.append({ content, source, scope: 'project' });
   }
 
@@ -247,6 +287,7 @@ export class MemoryCascade {
 
   /** 以 System Prompt 片段注入：格式化当前装配结果 */
   public async toPromptFragment(query?: string): Promise<string> {
+    if (this.config.mode === 'disabled') return '';
     const entries = await this.assemble(query);
     if (entries.length === 0) return '';
     const lines = entries.map((e) => `- [${e.scope.toUpperCase()}] ${e.content.split('\n')[0].slice(0, 80)}`).join('\n');
@@ -268,12 +309,16 @@ export interface MigrateMemoryOptions {
   targetDbPath?: string;
   /** 'lossless-migrate' 平滑无损迁移 | 'fresh-start' 全新起步，丢弃测试数据 */
   mode: 'lossless-migrate' | 'fresh-start';
+  /** 迁移源格式（缺省 file） */
+  sourceMode?: MemoryStorageMode;
 }
 
 export interface MigrateMemoryResult {
   migrated: number;
   skipped: number;
   backupPath?: string;
+  targetMode: MemoryStorageMode;
+  targetPath: string;
 }
 
 /**
@@ -283,7 +328,8 @@ export interface MigrateMemoryResult {
  * 2. fresh-start：原文件备份为 .bak 后清空，全新起步。
  */
 export async function migrateMemory(options: MigrateMemoryOptions): Promise<MigrateMemoryResult> {
-  const mdPath = path.join(options.workspacePath, '.harness', 'memory.md');
+  const ws = path.resolve(options.workspacePath);
+  const mdPath = path.join(ws, '.harness', 'memory.md');
   const backupPath = fs.existsSync(mdPath) ? `${mdPath}.bak` : undefined;
 
   // 1. 自动生成 .bak 备份（满足安全留痕）
@@ -296,13 +342,14 @@ export async function migrateMemory(options: MigrateMemoryOptions): Promise<Migr
     if (fs.existsSync(mdPath)) {
       fs.writeFileSync(mdPath, '', 'utf8');
     }
-    return { migrated: 0, skipped: 0, backupPath };
+    return { migrated: 0, skipped: 0, backupPath, targetMode: 'file', targetPath: mdPath };
   }
 
   // lossless-migrate
   if (!options.targetDbPath) throw new Error('平滑迁移需要提供 targetDbPath 参数');
-  const mdAdapter = new MarkdownMemoryAdapter(options.workspacePath);
-  const sqliteAdapter = new SqliteMemoryAdapter(options.targetDbPath);
+  const targetDb = path.isAbsolute(options.targetDbPath) ? options.targetDbPath : path.join(ws, options.targetDbPath);
+  const mdAdapter = new MarkdownMemoryAdapter(ws);
+  const sqliteAdapter = new SqliteMemoryAdapter(targetDb);
 
   const entries = await mdAdapter.list();
   let migrated = 0;
@@ -316,5 +363,5 @@ export async function migrateMemory(options: MigrateMemoryOptions): Promise<Migr
     else skipped++;
   }
 
-  return { migrated, skipped, backupPath };
+  return { migrated, skipped, backupPath, targetMode: 'sqlite', targetPath: targetDb };
 }

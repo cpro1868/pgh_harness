@@ -41,6 +41,11 @@ export interface TurnLoopOptions {
   userAttachments?: string[];
   chat: ChatFn;
   executeTool: ToolExecutor;
+  /**
+   * 运行中的人类干预指令抽取器：每个推理步开始前调用一次，
+   * 返回的每条指令作为独立 user 消息注入本轮上下文（流水线人机协同，WBS-02-04-02）。
+   */
+  drainUserMessages?: () => string[];
   signal?: AbortSignal;
   onEvent?: (event: TurnEvent) => void;
   onDelta?: (kind: 'reasoning' | 'content', text: string) => void;
@@ -105,6 +110,15 @@ export class TurnLoop {
 
       stepsUsed += 1;
       emit('step-start', { step: stepsUsed });
+
+      // 运行中人类干预：每步开始前抽取待注入指令，作为独立 user 消息进入上下文
+      for (const injected of this.options.drainUserMessages?.() ?? []) {
+        const text = injected.trim();
+        if (text) {
+          messages.push({ role: 'user', content: `[人类实时干预指令]\n${text}` });
+          append('stream/chunk', { turnId: this.options.turnId, type: 'content', chunk: `\n> 🧑💻 人类干预：${text}\n` });
+        }
+      }
 
       const turn = await this.options.chat(messages, TurnLoop.toolSchemas(), (kind, text) => {
         this.options.onDelta?.(kind, text);

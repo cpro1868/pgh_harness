@@ -1,24 +1,33 @@
-# 依赖目录（任何层级，零 Native 项目也绝无例外）
+# ==============================================================================
+# Purple Grapes Harness (PGH) .gitignore
+# 遵循规范: AGENTS.md (0.1 安全铁律) & docs/规范/安全工程方法论.md
+# ==============================================================================
+
+# 1. 依赖目录（零 Native 依赖项目，统一包管理器 pnpm）
 node_modules/
 
-# 构建产物与缓存
+# 2. 构建产物、临时缓存与覆盖率
 dist/
 build/
-.next/
-out/
 coverage/
 *.tsbuildinfo
+.temp/
+tmp/
+*.bak
 
-# 本地数据目录（运行时数据库、锁文件、日志、会话私有 blob）
+# 3. 本地运行时数据、数据库与测试工作区（安全工程方法论 §4/§5/§11 强制约束）
 .pg_harness/
 .pg_harness*/
+.workspace_*
+.workspace_test_*
 *.db
 *.db-wal
 *.db-shm
+*.db-journal
 logs/
 *.log
 
-# 密钥与本地环境（安全红线：绝不入库）
+# 4. 凭据、私钥与本地环境变量（安全红线：绝不出机、绝不进 Git）
 .env
 .env.*
 !.env.example
@@ -27,14 +36,18 @@ logs/
 *.p12
 secrets/
 
-# 外部参考源码库：非本项目源码，且体量大、许可证归属第三方，
-# 不纳入版本库（详见 WBS 第 7 节偏差登记与 AGENTS.md 版权合规要求）
+# 5. 外部参考源码库（体积大、许可证归属第三方，不纳入版本库）
 reference/
 
-# 编辑器与操作系统杂项
+# 6. 本地过程性会话台账与交接便签（防止本地频繁日常调试冲突，不纳入公共版本库）
+SESSION.md
+
+# 7. 编辑器与操作系统杂项
 .DS_Store
 Thumbs.db
 desktop.ini
 .idea/
+.vscode/
 *.swp
 *~
+

@@ -1,17 +1,24 @@
-/* Purple Grapes Harness (PGH) 统一设计语言与全局布局规范 */
-@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Inter:wght@400;500;600;700&display=swap');
 
 :root {
   --bg-app: #070a12;
-  --bg-topbar: #0a0f1d;
-  --bg-nav: #090d18;
-  --bg-sidebar: #0c101c;
-  --bg-card: #0f1523;
-  --border-color: #1a2333;
+  --bg-nav: #0b0f19;
+  --bg-sidebar: #0d1322;
+  --bg-card: #131b2e;
+  --bg-card-hover: #19233c;
+  --border-color: #1e293b;
+  --border-subtle: #162032;
+  --border-focus: #3b82f6;
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
-  --accent-purple: #9333ea;
+  --text-dim: #64748b;
   --accent-blue: #3b82f6;
+  --accent-blue-hover: #2563eb;
+  --accent-emerald: #10b981;
+  --accent-amber: #f59e0b;
+  --accent-rose: #f43f5e;
+  --accent-purple: #a855f7;
+  --accent-cyan: #06b6d4;
 }
 
 * {
@@ -20,22 +27,167 @@
   padding: 0;
 }
 
+/* 允许自然垂直滚动，杜绝全屏截断问题 */
 body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   background-color: var(--bg-app);
   color: var(--text-main);
-  height: 100vh;
-  width: 100vw;
-  overflow: hidden;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
   display: flex;
-  flex-direction: column;
+}
+
+/* 针对需要固定高度双栏滚动的页面容器 */
+.h-app-screen {
+  height: 100vh;
+  overflow: hidden;
 }
 
 code, pre, .font-mono {
-  font-family: 'JetBrains Mono', Consolas, Monaco, monospace !important;
+  font-family: 'JetBrains Mono', Consolas, Monaco, "Courier New", monospace !important;
 }
 
-/* 全局统一舒适深色滚动条 (加粗为 9px，提高可视度与抓取手感) */
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: #243046;
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+/* Global Leftmost Activity Bar */
+.activity-bar {
+  width: 56px;
+  background-color: var(--bg-nav);
+  border-right: 1px solid var(--border-color);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  flex-shrink: 0;
+  z-index: 50;
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+
+.activity-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-dim);
+  text-decoration: none;
+  margin-bottom: 6px;
+  position: relative;
+  transition: all 0.15s ease;
+}
+.activity-btn:hover {
+  color: var(--text-main);
+  background-color: rgba(255, 255, 255, 0.05);
+}
+.activity-btn.active {
+  color: var(--accent-blue);
+  background-color: rgba(59, 130, 246, 0.12);
+}
+.activity-btn.active::before {
+  content: '';
+  position: absolute;
+  left: -8px;
+  top: 8px;
+  bottom: 8px;
+  width: 3px;
+  border-radius: 0 2px 2px 0;
+  background-color: var(--accent-blue);
+}
+
+.activity-divider {
+  width: 28px;
+  height: 1px;
+  background-color: var(--border-color);
+  margin: 8px 0;
+}
+
+/* Top App Bar */
+.top-app-bar {
+  height: 46px;
+  background: #090e1c;
+  border-bottom: 1px solid var(--border-color);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 16px;
+  flex-shrink: 0;
+}
+
+/* 锁定的工作区芯片标签 (会话运行中不可更改) */
+.locked-workspace-chip {
+  display: flex;
+  align-items: center;
+  background: rgba(15, 23, 42, 0.8);
+  border: 1px solid #334155;
+  padding: 3px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  color: #cbd5e1;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Stream Cursor Blink */
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+.cursor-blink {
+  display: inline-block;
+  width: 7px;
+  height: 15px;
+  background-color: #60a5fa;
+  vertical-align: middle;
+  animation: blink 0.9s infinite;
+  margin-left: 2px;
+}
+
+/* ==========================================================================
+   PGH 应用外壳（顶栏 + 主体）适配层
+   --------------------------------------------------------------------------
+   原型 CSS 的 body 为横向 flex（首个直接子元素是 .activity-bar）。
+   本项目的「配置类页面」结构为 [header] + [主体容器]，必须纵向堆叠，
+   否则顶栏会被压成左侧一列、主体被推走，从而在左侧出现大片空白。
+   以下规则仅作用于「首个子元素是 header」的页面，原型型页面不受影响。
+   ========================================================================== */
+body:has(> header),
+body.app-shell {
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* 这类页面中 .activity-bar 位于主体容器内部，需按容器高度铺满而非 100vh */
+body:has(> header) .activity-bar,
+body.app-shell .activity-bar {
+  height: 100%;
+  position: static;
+}
+
+/* 主内容滚动容器：撑满剩余高度并独立滚动，杜绝顶部无效留白 */
+body:has(> header) > .flex-1,
+body.app-shell > .flex-1 {
+  min-height: 0;
+}
+
+/* 全局统一舒适深色滚动条（用户要求加粗至 9px，覆盖原型 6px 默认值） */
 ::-webkit-scrollbar {
   width: 9px;
   height: 9px;
@@ -51,64 +203,4 @@ code, pre, .font-mono {
 }
 ::-webkit-scrollbar-thumb:hover {
   background: #475569;
-  border-radius: 5px;
-  border: 2px solid transparent;
-  background-clip: padding-box;
-}
-  background: #334155;
-}
-
-/* 全系统严格统一的 48px 一级侧边栏 (Activity Bar) */
-.activity-bar {
-  width: 48px;
-  background-color: var(--bg-nav);
-  border-right: 1px solid var(--border-color);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 8px 0;
-  flex-shrink: 0;
-  height: calc(100vh - 40px);
-}
-
-.activity-btn {
-  width: 36px;
-  height: 36px;
-  border-radius: 8px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #64748b;
-  text-decoration: none;
-  margin-bottom: 8px;
-  position: relative;
-  transition: all 0.15s ease;
-}
-
-.activity-btn:hover {
-  color: #f1f5f9;
-  background-color: rgba(255, 255, 255, 0.05);
-}
-
-.activity-btn.active {
-  color: #c084fc;
-  background-color: rgba(168, 85, 247, 0.16);
-}
-
-.activity-btn.active::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  top: 8px;
-  bottom: 8px;
-  width: 3px;
-  border-radius: 0 2px 2px 0;
-  background-color: #a855f7;
-}
-
-.activity-divider {
-  width: 24px;
-  height: 1px;
-  background-color: var(--border-color);
-  margin: 6px 0;
 }

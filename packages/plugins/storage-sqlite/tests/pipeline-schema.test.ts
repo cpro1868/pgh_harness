@@ -152,5 +152,67 @@ describe('TC-02-01-001: 流水线模板与阶段数据模型 (WBS-02-01-01)', ()
     assert.ok(roles.some((r) => r.includes('编码')), '应包含编码阶段');
     assert.ok(roles.some((r) => r.includes('验收')), '应包含验收阶段');
     assert.ok(PIPELINE_DEFAULT_TEMPLATE.stages.every((s, i) => s.order === i + 1), '阶段顺序必须连续递增');
+    assert.ok(
+      PIPELINE_DEFAULT_TEMPLATE.stages.every((s) => s.modelId === undefined),
+      '内置模板不得硬编码模型（模型由用户在 Provider 资产中真实配置，UI 动态绑定）',
+    );
+  });
+
+  // ---------- 实例持久化与全生命周期 (WBS-02-04-01 / WBS-02-04-02) ----------
+
+  it('流水线实例 CRUD：保存草稿、查询、更新状态与详细活动日志、删除', () => {
+    const inst = {
+      instanceId: 'inst_test_01',
+      name: '实现支付网关签名防重放',
+      pipelineId: 'pipeline_std_rd',
+      pipelineName: '标准软件工程四阶段研发泳道',
+      workspacePath: '/workspace/demo',
+      taskPrompt: '完善防重放签名校验与单测',
+      status: 'draft' as const,
+      currentStageOrder: 1,
+      stages: PIPELINE_DEFAULT_TEMPLATE.stages,
+      logs: [
+        {
+          id: 'log_1',
+          stageId: 'stg_prd',
+          stageOrder: 1,
+          roleName: '需求分析师',
+          actor: 'agent' as const,
+          type: 'thought' as const,
+          content: '正在查阅代码...',
+          timestamp: Date.now(),
+        },
+      ],
+      artifacts: [
+        {
+          stageId: 'stg_prd',
+          roleName: '需求分析师',
+          path: 'docs/PRD.md',
+          sizeBytes: 1024,
+          timestamp: Date.now(),
+        },
+      ],
+      gateRecords: [],
+      tokensUsed: 1200,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    };
+
+    store.saveInstance(inst);
+    const loaded = store.getInstance('inst_test_01');
+    assert.ok(loaded);
+    assert.equal(loaded!.status, 'draft');
+    assert.equal(loaded!.logs.length, 1);
+    assert.equal(loaded!.artifacts.length, 1);
+    assert.equal(loaded!.tokensUsed, 1200);
+
+    // 列表倒序
+    const list = store.listInstances();
+    assert.equal(list.length, 1);
+    assert.equal(list[0].instanceId, 'inst_test_01');
+
+    // 删除
+    assert.equal(store.deleteInstance('inst_test_01'), true);
+    assert.equal(store.getInstance('inst_test_01'), undefined);
   });
 });

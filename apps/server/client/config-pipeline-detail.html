@@ -1,0 +1,425 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="ico/pgh.svg">
+  <title>流水线模板与角色流程设定 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .ide-top-bar {
+      height: 40px;
+      background: #090d18;
+      border-bottom: 1px solid #1a2333;
+      padding: 0 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden font-sans">
+
+  <!-- 1. 全系统严格一致的 48px 一级侧边栏 -->
+  <aside class="activity-bar h-full">
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+    </a>
+    <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+    </a>
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+    </a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+    </a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+    </a>
+    <a href="config-pipelines.html" class="activity-btn active" title="流水线模板设定">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+    </a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+    </a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+    <div class="flex-1"></div>
+    <a href="config-settings.html" class="activity-btn" title="系统全局设置 (Settings)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+    </a>
+  </aside>
+
+  <!-- 2. 主体区 -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    
+    <header class="ide-top-bar">
+      <div class="flex items-center space-x-2">
+        <a href="config-pipelines.html" class="text-slate-400 hover:text-white flex items-center pr-2 border-r border-slate-800">
+          <span>&larr; 返回模板列表</span>
+        </a>
+        <span class="font-bold text-white">流水线角色与阶段流转设置:</span>
+        <span id="pipe-name-display" class="font-mono text-purple-300 font-bold">载入中...</span>
+        <span id="pipe-id-display" class="text-slate-500 font-mono text-[10px]"></span>
+      </div>
+
+      <div class="flex items-center space-x-2">
+        <button onclick="addNewStage()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700 font-medium">+ 增加新阶段</button>
+        <button onclick="saveCurrentPipelineTemplate()" class="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-medium text-xs shadow">保存模板修改</button>
+      </div>
+    </header>
+
+    <!-- 主体双栏布局：左侧阶段有序列表，右侧阶段详细设置 -->
+    <div class="flex-1 flex overflow-hidden">
+      
+      <!-- 左侧阶段列表与排序 -->
+      <div class="w-80 bg-[#090d18] border-r border-[#1a2333] flex flex-col flex-shrink-0">
+
+        <!-- 模板基础信息（名称 / 描述，统一在此处设置，无弹窗） -->
+        <div class="p-3 border-b border-[#1a2333] space-y-2.5">
+          <div class="text-xs font-bold text-white uppercase font-mono">模板基础信息</div>
+          <div class="space-y-1">
+            <label class="block text-[10px] text-slate-400 font-sans">模板名称</label>
+            <input id="form-pipe-name" oninput="syncPipelineMeta('name', this.value)" type="text" placeholder="流水线模板名称" class="w-full bg-[#0b101c] border border-slate-700 rounded px-2.5 py-1.5 text-white text-xs font-medium focus:border-purple-500">
+          </div>
+          <div class="space-y-1">
+            <label class="block text-[10px] text-slate-400 font-sans">模板描述</label>
+            <textarea id="form-pipe-desc" oninput="syncPipelineMeta('description', this.value)" rows="2" placeholder="用途说明（可留空）" class="w-full bg-[#0b101c] border border-slate-700 rounded px-2.5 py-1.5 text-slate-300 text-[11px] font-sans focus:border-purple-500"></textarea>
+          </div>
+        </div>
+
+        <div class="p-3 border-b border-[#1a2333] flex items-center justify-between">
+          <span class="text-xs font-bold text-white uppercase font-mono">阶段流转顺序 (<span id="stage-count-badge">0</span> Stages)</span>
+          <span class="text-[10px] text-slate-500">按序推进执行</span>
+        </div>
+
+        <div id="stages-nav-list" class="flex-1 overflow-y-auto p-2.5 space-y-2 font-mono text-xs">
+          <!-- 动态渲染 -->
+        </div>
+      </div>
+
+      <!-- 右侧：当前选中阶段的角色与详细参数设定表单 -->
+      <div class="flex-1 overflow-y-auto p-6 space-y-5 bg-[#070a12] text-xs">
+        
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div>
+            <h3 id="stage-editor-title" class="text-sm font-bold text-white">阶段详细设定</h3>
+            <p class="text-xs text-slate-400 mt-0.5">配置该阶段负责的 Agent 角色职责、模型绑定、提示词模板、工具白名单与工件传递规则。</p>
+          </div>
+          <div class="flex items-center space-x-2 shrink-0">
+            <span id="stage-id-badge" class="font-mono text-purple-400 px-2 py-0.5 rounded bg-purple-950/80 border border-purple-800/60">Stage ID</span>
+            <button onclick="deleteCurrentStage()" class="px-2.5 py-1 rounded bg-rose-950/60 hover:bg-rose-900/70 text-rose-300 border border-rose-900/60 font-medium">删除此阶段</button>
+          </div>
+        </div>
+
+        <!-- 0. 阶段语义名称 -->
+        <div>
+          <label class="block font-medium text-slate-300 mb-1">阶段语义名称 (Stage Name · 可编辑)：</label>
+          <input id="form-stage-name" oninput="syncCurrentStageField('name', this.value)" type="text" placeholder="例如：需求分析与规格提炼" class="w-full bg-[#0b101c] border border-slate-700 rounded px-3 py-1.5 text-white font-medium focus:border-purple-500">
+          <div class="text-[10px] text-slate-500 mt-0.5">在模板卡片与工作台中显示的阶段标题，与下方角色名独立。</div>
+        </div>
+
+        <!-- 1. 角色与模型绑定 -->
+        <div class="grid grid-cols-2 gap-4">
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">负责 Agent 角色名称 (Role Name)：</label>
+            <input id="form-role-name" oninput="syncCurrentStageField('roleName', this.value)" type="text" class="w-full bg-[#0b101c] border border-slate-700 rounded px-3 py-1.5 text-white font-medium focus:border-purple-500">
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-300 mb-1">推荐调用大模型 (Model Binding)：</label>
+            <select id="form-model-id" onchange="syncCurrentStageField('modelId', this.value)" class="w-full bg-[#0b101c] border border-slate-700 rounded px-3 py-1.5 text-white font-mono focus:border-purple-500">
+              <option value="">载入中...</option>
+            </select>
+          </div>
+        </div>
+
+        <!-- 2. 角色专有 System Prompt 契约模板 -->
+        <div>
+          <label class="block font-medium text-slate-300 mb-1">角色 System Prompt 约束与指示模板：</label>
+          <textarea id="form-prompt-template" oninput="syncCurrentStageField('promptTemplate', this.value)" rows="6" class="w-full bg-[#0b101c] border border-slate-700 rounded p-3 text-slate-200 font-mono leading-relaxed focus:outline-none focus:border-purple-500"></textarea>
+        </div>
+
+        <!-- 3. 工具权限白名单 -->
+        <div>
+          <label class="block font-medium text-slate-300 mb-2">本阶段角色允许调用的工具清单 (按需收敛)：</label>
+          <div class="grid grid-cols-3 gap-2.5 font-mono">
+            <label class="flex items-center space-x-2 p-2 rounded bg-[#0b101c] border border-slate-800 cursor-pointer">
+              <input type="checkbox" value="read_file" onchange="toggleToolAllowed('read_file', this.checked)" class="tool-chk rounded text-purple-600 bg-slate-900 border-slate-700">
+              <span class="text-slate-200">read_file (读文件)</span>
+            </label>
+            <label class="flex items-center space-x-2 p-2 rounded bg-[#0b101c] border border-slate-800 cursor-pointer">
+              <input type="checkbox" value="edit_file" onchange="toggleToolAllowed('edit_file', this.checked)" class="tool-chk rounded text-purple-600 bg-slate-900 border-slate-700">
+              <span class="text-slate-200">edit_file (修改文件)</span>
+            </label>
+            <label class="flex items-center space-x-2 p-2 rounded bg-[#0b101c] border border-slate-800 cursor-pointer">
+              <input type="checkbox" value="write_file" onchange="toggleToolAllowed('write_file', this.checked)" class="tool-chk rounded text-purple-600 bg-slate-900 border-slate-700">
+              <span class="text-slate-200">write_file (写文件)</span>
+            </label>
+            <label class="flex items-center space-x-2 p-2 rounded bg-[#0b101c] border border-slate-800 cursor-pointer">
+              <input type="checkbox" value="glob" onchange="toggleToolAllowed('glob', this.checked)" class="tool-chk rounded text-purple-600 bg-slate-900 border-slate-700">
+              <span class="text-slate-200">glob (文件搜索)</span>
+            </label>
+            <label class="flex items-center space-x-2 p-2 rounded bg-[#0b101c] border border-slate-800 cursor-pointer">
+              <input type="checkbox" value="grep" onchange="toggleToolAllowed('grep', this.checked)" class="tool-chk rounded text-purple-600 bg-slate-900 border-slate-700">
+              <span class="text-slate-200">grep (内容检索)</span>
+            </label>
+            <label class="flex items-center space-x-2 p-2 rounded bg-[#0b101c] border border-slate-800 cursor-pointer">
+              <input type="checkbox" value="bash" onchange="toggleToolAllowed('bash', this.checked)" class="tool-chk rounded text-purple-600 bg-slate-900 border-slate-700">
+              <span class="text-slate-200">bash (命令执行)</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 4. 工件传递契约与 Gatekeeper 审批门 -->
+        <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-3">
+          <h4 class="font-bold text-white">工件交付 (Artifact) 与流转控制</h4>
+          
+          <div class="space-y-1">
+            <label class="block text-slate-400">产出交付工件路径清单 (逗号或换行分隔，留空按 Git 状态追踪)：</label>
+            <input id="form-artifact-paths" oninput="syncCurrentStageArtifacts(this.value)" type="text" placeholder="例如: docs/**, packages/protocol/**" class="w-full bg-[#070b14] border border-slate-700 rounded px-2.5 py-1.5 text-blue-300 font-mono text-[11px] focus:border-purple-500">
+            <div class="text-[10px] text-slate-500">留空时自动基于 Git 工作区追踪该阶段全部改动文件</div>
+          </div>
+
+          <!-- Gatekeeper 开关 -->
+          <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between">
+            <div>
+              <div class="font-semibold text-white">人工审核卡点 (Gatekeeper Required)</div>
+              <div class="text-[11px] text-slate-400">本阶段工件产出后，必须等待人类操作者点击「确认放行」后，流水线才允许唤醒下一阶段 Agent。</div>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="form-gatekeeper-chk" onchange="syncCurrentStageField('gatekeeperRequired', this.checked)" type="checkbox" class="sr-only peer">
+              <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-purple-600"></div>
+            </label>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
+      return String(text === undefined || text === null ? '' : text).replace(/[&<>"']/g, (ch) => map[ch]);
+    }
+
+    let pipelineData = null;
+    let selectedStageIndex = 0;
+    let availableModels = [];
+
+    // 从系统真实 Provider 资产加载已配置模型（不再硬编码）
+    async function loadModels() {
+      try {
+        const res = await fetch('/api/providers');
+        const json = await res.json();
+        const list = json.data || [];
+        availableModels = [];
+        list.forEach((p) => (p.models || []).forEach((m) => availableModels.push({ id: m.id, provider: p.name })));
+      } catch (err) {
+        console.warn('Load models failed:', err);
+      }
+    }
+
+    // 渲染模型下拉：含「跟随全局默认」空选项；若阶段存有失效 modelId 也如实列出并警示
+    function renderModelOptions(select, selectedId) {
+      const ids = new Set(availableModels.map((m) => m.id));
+      const opts = [];
+      if (selectedId && !ids.has(selectedId)) {
+        opts.push(`<option value="${escapeHtml(selectedId)}">${escapeHtml(selectedId)}（未在当前 Provider 配置中）</option>`);
+      }
+      opts.push('<option value="">（跟随全局默认模型）</option>');
+      availableModels.forEach((m) => {
+        opts.push(`<option value="${escapeHtml(m.id)}">${escapeHtml(m.id)}（${escapeHtml(m.provider)}）</option>`);
+      });
+      if (availableModels.length === 0) {
+        opts.push('<option value="" disabled>（系统尚未配置任何模型，请先到「模型与 Provider 资产」添加）</option>');
+      }
+      select.innerHTML = opts.join('');
+      select.value = selectedId || '';
+    }
+
+    async function init() {
+      const urlParams = new URLSearchParams(window.location.search);
+      const pipeId = urlParams.get('id') || 'pipeline_std_rd';
+
+      await loadModels();
+
+      try {
+        const res = await fetch('/api/pipelines');
+        const json = await res.json();
+        const list = json.data || [];
+        pipelineData = list.find((p) => p.id === pipeId) || list[0];
+        if (!pipelineData) {
+          alert('未找到该流水线模板');
+          window.location.href = 'config-pipelines.html';
+          return;
+        }
+
+        document.getElementById('pipe-name-display').textContent = pipelineData.name;
+        document.getElementById('pipe-id-display').textContent = `(${pipelineData.id})`;
+        document.getElementById('form-pipe-name').value = pipelineData.name || '';
+        document.getElementById('form-pipe-desc').value = pipelineData.description || '';
+        renderStagesNav();
+        selectStage(0);
+      } catch (err) {
+        alert('读取模板异常: ' + err.message);
+      }
+    }
+
+    function syncPipelineMeta(field, value) {
+      if (!pipelineData) return;
+      pipelineData[field] = value;
+      if (field === 'name') {
+        document.getElementById('pipe-name-display').textContent = value || '（未命名）';
+      }
+    }
+
+    function renderStagesNav() {
+      const container = document.getElementById('stages-nav-list');
+      const stages = pipelineData.stages || [];
+      document.getElementById('stage-count-badge').textContent = String(stages.length);
+
+      container.innerHTML = stages.map((s, idx) => {
+        const isSelected = idx === selectedStageIndex;
+        return `
+          <div onclick="selectStage(${idx})" class="p-3 rounded-lg cursor-pointer transition ${isSelected ? 'bg-purple-950/30 border border-purple-500/80 shadow-md' : 'bg-[#0c1220] border border-slate-800 hover:border-slate-700'}">
+            <div class="flex items-center justify-between">
+              <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded ${isSelected ? 'bg-purple-500/30 text-purple-300' : 'bg-slate-800 text-slate-400'}">STAGE ${String(idx + 1).padStart(2, '0')}</span>
+              <span class="text-[10px] ${s.gatekeeperRequired ? 'text-amber-400' : 'text-slate-500'} font-mono">${s.gatekeeperRequired ? '需人工确认' : '自动放行'}</span>
+            </div>
+            <h4 class="text-xs font-bold text-white mt-1.5 truncate">${escapeHtml(s.name || s.roleName)}</h4>
+            <div class="text-[10px] text-slate-500 truncate mt-1">${escapeHtml(s.roleName)} · 产出: ${(s.artifactPaths || []).join(', ') || 'Git 改动'}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function selectStage(index) {
+      selectedStageIndex = index;
+      const stage = (pipelineData.stages || [])[index];
+      if (!stage) return;
+
+      renderStagesNav();
+
+      document.getElementById('stage-editor-title').textContent = `阶段 ${index + 1} 详细设定: ${stage.name || stage.roleName}`;
+      document.getElementById('stage-id-badge').textContent = `Stage ID: ${stage.id}`;
+      document.getElementById('form-stage-name').value = stage.name || '';
+      document.getElementById('form-role-name').value = stage.roleName || '';
+      renderModelOptions(document.getElementById('form-model-id'), stage.modelId || '');
+      document.getElementById('form-prompt-template').value = stage.promptTemplate || '';
+      document.getElementById('form-artifact-paths').value = (stage.artifactPaths || []).join(', ');
+      document.getElementById('form-gatekeeper-chk').checked = Boolean(stage.gatekeeperRequired);
+
+      // 工具 checkbox
+      const tools = new Set(stage.toolsAllowed || []);
+      document.querySelectorAll('.tool-chk').forEach((chk) => {
+        chk.checked = tools.has(chk.value);
+      });
+    }
+
+    function syncCurrentStageField(field, value) {
+      const stage = (pipelineData.stages || [])[selectedStageIndex];
+      if (stage) {
+        stage[field] = value;
+        renderStagesNav();
+      }
+    }
+
+    function syncCurrentStageArtifacts(valStr) {
+      const stage = (pipelineData.stages || [])[selectedStageIndex];
+      if (stage) {
+        stage.artifactPaths = valStr.split(/[,，\n]/).map((s) => s.trim()).filter(Boolean);
+        renderStagesNav();
+      }
+    }
+
+    function toggleToolAllowed(toolName, checked) {
+      const stage = (pipelineData.stages || [])[selectedStageIndex];
+      if (!stage) return;
+      const set = new Set(stage.toolsAllowed || []);
+      if (checked) set.add(toolName); else set.delete(toolName);
+      stage.toolsAllowed = [...set];
+    }
+
+    // 内联新增阶段（默认填充可编辑字段，不再弹窗询问）
+    function addNewStage() {
+      const stages = pipelineData.stages || [];
+      const nextNo = stages.length + 1;
+      const newStage = {
+        id: `stg_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
+        pipelineId: pipelineData.id,
+        order: nextNo,
+        name: `新阶段 ${nextNo}`,
+        roleName: `自定义角色 ${nextNo}`,
+        promptTemplate: '',
+        modelId: availableModels[0]?.id || '',
+        toolsAllowed: ['read_file', 'glob', 'grep'],
+        artifactPaths: [],
+        gatekeeperRequired: true,
+      };
+      stages.push(newStage);
+      pipelineData.stages = stages;
+      selectStage(stages.length - 1);
+      document.getElementById('form-stage-name').focus();
+    }
+
+    // 删除当前阶段：自动重排 order，且至少保留 1 个阶段
+    function deleteCurrentStage() {
+      const stages = pipelineData.stages || [];
+      if (stages.length <= 1) {
+        alert('流水线至少需要保留一个阶段，无法删除');
+        return;
+      }
+      const stage = stages[selectedStageIndex];
+      const label = stage ? (stage.name || stage.roleName) : '';
+      if (!confirm(`确定删除阶段「${label}」吗？`)) return;
+
+      stages.splice(selectedStageIndex, 1);
+      stages.forEach((s, idx) => { s.order = idx + 1; });
+      pipelineData.stages = stages;
+
+      const nextIndex = Math.min(selectedStageIndex, stages.length - 1);
+      selectedStageIndex = nextIndex;
+      selectStage(nextIndex);
+    }
+
+    async function saveCurrentPipelineTemplate() {
+      const name = (pipelineData.name || '').trim();
+      if (!name) {
+        alert('模板名称不能为空');
+        document.getElementById('form-pipe-name').focus();
+        return;
+      }
+      pipelineData.name = name;
+      try {
+        const res = await fetch('/api/pipelines', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(pipelineData),
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          pipelineData = json.data;
+          document.getElementById('form-pipe-name').value = pipelineData.name;
+          document.getElementById('form-pipe-desc').value = pipelineData.description || '';
+          document.getElementById('pipe-name-display').textContent = pipelineData.name;
+          alert('✓ 流水线模板已保存并更新！');
+        } else {
+          alert('保存失败: ' + json.message);
+        }
+      } catch (err) {
+        alert('保存异常: ' + err.message);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', init);
+  </script>
+</body>
+</html>
+
