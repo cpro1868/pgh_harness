@@ -124,6 +124,15 @@
       </button>
       <button
         type="button"
+        id="topbar-delete-session-btn"
+        onclick="confirmDeleteActiveSession()"
+        title="删除当前会话及其所有事件"
+        class="hidden px-2 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 hover:text-white border border-rose-800/60 font-mono text-[10px] flex items-center space-x-1 transition"
+      >
+        <span>🗑️</span><span>删除会话</span>
+      </button>
+      <button
+        type="button"
         onclick="toggleRightPanel()"
         title="展开 / 收起右侧面板"
         class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
@@ -336,6 +345,51 @@
       <span class="text-[10px] [writing-mode:vertical-rl] tracking-widest text-slate-400 group-hover:text-white font-mono select-none">会话面板</span>
     </button>
 
+  </div>
+
+  <!-- 会话删除二次确认模态弹窗 (明确让用户确认并防误触) -->
+  <div id="delete-session-modal" class="hidden fixed inset-0 z-[80] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-md rounded-xl bg-[#0f172a] border border-rose-900/60 shadow-2xl overflow-hidden flex flex-col font-sans text-xs">
+      <div class="px-5 py-3.5 bg-rose-950/40 border-b border-rose-900/40 flex items-center justify-between">
+        <div class="flex items-center space-x-2 text-rose-300 font-bold text-sm">
+          <span>⚠️</span>
+          <span>删除会话确认</span>
+        </div>
+        <button type="button" onclick="closeDeleteSessionModal()" class="text-slate-400 hover:text-white text-base leading-none">&times;</button>
+      </div>
+      <div class="p-5 space-y-3.5 text-slate-300">
+        <p class="leading-relaxed">
+          您确定要彻底删除该会话记录吗？
+        </p>
+        <div class="p-3 rounded-lg bg-[#080d1a] border border-slate-800 space-y-1.5 font-mono text-[11px]">
+          <div class="text-slate-400">会话标题: <span id="del-modal-title" class="text-white font-semibold font-sans">--</span></div>
+          <div class="text-slate-400">会话 ID: <span id="del-modal-id" class="text-blue-300">--</span></div>
+          <div class="text-slate-400">绑定工作区: <span id="del-modal-ws" class="text-slate-300">--</span></div>
+        </div>
+        <div class="p-2.5 rounded bg-rose-950/30 border border-rose-900/50 text-[11px] text-rose-300 leading-normal flex items-start space-x-2">
+          <span class="text-xs">🚨</span>
+          <span>警告：此操作不可逆！该会话名下的所有对话、工具调用记录以及追加式事件日志将全部从数据库中永久清除。</span>
+        </div>
+      </div>
+      <div class="px-5 py-3 bg-[#0a0f1d] border-t border-slate-800 flex items-center justify-end space-x-2">
+        <button
+          type="button"
+          onclick="closeDeleteSessionModal()"
+          class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+        >
+          取消
+        </button>
+        <button
+          type="button"
+          id="del-modal-confirm-btn"
+          onclick="executeDeleteSession()"
+          class="px-4 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white font-semibold shadow transition flex items-center space-x-1"
+        >
+          <span>🗑️</span>
+          <span>确认彻底删除</span>
+        </button>
+      </div>
+    </div>
   </div>
 
   <!-- 首次启动破冰向导 (WBS-01-08-04 / D57)：冷启动两步打通端到端 -->
@@ -864,16 +918,16 @@
         <span class="text-white font-bold text-xs tracking-tight pointer-events-none drop-shadow-sm">${escapeHtml(badgeText)}</span>
         <span class="text-[9px] text-slate-300/80 font-mono truncate px-1 max-w-[90%] pointer-events-none">${escapeHtml(title.slice(0, 4))}</span>
 
-        <!-- 悬停浮层：外层紧贴色块边缘（无间隙，避免鼠标穿越死区导致浮层消失、删除按钮点不到），内层保留视觉间距 -->
-        <div class="session-preview hidden group-hover:block absolute right-full top-0 z-50 pr-2">
-          <div class="w-56 bg-[#0f172a] border border-slate-700 rounded-lg p-3 shadow-2xl text-left space-y-1.5">
+        <!-- 悬停浮层：外层紧贴色块边缘（带有向右延伸的安全内边距，防鼠标移动瞬间脱焦） -->
+        <div class="session-preview hidden group-hover:block absolute right-[calc(100%-8px)] top-0 z-50 pr-4 pointer-events-auto">
+          <div class="w-56 bg-[#0f172a] border border-slate-700 rounded-lg p-3 shadow-2xl text-left space-y-1.5 backdrop-blur-md">
             <div class="text-xs text-white font-semibold leading-snug line-clamp-2">${escapeHtml(title)}</div>
             <div class="flex items-center space-x-1 text-[10px] text-blue-300 font-mono truncate">
               <span>📁</span><span class="truncate">${escapeHtml(wsShort)}</span>
             </div>
             <div class="text-[9px] text-slate-400 font-mono">创建: ${escapeHtml(formatDateTime(sess.createdAt))}</div>
             <div class="text-[9px] text-slate-400 font-mono">更新: ${escapeHtml(formatDateTime(sess.updatedAt || sess.createdAt))}</div>
-            <div class="pt-1 border-t border-slate-800 flex items-center gap-1.5">
+            <div class="pt-1.5 border-t border-slate-800 flex items-center gap-1.5">
               <button
                 type="button"
                 class="flex-1 px-2 py-1 text-[10px] text-slate-300 hover:text-white hover:bg-slate-700 rounded border border-slate-600 transition text-center flex items-center justify-center space-x-1 cursor-pointer"
@@ -883,8 +937,8 @@
               </button>
               <button
                 type="button"
-                class="flex-1 px-2 py-1 text-[10px] text-rose-400 hover:text-white hover:bg-rose-600/80 rounded border border-rose-900/50 transition text-center flex items-center justify-center space-x-1 cursor-pointer"
-                onclick="deleteSession(event, '${sess.id}')"
+                class="flex-1 px-2 py-1 text-[10px] text-rose-300 hover:text-white hover:bg-rose-600 rounded border border-rose-800/80 transition text-center flex items-center justify-center space-x-1 cursor-pointer shadow-sm"
+                onclick="deleteSession(event, '${sess.id}', '${escapeHtml(title).replace(/'/g, "&#39;")}', '${escapeHtml(wsShort).replace(/'/g, "&#39;")}')"
               >
                 <span>🗑️</span><span>删除</span>
               </button>
@@ -941,13 +995,39 @@
       }
     }
 
-    async function deleteSession(event, sessionId) {
-      event.stopPropagation();
-      if (!confirm('确定要删除该会话及其所有历史事件吗？此操作不可逆。')) return;
+    let pendingDeleteSessionId = null;
+
+    function openDeleteSessionModal(sessionId, title, wsPath) {
+      pendingDeleteSessionId = sessionId;
+      const titleEl = document.getElementById('del-modal-title');
+      const idEl = document.getElementById('del-modal-id');
+      const wsEl = document.getElementById('del-modal-ws');
+      if (titleEl) titleEl.textContent = title || '未命名会话';
+      if (idEl) idEl.textContent = sessionId;
+      if (wsEl) wsEl.textContent = wsPath || '--';
+      const modal = document.getElementById('delete-session-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeDeleteSessionModal() {
+      pendingDeleteSessionId = null;
+      const modal = document.getElementById('delete-session-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function executeDeleteSession() {
+      if (!pendingDeleteSessionId) return;
+      const sessionId = pendingDeleteSessionId;
+      const btn = document.getElementById('del-modal-confirm-btn');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span><span>正在删除...</span>';
+      }
 
       try {
         const res = await fetch(`/api/sessions/${sessionId}`, { method: 'DELETE' });
         const result = await res.json();
+        closeDeleteSessionModal();
         if (result.code === 0) {
           if (activeSessionId === sessionId) {
             createNewSession();
@@ -958,8 +1038,29 @@
           showErrorBanner('删除会话失败: ' + result.message);
         }
       } catch (err) {
+        closeDeleteSessionModal();
         showErrorBanner('删除请求异常: ' + err.message);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = '<span>🗑️</span><span>确认彻底删除</span>';
+        }
       }
+    }
+
+    function confirmDeleteActiveSession() {
+      if (!activeSessionId) return;
+      const titleEl = document.getElementById('active-session-title');
+      const title = titleEl ? titleEl.textContent : '当前会话';
+      openDeleteSessionModal(activeSessionId, title, activeWorkspacePath);
+    }
+
+    async function deleteSession(event, sessionId, title, wsPath) {
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
+      openDeleteSessionModal(sessionId, title, wsPath);
     }
 
     function createNewSession() {
@@ -974,6 +1075,8 @@
       renderUsageBar(0);
       const titleEl = document.getElementById('active-session-title');
       if (titleEl) titleEl.textContent = '新对话';
+      const delBtn = document.getElementById('topbar-delete-session-btn');
+      if (delBtn) delBtn.classList.add('hidden');
       // 清空右侧轮次大纲
       outlineTurns = [];
       renderTurnOutline();
@@ -986,6 +1089,8 @@
 
     async function switchSession(sessionId) {
       activeSessionId = sessionId;
+      const delBtn = document.getElementById('topbar-delete-session-btn');
+      if (delBtn) delBtn.classList.remove('hidden');
       await loadSessionList();
       await syncPermissionPresetFromServer(sessionId);
       await syncUsageBaselineFromServer(sessionId);
@@ -2001,6 +2106,8 @@
               card.setMeta({ createdAt: Date.now() });
               if (data.sessionId && !activeSessionId) {
                 activeSessionId = data.sessionId;
+                const delBtn = document.getElementById('topbar-delete-session-btn');
+                if (delBtn) delBtn.classList.remove('hidden');
                 loadSessionList();
               }
             } else if (eventType === 'reasoning') {
