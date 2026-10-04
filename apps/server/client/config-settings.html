@@ -6,6 +6,7 @@
   <title>系统设置中心 - Purple Grapes Harness (PGH)</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/shared.css">
+  <script src="js/theme.js"></script>
 </head>
 <body class="bg-[#070a12] text-slate-100 font-sans app-shell">
 
@@ -160,22 +161,27 @@
 
         <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg">
           <div>
-            <label class="block text-slate-300 font-medium mb-2">主色系与对比度 (Theme Style)：</label>
-            <div class="grid grid-cols-3 gap-3">
-              <label class="p-3 rounded-lg bg-[#070b14] border-2 border-blue-500/80 cursor-pointer block">
-                <input type="radio" name="app_theme" value="dark-geek" checked class="mr-1">
+            <label class="block text-slate-300 font-medium mb-2">主色系与对比度 (Theme Style · 点击即时预览)：</label>
+            <div class="grid grid-cols-4 gap-3">
+              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block has-[:checked]:border-blue-500/80">
+                <input type="radio" name="app_theme" value="dark-geek" checked class="mr-1" onchange="previewTheme(this.value)">
                 <span class="font-bold text-white">暗色极客 (默认)</span>
                 <p class="text-[10px] text-slate-400 mt-1">深黑背景 #070a12，高对比代码荧光。</p>
               </label>
-              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block">
-                <input type="radio" name="app_theme" value="slate-blue" class="mr-1">
+              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block has-[:checked]:border-blue-500/80">
+                <input type="radio" name="app_theme" value="slate-blue" class="mr-1" onchange="previewTheme(this.value)">
                 <span class="font-bold text-white">Slate 深蓝调</span>
                 <p class="text-[10px] text-slate-400 mt-1">Tailwind Slate 现代工程师配色。</p>
               </label>
-              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block">
-                <input type="radio" name="app_theme" value="oled-black" class="mr-1">
+              <label class="p-3 rounded-lg bg-[#070b14] border border-slate-800 cursor-pointer block has-[:checked]:border-blue-500/80">
+                <input type="radio" name="app_theme" value="oled-black" class="mr-1" onchange="previewTheme(this.value)">
                 <span class="font-bold text-white">纯黑 OLED 模式</span>
                 <p class="text-[10px] text-slate-400 mt-1">极致纯黑，专注降噪。</p>
+              </label>
+              <label class="p-3 rounded-lg bg-[#f8fafc] border border-slate-300 cursor-pointer block has-[:checked]:border-blue-500/80 has-[:checked]:ring-2 has-[:checked]:ring-blue-500/30">
+                <input type="radio" name="app_theme" value="light-clean" class="mr-1" onchange="previewTheme(this.value)">
+                <span class="font-bold text-slate-800">☀️ 清新明亮模式</span>
+                <p class="text-[10px] text-slate-500 mt-1">纯净白底 #f8fafc，日间办公护眼。</p>
               </label>
             </div>
           </div>
@@ -183,7 +189,7 @@
           <div class="grid grid-cols-2 gap-4">
             <div>
               <label class="block text-slate-300 font-medium mb-1">代码与等宽字体 (Font Family)：</label>
-              <select id="appearance-font" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
+              <select id="appearance-font" onchange="previewTheme(document.querySelector('input[name=app_theme]:checked').value)" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono text-xs">
                 <option value="JetBrains Mono, SF Mono, Menlo" selected>JetBrains Mono, Menlo</option>
                 <option value="Fira Code, Consolas">Fira Code, Consolas</option>
                 <option value="Cascadia Code, Monaco">Cascadia Code, Monaco</option>
@@ -191,7 +197,7 @@
             </div>
             <div>
               <label class="block text-slate-300 font-medium mb-1">界面信息密度 (UI Density)：</label>
-              <select id="appearance-density" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs">
+              <select id="appearance-density" onchange="previewTheme(document.querySelector('input[name=app_theme]:checked').value)" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs">
                 <option value="compact" selected>紧凑模式 (Compact · 专为多代码窗口设计)</option>
                 <option value="default">标准模式 (Default)</option>
               </select>
@@ -341,6 +347,10 @@
           if (appearance) {
             document.getElementById('appearance-font').value = appearance.editorFontFamily;
             document.getElementById('appearance-density').value = appearance.uiDensity;
+            const themeVal = (window.PGHTheme && window.PGHTheme.valid(appearance.themeStyle))
+              ? appearance.themeStyle : 'dark-geek';
+            const themeRadio = document.querySelector(`input[name="app_theme"][value="${themeVal}"]`);
+            if (themeRadio) themeRadio.checked = true;
           }
 
           if (permissions) {
@@ -435,11 +445,25 @@
       await saveSection('proxy', proxyData);
     }
 
+    function previewTheme(value) {
+      if (!window.PGHTheme || !window.PGHTheme.valid(value)) return;
+      window.PGHTheme.apply({
+        themeStyle: value,
+        editorFontFamily: document.getElementById('appearance-font').value,
+        uiDensity: document.getElementById('appearance-density').value,
+      });
+    }
+
     async function saveAppearance() {
       const theme = document.querySelector('input[name="app_theme"]:checked').value;
       const font = document.getElementById('appearance-font').value;
       const density = document.getElementById('appearance-density').value;
       await saveSection('appearance', { themeStyle: theme, editorFontFamily: font, uiDensity: density });
+      if (window.PGHTheme) {
+        const payload = { themeStyle: theme, editorFontFamily: font, uiDensity: density };
+        window.PGHTheme.persist(payload);
+        window.PGHTheme.apply(payload);
+      }
     }
 
     async function savePermissions() {

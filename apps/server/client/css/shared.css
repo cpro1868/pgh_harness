@@ -6,12 +6,20 @@
   --bg-sidebar: #0d1322;
   --bg-card: #131b2e;
   --bg-card-hover: #19233c;
+  --bg-input: #090d18;
+  --bg-inset: #070b14;
+  --bg-topbar: #0a0f1d;
+  --bg-header: #090e1c;
+  --bg-menubar: #0c101c;
+  --bg-elevated: #0f1523;
   --border-color: #1e293b;
   --border-subtle: #162032;
+  --border-strong: #1a2333;
   --border-focus: #3b82f6;
   --text-main: #f1f5f9;
   --text-muted: #94a3b8;
   --text-dim: #64748b;
+  --text-strong: #ffffff;
   --accent-blue: #3b82f6;
   --accent-blue-hover: #2563eb;
   --accent-emerald: #10b981;
@@ -19,7 +27,159 @@
   --accent-rose: #f43f5e;
   --accent-purple: #a855f7;
   --accent-cyan: #06b6d4;
+  --scrollbar-track: rgba(10, 15, 29, 0.6);
+  --scrollbar-thumb: #334155;
+  --scrollbar-thumb-hover: #475569;
 }
+
+/* ==========================================================================
+   主题色系 (appearance.themeStyle)
+   --------------------------------------------------------------------------
+   dark-geek  = :root 默认值，无需额外变量。
+   其余主题仅覆盖 CSS 变量；明亮主题另在文件尾部对 Tailwind
+   硬编码色值类做整体降亮映射，保证存量页面零改动生效。
+   ========================================================================== */
+[data-theme='slate-blue'] {
+  --bg-app: #0f172a;
+  --bg-nav: #101a30;
+  --bg-sidebar: #141f3a;
+  --bg-card: #1e293b;
+  --bg-card-hover: #273549;
+  --bg-input: #0d1526;
+  --bg-inset: #0b1220;
+  --bg-topbar: #111c34;
+  --bg-header: #0e1830;
+  --bg-menubar: #16223e;
+  --bg-elevated: #1a2742;
+  --border-color: #2b3a55;
+  --border-subtle: #223047;
+  --border-strong: #31415e;
+  --text-main: #e2e8f0;
+  --text-muted: #94a3b8;
+  --text-dim: #64748b;
+  --scrollbar-track: rgba(15, 23, 42, 0.7);
+  --scrollbar-thumb: #3b4a63;
+  --scrollbar-thumb-hover: #52627e;
+}
+
+[data-theme='oled-black'] {
+  --bg-app: #000000;
+  --bg-nav: #050505;
+  --bg-sidebar: #080808;
+  --bg-card: #0e0e0e;
+  --bg-card-hover: #161616;
+  --bg-input: #060606;
+  --bg-inset: #040404;
+  --bg-topbar: #070707;
+  --bg-header: #050505;
+  --bg-menubar: #0a0a0a;
+  --bg-elevated: #101010;
+  --border-color: #1f1f1f;
+  --border-subtle: #161616;
+  --border-strong: #232323;
+  --text-main: #e8e8e8;
+  --text-muted: #9a9a9a;
+  --text-dim: #6b6b6b;
+  --scrollbar-track: rgba(0, 0, 0, 0.8);
+  --scrollbar-thumb: #2a2a2a;
+  --scrollbar-thumb-hover: #3d3d3d;
+}
+
+[data-theme='light-clean'] {
+  --bg-app: #f1f5f9;
+  --bg-nav: #e8edf5;
+  --bg-sidebar: #eef2f8;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f4f7fb;
+  --bg-input: #ffffff;
+  --bg-inset: #f6f8fb;
+  --bg-topbar: #e9eef6;
+  --bg-header: #eef1f7;
+  --bg-menubar: #f4f6fa;
+  --bg-elevated: #ffffff;
+  --border-color: #dbe2ec;
+  --border-subtle: #e6ebf2;
+  --border-strong: #cfd8e3;
+  --border-focus: #3b82f6;
+  --text-main: #1e293b;
+  --text-muted: #64748b;
+  --text-dim: #94a3b8;
+  --text-strong: #0f172a;
+  --accent-blue: #2563eb;
+  --accent-blue-hover: #1d4ed8;
+  --accent-emerald: #059669;
+  --accent-amber: #d97706;
+  --accent-rose: #e11d48;
+  --accent-purple: #9333ea;
+  --accent-cyan: #0891b2;
+  --scrollbar-track: rgba(226, 232, 240, 0.6);
+  --scrollbar-thumb: #b6c2d2;
+  --scrollbar-thumb-hover: #94a3b8;
+}
+
+/* ==========================================================================
+   明亮模式整体映射：将各页面硬编码的 Tailwind 深色类降亮
+   （仅作用于非暗色主题，dark-* 页面在 light 下仍可读）
+   ========================================================================== */
+[data-theme='light-clean'] body,
+[data-theme='light-clean'] .bg-\[\#070a12\] { background-color: var(--bg-app); }
+[data-theme='light-clean'] .bg-\[\#070b14\] { background-color: var(--bg-inset); }
+[data-theme='light-clean'] .bg-\[\#080d18\],
+[data-theme='light-clean'] .bg-\[\#080d1a\] { background-color: var(--bg-inset); }
+[data-theme='light-clean'] .bg-\[\#090d16\],
+[data-theme='light-clean'] .bg-\[\#090d18\] { background-color: var(--bg-input); }
+[data-theme='light-clean'] .bg-\[\#090e1a\],
+[data-theme='light-clean'] .bg-\[\#090e1c\],
+[data-theme='light-clean'] .bg-\[\#0a0f1d\] { background-color: var(--bg-topbar); }
+[data-theme='light-clean'] .bg-\[\#0b101c\],
+[data-theme='light-clean'] .bg-\[\#0b1120\],
+[data-theme='light-clean'] .bg-\[\#0c101c\] { background-color: var(--bg-menubar); }
+[data-theme='light-clean'] .bg-\[\#0c1220\],
+[data-theme='light-clean'] .bg-\[\#0e1424\],
+[data-theme='light-clean'] .bg-\[\#0e1526\],
+[data-theme='light-clean'] .bg-\[\#0f1523\],
+[data-theme='light-clean'] .bg-\[\#0f172a\],
+[data-theme='light-clean'] .bg-\[\#11192e\],
+[data-theme='light-clean'] .bg-\[\#131b2e\],
+[data-theme='light-clean'] .bg-\[\#131d38\] { background-color: var(--bg-card); }
+[data-theme='light-clean'] .bg-\[\#050811\] { background-color: var(--bg-app); }
+
+[data-theme='light-clean'] .border-\[\#1a2333\],
+[data-theme='light-clean'] .border-slate-700,
+[data-theme='light-clean'] .border-slate-800 { border-color: var(--border-color); }
+
+[data-theme='light-clean'] .text-slate-100,
+[data-theme='light-clean'] .text-slate-200,
+[data-theme='light-clean'] .text-white { color: var(--text-main); }
+[data-theme='light-clean'] .text-slate-300 { color: #334155; }
+[data-theme='light-clean'] .text-slate-400 { color: var(--text-muted); }
+[data-theme='light-clean'] .text-slate-500,
+[data-theme='light-clean'] .text-slate-600 { color: var(--text-dim); }
+
+[data-theme='light-clean'] .bg-slate-800\/20,
+[data-theme='light-clean'] .hover\:bg-slate-800\/20:hover,
+[data-theme='light-clean'] .bg-slate-800 { background-color: var(--bg-sidebar); }
+[data-theme='light-clean'] .bg-slate-900 { background-color: var(--bg-card); }
+
+/* 明亮模式：通用容器、输入框与按钮细化 */
+[data-theme='light-clean'] input,
+[data-theme='light-clean'] select,
+[data-theme='light-clean'] textarea {
+  background-color: var(--bg-input);
+  color: var(--text-main);
+  border-color: var(--border-color);
+}
+[data-theme='light-clean'] input::placeholder,
+[data-theme='light-clean'] textarea::placeholder { color: var(--text-dim); }
+[data-theme='light-clean'] .top-app-bar { background: var(--bg-header); }
+[data-theme='light-clean'] .locked-workspace-chip {
+  background: rgba(226, 232, 240, 0.8);
+  border-color: var(--border-strong);
+  color: #334155;
+}
+[data-theme='light-clean'] .activity-btn:hover { background-color: rgba(15, 23, 42, 0.06); }
+[data-theme='light-clean'] .activity-btn.active { background-color: rgba(37, 99, 235, 0.12); }
+[data-theme='light-clean'] .cursor-blink { background-color: var(--accent-blue); }
 
 * {
   box-sizing: border-box;
@@ -45,7 +205,7 @@ body {
 }
 
 code, pre, .font-mono {
-  font-family: 'JetBrains Mono', Consolas, Monaco, "Courier New", monospace !important;
+  font-family: var(--font-mono, 'JetBrains Mono', Consolas, Monaco, "Courier New", monospace) !important;
 }
 
 /* Custom scrollbar */
@@ -122,7 +282,7 @@ code, pre, .font-mono {
 /* Top App Bar */
 .top-app-bar {
   height: 46px;
-  background: #090e1c;
+  background: var(--bg-header);
   border-bottom: 1px solid var(--border-color);
   display: flex;
   align-items: center;
@@ -136,7 +296,7 @@ code, pre, .font-mono {
   display: flex;
   align-items: center;
   background: rgba(15, 23, 42, 0.8);
-  border: 1px solid #334155;
+  border: 1px solid var(--border-strong);
   padding: 3px 10px;
   border-radius: 6px;
   font-size: 11px;
@@ -193,14 +353,14 @@ body.app-shell > .flex-1 {
   height: 9px;
 }
 ::-webkit-scrollbar-track {
-  background: rgba(10, 15, 29, 0.6);
+  background: var(--scrollbar-track);
 }
 ::-webkit-scrollbar-thumb {
-  background: #334155;
+  background: var(--scrollbar-thumb);
   border-radius: 5px;
   border: 2px solid transparent;
   background-clip: padding-box;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #475569;
+  background: var(--scrollbar-thumb-hover);
 }

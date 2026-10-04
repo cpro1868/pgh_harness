@@ -16,6 +16,8 @@ tmp/
 *.bak
 
 # 3. 本地运行时数据、数据库与测试工作区（安全工程方法论 §4/§5/§11 强制约束）
+.agents/
+.harness/
 .pg_harness/
 .pg_harness*/
 .workspace_*
