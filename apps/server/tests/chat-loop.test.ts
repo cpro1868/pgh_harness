@@ -5,6 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import http from 'node:http';
 import { HarnessServer } from '../src/index.ts';
+import type { WorkspaceWriteLock } from '../../../packages/core/src/index.ts';
 
 function startStubLlm(): Promise<{ server: http.Server; port: number; calls: { count: number } }> {
   return new Promise((resolve) => {
@@ -14,7 +15,7 @@ function startStubLlm(): Promise<{ server: http.Server; port: number; calls: { c
         let raw = '';
         req.on('data', (chunk) => { raw += chunk; });
         req.on('end', () => {
-          let payload: { stream?: boolean; model?: string } = {};
+          let payload: { stream?: boolean; model?: string };
           try {
             payload = JSON.parse(raw) as { stream?: boolean; model?: string };
           } catch {
@@ -398,9 +399,10 @@ test('TC-02-02: 对话闭环集成 (会话落盘 + ReAct 工具循环 + SSE 事�
 
     // 2. 模拟真实并发：会话 A 占有该工作区写锁（如正在进行长任务执行）
     const wsResolved = path.resolve(wsDir);
-    const acquired = (server as any).writeLocks.tryAcquire(wsResolved, sessionId);
+    const writeLocks = (server as unknown as { writeLocks: WorkspaceWriteLock }).writeLocks;
+    const acquired = writeLocks.tryAcquire(wsResolved, sessionId);
     assert.equal(acquired, true, '会话 A 应成功占有写锁');
-    assert.equal((server as any).writeLocks.holder(wsResolved), sessionId);
+    assert.equal(writeLocks.holder(wsResolved), sessionId);
 
     try {
       // 3. 会话 B 并发向同一工作区发起写请求
@@ -424,8 +426,8 @@ test('TC-02-02: 对话闭环集成 (会话落盘 + ReAct 工具循环 + SSE 事�
       assert.equal(bodyB.holder, sessionId, '409 响应必须明确指明当前写锁持有者会话 ID');
     } finally {
       // 5. 释放写锁
-      (server as any).writeLocks.release(wsResolved, sessionId);
-      assert.equal((server as any).writeLocks.holder(wsResolved), undefined);
+      writeLocks.release(wsResolved, sessionId);
+      assert.equal(writeLocks.holder(wsResolved), undefined);
     }
   });
 });

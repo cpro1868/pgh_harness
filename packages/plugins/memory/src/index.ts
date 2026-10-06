@@ -174,7 +174,7 @@ export class SqliteMemoryAdapter implements MemoryAdapter {
     const hash = crypto.createHash('sha256').update(entry.content).digest('hex');
     const id = hash.slice(0, 12);
     const now = new Date().toISOString();
-    const db = this.openDb() as { prepare: (s: string) => { run: (...a: unknown[]) => void; get: (...a: unknown[]) => unknown } };
+    const db = this.openDb() as { prepare: (s: string) => { run: (...a: unknown[]) => void; get: (...a: unknown[]) => unknown }; close: () => void };
     try {
       const existing = db.prepare('SELECT id FROM memory_entries WHERE content_hash = ?').get(hash);
       if (existing) return { ...entry, id, createdAt: now };
@@ -182,19 +182,19 @@ export class SqliteMemoryAdapter implements MemoryAdapter {
         .run(id, entry.content, entry.source ?? 'manual', entry.scope, now, hash);
       return { ...entry, id, createdAt: now };
     } finally {
-      (db as { close: () => void }).close();
+      db.close();
     }
   }
 
   async list(): Promise<MemoryEntry[]> {
-    const db = this.openDb() as { prepare: (s: string) => { all: (...a: unknown[]) => unknown[] } };
+    const db = this.openDb() as { prepare: (s: string) => { all: (...a: unknown[]) => unknown[] }; close: () => void };
     try {
       const rows = db.prepare('SELECT id, content, source, scope, created_at FROM memory_entries ORDER BY created_at DESC').all() as {
         id: string; content: string; source: string; scope: string; created_at: string;
       }[];
       return rows.map((r) => ({ id: r.id, content: r.content, source: r.source, scope: r.scope as 'project' | 'global', createdAt: r.created_at }));
     } finally {
-      (db as { close: () => void }).close();
+      db.close();
     }
   }
 

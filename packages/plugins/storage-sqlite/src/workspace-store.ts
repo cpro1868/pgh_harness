@@ -15,6 +15,17 @@ export interface WorkspaceRecord {
   updatedAt: number;
 }
 
+type WorkspaceRow = {
+  id: string;
+  name: string;
+  path: string;
+  description: string | null;
+  rules_json: string;
+  ignore_patterns: string;
+  created_at: number;
+  updated_at: number;
+};
+
 export class WorkspaceStore {
   private readonly db: SqliteDatabase;
 
@@ -24,7 +35,7 @@ export class WorkspaceStore {
 
   public list(): WorkspaceRecord[] {
     const stmt = this.db.raw.prepare('SELECT * FROM workspaces ORDER BY updated_at DESC;');
-    const rows = stmt.all() as any[];
+    const rows = stmt.all() as WorkspaceRow[];
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -39,7 +50,7 @@ export class WorkspaceStore {
 
   public getByPath(wsPath: string): WorkspaceRecord | undefined {
     const stmt = this.db.raw.prepare('SELECT * FROM workspaces WHERE path = ?;');
-    const r = stmt.get(wsPath) as any;
+    const r = stmt.get(wsPath) as WorkspaceRow | undefined;
     if (!r) return undefined;
     return {
       id: r.id,

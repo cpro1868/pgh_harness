@@ -5,7 +5,7 @@ import path from 'node:path';
 import os from 'node:os';
 import { SqliteDatabase } from '../src/database.ts';
 import { PipelineStore, PIPELINE_DEFAULT_TEMPLATE } from '../src/pipeline-schema.ts';
-import type { PipelineTemplate, PipelineStage } from '../src/pipeline-schema.ts';
+import type { PipelineTemplate } from '../src/pipeline-schema.ts';
 
 describe('TC-02-01-001: 流水线模板与阶段数据模型 (WBS-02-01-01)', () => {
   let tmpDir: string;

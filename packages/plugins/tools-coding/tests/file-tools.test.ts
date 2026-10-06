@@ -62,7 +62,7 @@ test('TC-01-04-001 & TC-01-04-002: 换行符容错(CRLF/LF)精密替换、先读
     // 第 2 次失败
     assert.throws(() => tools.editFile(filePath, 'not_exist_2', 'new'), EditMismatchError);
     // 第 3 次失败触发熔断
-    assert.throws(() => tools.editFile(filePath, 'not_exist_3', 'new'), (err: any) => {
+    assert.throws(() => tools.editFile(filePath, 'not_exist_3', 'new'), (err: unknown) => {
       assert.ok(err instanceof EditMismatchError);
       assert.equal(err.isDoomLoop, true);
       return true;

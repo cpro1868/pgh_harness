@@ -21,7 +21,7 @@ test('TC-01-03-002: Anthropic 原生协议 Prompt Caching 与 Thinking 解析测
 
     assert.equal(Array.isArray(payload.system), true);
     // 验证静态断点注入
-    const systemBlock = payload.system[0] as { type: string; text: string; cache_control?: { type: string } };
+    const systemBlock = (payload.system as Array<{ type: string; text: string; cache_control?: { type: string } }>)[0];
     assert.equal(systemBlock.type, 'text');
     assert.equal(systemBlock.cache_control?.type, 'ephemeral');
   });

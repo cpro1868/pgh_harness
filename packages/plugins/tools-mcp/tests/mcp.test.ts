@@ -1,7 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
 import http from 'node:http';
-import { spawn } from 'node:child_process';
 import { McpClientPool, toMcpToolName, fromMcpToolName, assertNoLocalConflict, MCP_PREFIX } from '../src/index.ts';
 import type { McpServerConfig } from '../src/index.ts';
 
@@ -58,7 +57,7 @@ describe('TC-01-10-002: MCP 客户端连接池与命名空间强隔离', () => {
         } else if (rpc.method === 'tools/list') {
           res.end(JSON.stringify({ jsonrpc: '2.0', id: rpc.id, result: { tools: stubTools } }));
         } else if (rpc.method === 'tools/call') {
-          const { name, arguments: args } = rpc.params as { name: string; arguments: { text?: string } };
+          const { arguments: args } = rpc.params as { name: string; arguments: { text?: string } };
           res.end(JSON.stringify({ jsonrpc: '2.0', id: rpc.id, result: { content: [{ type: 'text', text: `echo:${args?.text ?? ''}` }] } }));
         } else {
           res.end(JSON.stringify({ jsonrpc: '2.0', id: rpc.id, error: { code: -32601, message: 'Method not found' } }));

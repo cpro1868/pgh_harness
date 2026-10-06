@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "composite": false,
+    "declaration": false,
+    "declarationMap": false,
+    "sourceMap": false,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
+    "types": ["node"],
+    "paths": {
+      "@harness/protocol": ["./packages/protocol/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/*/src/**/*",
+    "packages/*/tests/**/*",
+    "packages/plugins/*/src/**/*",
+    "packages/plugins/*/tests/**/*",
+    "apps/*/src/**/*",
+    "apps/*/tests/**/*"
+  ],
+  "exclude": ["reference", "node_modules", "**/dist"]
+}

@@ -81,8 +81,8 @@ export async function listDirectory(targetPath?: string): Promise<DirectoryListi
     }
     // 字母排序
     entries.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
-  } catch (err) {
-    // 权限不足或其他错误时返回空 entries
+  } catch {
+    // 权限不足或路径不存在时返回空 entries
   }
 
   return {
@@ -142,7 +142,7 @@ $dialog.Dispose()
       timeout: 120000,
     });
     return stdout.trim().split(/\r?\n/).pop()?.trim() || '';
-  } catch (err) {
+  } catch {
     return '';
   }
 }

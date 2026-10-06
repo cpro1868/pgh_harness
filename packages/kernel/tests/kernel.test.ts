@@ -16,7 +16,7 @@ test('TC-01-01-001: 微内核生命周期与 Fail-Fast 依赖缺失回滚验证'
     });
 
     await ctx.start();
-    assert.equal(ctx.getService('service.auth')?.token, 'mock-token-123');
+    assert.equal(ctx.getService<{ token: string }>('service.auth')?.token, 'mock-token-123');
   });
 
   await t.test('插件B因缺少依赖触发 Fail-Fast 并原子回滚', async () => {

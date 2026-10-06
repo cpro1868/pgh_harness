@@ -24,6 +24,18 @@ export interface RouteResolution {
   auth?: { username?: string; password?: string };
 }
 
+export interface ProviderProxyOption {
+  enabled: boolean;
+  mode: 'inherit' | 'custom' | 'direct';
+  customConfig?: {
+    protocol?: string;
+    host?: string;
+    port?: number;
+    username?: string;
+    password?: string;
+  };
+}
+
 export class ProxyDispatcher {
   private globalProxy: NetworkProxyConfig;
   private silentTimeoutMs: number;
@@ -66,11 +78,7 @@ export class ProxyDispatcher {
 
   public resolveRoute(
     targetUrl: string,
-    providerProxy?: {
-      enabled: boolean;
-      mode: 'inherit' | 'custom' | 'direct';
-      customConfig?: Partial<NetworkProxyConfig>;
-    }
+    providerProxy?: ProviderProxyOption
   ): RouteResolution {
     if (this.shouldBypass(targetUrl)) {
       return { useProxy: false };
@@ -125,9 +133,13 @@ export class ProxyDispatcher {
   /**
    * 针对 Node 22 原生 fetch 构建带代理的 RequestInit 配置
    */
-  public async fetchWithProxy(targetUrl: string, init: RequestInit = {}, providerProxy?: any): Promise<Response> {
+  public async fetchWithProxy(
+    targetUrl: string,
+    init: RequestInit = {},
+    providerProxy?: ProviderProxyOption,
+  ): Promise<Response> {
     const route = this.resolveRoute(targetUrl, providerProxy);
-    const options: any = { ...init };
+    const options: RequestInit & { dispatcher?: unknown } = { ...init };
 
     if (route.useProxy && route.proxyUrl) {
       // 动态使用 Node 22 内置支持的 undici ProxyAgent
@@ -139,8 +151,8 @@ export class ProxyDispatcher {
             ? `Basic ${Buffer.from(`${route.auth.username}:${route.auth.password}`).toString('base64')}`
             : undefined,
         });
-      } catch {
-        // 如果环境未装 undici，使用标准 fetch 降级
+      } catch (err) {
+        console.warn(`[Harness] ProxyAgent 加载失败，本次请求将绕过代理直连: ${(err as Error).message}`);
       }
     }
 

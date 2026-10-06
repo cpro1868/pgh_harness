@@ -1,4 +1,5 @@
 import type { SqliteDatabase } from './database.js';
+import type { SQLInputValue } from 'node:sqlite';
 
 export interface IndexEventInput {
   sessionId: string;
@@ -49,7 +50,7 @@ export class FtsSearchService {
       FROM events_fts
       WHERE events_fts MATCH ?
     `;
-    const params: unknown[] = [`"${sanitizedQuery}"`];
+    const params: SQLInputValue[] = [`"${sanitizedQuery}"`];
 
     if (sessionId) {
       sql += ` AND session_id = ?`;

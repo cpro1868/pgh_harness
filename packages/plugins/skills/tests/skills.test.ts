@@ -9,7 +9,6 @@ import {
   extractSkillMeta,
   projectSkillDirs,
   scanSkillRoot,
-  scanAllSkills,
   buildSkillsPromptFragment,
   loadSkillContent,
   installSkill,

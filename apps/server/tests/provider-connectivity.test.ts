@@ -12,11 +12,8 @@ function startPingLlm(): Promise<{ server: http.Server; port: number }> {
   return new Promise((resolve) => {
     const server = http.createServer((req, res) => {
       if (req.method === 'POST' && req.url === '/chat/completions') {
-        let raw = '';
-        req.on('data', (c) => { raw += c; });
+        req.on('data', () => {});
         req.on('end', () => {
-          let auth = req.headers.authorization || '';
-          if (!auth) auth = '';
           res.writeHead(200, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ choices: [{ message: { role: 'assistant', content: 'pong' } }] }));
         });

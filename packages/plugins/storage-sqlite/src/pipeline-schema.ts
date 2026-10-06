@@ -73,6 +73,27 @@ export const PIPELINE_DEFAULT_TEMPLATE: PipelineTemplate = {
   ],
 };
 
+type PipelineInstanceRow = {
+  instance_id: string;
+  name: string;
+  pipeline_id: string;
+  pipeline_name: string;
+  workspace_path: string;
+  task_prompt: string;
+  status: string;
+  current_stage_id: string | null;
+  current_stage_order: number;
+  stages_json: string;
+  logs_json: string;
+  artifacts_json: string;
+  gate_records_json: string;
+  tokens_used: number;
+  error: string | null;
+  created_at: number;
+  started_at: number | null;
+  updated_at: number;
+};
+
 export class PipelineStore {
   private readonly db: SqliteDatabase;
 
@@ -348,7 +369,7 @@ export class PipelineStore {
   }
 
   public getInstance(instanceId: string): PipelineInstanceModel | undefined {
-    const r = this.db.raw.prepare('SELECT * FROM pipeline_instances WHERE instance_id = ?;').get(instanceId) as any;
+    const r = this.db.raw.prepare('SELECT * FROM pipeline_instances WHERE instance_id = ?;').get(instanceId) as PipelineInstanceRow | undefined;
     if (!r) return undefined;
     return {
       instanceId: r.instance_id,
@@ -373,7 +394,7 @@ export class PipelineStore {
   }
 
   public listInstances(): PipelineInstanceModel[] {
-    const rows = this.db.raw.prepare('SELECT instance_id FROM pipeline_instances ORDER BY updated_at DESC;').all() as any[];
+    const rows = this.db.raw.prepare('SELECT instance_id FROM pipeline_instances ORDER BY updated_at DESC;').all() as Array<{ instance_id: string }>;
     return rows.map((r) => this.getInstance(r.instance_id)!).filter(Boolean);
   }
 

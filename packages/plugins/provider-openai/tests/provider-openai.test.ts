@@ -7,6 +7,7 @@ test('TC-01-03-001 & TC-01-03-003: OpenAI 兼容协议流式解析与自动探�
   const provider = new OpenAICompatibleProvider({
     id: 'deepseek',
     name: 'DeepSeek 官方',
+    protocol: 'openai-compatible',
     baseUrl: 'https://api.deepseek.com/v1',
     apiKey: 'sk-mock-key',
   });

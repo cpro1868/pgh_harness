@@ -1,5 +1,4 @@
 import { spawn, type ChildProcess } from 'node:child_process';
-import os from 'node:os';
 
 export interface ExecOptions {
   timeoutMs?: number; // 默认 120 秒

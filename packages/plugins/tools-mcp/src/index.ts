@@ -1,6 +1,5 @@
 import http from 'node:http';
 import { spawn, type ChildProcess } from 'node:child_process';
-import path from 'node:path';
 
 /**
  * MCP 服务器配置项（与 mcp.json / harness.yml 配置对齐）

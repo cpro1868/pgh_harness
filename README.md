@@ -9,7 +9,9 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Architecture](https://img.shields.io/badge/Architecture-Event%20Sourcing-orange)]()
 [![Zero Native](https://img.shields.io/badge/Dependencies-Zero%20Native%20Addons-success)]()
-[![Tests](https://img.shields.io/badge/Tests-271%20Passed-emerald)]()
+[![Tests](https://img.shields.io/badge/Tests-282%20Passed-emerald)]()
+[![Theme](https://img.shields.io/badge/Themes-4%20Themes-violet)]()
+[![Quality Gate](https://img.shields.io/badge/Quality%20Gate-lint%20%2B%20typecheck%20%2B%20test-success)]()
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)]()
 
 [产品定位](#-产品定位与解决痛点) • [三大核心能力形态](#-三大核心能力形态重点介绍) • [系统架构](#-系统架构) • [安全工程与信任边界](#-安全工程与信任边界) • [快速开始](#-快速开始) • [文档索引](#-文档体系)
@@ -30,6 +32,23 @@
 
 紫提套件提供从需求拆解到交付就绪的端到端闭环支持：
 $$\text{需求/缺陷定位} \longrightarrow \text{架构与契约设计} \longrightarrow \text{测试驱动开发 (TDD)} \longrightarrow \text{行级 Diff 审查} \longrightarrow \text{人工审批放行} \longrightarrow \text{交付归档}$$
+
+
+
+### 【Provider资产管理】
+
+![4](./assets/4.png)
+
+
+
+### 【工作区管理】
+
+![3](./assets/3.png)
+
+
+### 【沙箱规则管理】
+
+![5](./assets/5.png)
 
 ---
 
@@ -116,6 +135,9 @@ graph LR
    - **MCP 客户端池**：支持 Stdio 与 SSE 连接外部 MCP 服务器，强制 `mcp__` 命名空间前缀强隔离；
    - **双层记忆中心**：支持纯 Markdown 与嵌入式 SQLite 存储，区分全局与项目级记忆，内置零丢失受控迁移向导。
 
+
+![1](./assets/1.png)
+
 ---
 
 ### 二、 多角色流水线功能（多阶段工程化协同）
@@ -141,6 +163,12 @@ graph LR
    - **中途暂停 (Pause)**：支持任务执行中下达暂停指令，任务在当前阶段边界精准平滑挂起；
    - **下达干预指令 (Instruction)**：支持在暂停期间人类向流水线注入调整指令；
    - **恢复运行 (Resume)**：后续角色自动抽取并吸收中途干预指令，确保任务按人类预期精准修正。
+7. **全站外观主题体系与工程门禁**：
+   - **四档主题变量驱动**：`dark-geek`（默认深色）/ `slate-blue`（深蓝）/ `oled-black`（纯黑）/ `light-clean`（清新明亮），12 个页面统一 `data-theme` 无闪烁切换；明亮模式自动覆盖全部硬编码 Tailwind 深色类（含文字对比度适配与 WCAG 4.5:1 断言门禁 TC-01-12）；
+   - **真质量门禁**：`pnpm check` = `eslint`（`no-explicit-any` 零豁免）+ `tsc --noEmit`（全仓严格类型）+ `node --test`，22 套件 282 断言 100% 全绿。
+
+
+![2](./assets/2.png)
 
 ---
 
@@ -160,6 +188,10 @@ graph LR
    - **输入变量总线**：在各节点之间消费并传递上下文结构化变量。
 4. **动态执行流高亮监控**：
    - 任务执行期间在 SVG 画布上动态高亮当前运行节点与已走过的分支轨迹，具备端到端可视化追踪能力。
+
+
+![6](./assets/6.png)
+
 
 ---
 
@@ -293,8 +325,8 @@ flowchart TB
 ### 1. 克隆与安装依赖
 
 ```bash
-git clone https://github.com/your-org/pgh.git
-cd pgh
+git clone https://github.com/cpro1868/pgh_harness.git
+cd pgh_harness
 
 # 秒级安装纯 TypeScript 依赖（绝不触发 node-gyp 或 MSVC 编译）
 pnpm install
@@ -336,7 +368,7 @@ chmod +x scripts/*.sh
 # 全量质量门禁自检（包含 ESLint 检查、严格类型检查与全量测试套件）
 pnpm check
 
-# 运行全量 21 个原生测试套件 (271 个测试断言)
+# 运行全量 22 个原生测试套件 (282 个测试断言)
 pnpm test
 ```
 

@@ -191,7 +191,7 @@ export class TurnLoop {
         emit('tool-call-start', { callId: call.id, tool: call.name, args: call.args });
         append('tool/call', { callId: call.id, tool: call.name, args: call.args });
 
-        let output = '';
+        let output: string;
         let isError = false;
         let meta: Record<string, unknown> | undefined;
         try {

@@ -18,7 +18,7 @@ test('TC-01-06-001 & TC-01-06-002 & TC-01-06-003: 上下文治理、思维链剥
     const derived = governor.deriveMessages(rawMessages);
     assert.equal(derived.length, 2);
     assert.equal(derived[1].content, '这是正式修复');
-    assert.equal((derived[1] as any).reasoning, undefined, '历史消息回传必须剥离 reasoning 字段');
+    assert.equal((derived[1] as { reasoning?: string }).reasoning, undefined, '历史消息回传必须剥离 reasoning 字段');
   });
 
   await t.test('TC-01-06-002: 基于 Epoch/Seq 边界的无上限滚动压缩', () => {

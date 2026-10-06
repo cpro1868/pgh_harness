@@ -28,6 +28,18 @@ export interface ProviderRecord {
   updatedAt: number;
 }
 
+type ProviderRow = {
+  id: string;
+  name: string;
+  protocol: string;
+  base_url: string;
+  api_key_cipher: string;
+  proxy_json: string;
+  models_json: string;
+  created_at: number;
+  updated_at: number;
+};
+
 export class ProviderStore {
   private readonly db: SqliteDatabase;
 
@@ -38,7 +50,7 @@ export class ProviderStore {
 
   public list(): ProviderRecord[] {
     const stmt = this.db.raw.prepare('SELECT * FROM providers ORDER BY created_at ASC;');
-    const rows = stmt.all() as any[];
+    const rows = stmt.all() as ProviderRow[];
     return rows.map((r) => ({
       id: r.id,
       name: r.name,
@@ -54,7 +66,7 @@ export class ProviderStore {
 
   public get(id: string): ProviderRecord | undefined {
     const stmt = this.db.raw.prepare('SELECT * FROM providers WHERE id = ?;');
-    const r = stmt.get(id) as any;
+    const r = stmt.get(id) as ProviderRow | undefined;
     if (!r) return undefined;
     return {
       id: r.id,

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
-import { MarkdownMemoryAdapter, SqliteMemoryAdapter, MemoryCascade, migrateMemory } from '../src/index.ts';
+import { MarkdownMemoryAdapter, SqliteMemoryAdapter, migrateMemory } from '../src/index.ts';
 
 describe('TC-01-10-004: 记忆受控迁移向导与备份', () => {
 

@@ -35,7 +35,7 @@ test('TC-01-08-004: 工作区登记、路径校验与 AGENTS.md 生成接口测�
     });
 
     assert.equal(res.status, 200);
-    const body = await res.json() as any;
+    const body = await res.json() as { code: number; data: { name: string; rules: { hasAgentsMd: boolean } } };
     assert.equal(body.code, 0);
     assert.equal(body.data.name, 'Mock Project');
     assert.equal(body.data.rules.hasAgentsMd, false);
@@ -51,7 +51,7 @@ test('TC-01-08-004: 工作区登记、路径校验与 AGENTS.md 生成接口测�
     });
 
     assert.equal(res.status, 200);
-    const body = await res.json() as any;
+    const body = await res.json() as { code: number };
     assert.equal(body.code, 0);
 
     // 验证物理文件真实落盘
@@ -63,9 +63,9 @@ test('TC-01-08-004: 工作区登记、路径校验与 AGENTS.md 生成接口测�
   await t.test('API: GET /api/workspaces 动态感知 AGENTS.md 状态变为已就绪', async () => {
     const res = await fetch(`http://127.0.0.1:${testPort}/api/workspaces`);
     assert.equal(res.status, 200);
-    const body = await res.json() as any;
+    const body = await res.json() as { code: number; data: Array<{ path: string; exists: boolean; rules: { hasAgentsMd: boolean } }> };
     assert.equal(body.code, 0);
-    const target = body.data.find((w: any) => w.path === testWorkspaceDir);
+    const target = body.data.find((w) => w.path === testWorkspaceDir);
     assert.equal(target?.rules.hasAgentsMd, true);
     assert.equal(target?.exists, true);
   });

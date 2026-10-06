@@ -3,6 +3,12 @@
 > 每次关键确认后更新；只写已确认的决策与当前状态，不写过程讨论。
 > 最新确认在最上方。
 
+## 2026-10-06 质量门禁真门禁化（D75）
+
+| # | 决策 | 结论 |
+| --- | --- | --- |
+| D75 | `pnpm check` 三段式真门禁 | `check` = `lint && typecheck && test`，三段任一非零退出即门禁失败。`lint` = `eslint . --max-warnings=0`（flat config，`no-explicit-any` 为 error，白名单豁免未设）；`typecheck` = `tsc --noEmit -p tsconfig.check.json`（全仓单工程聚合，`allowImportingTsExtensions` + `@harness/protocol` paths 映射）；`test` = `node --test` 逐文件清单（**新增测试文件必须同步加入 `package.json` test 脚本**，否则等于没测）。存量 34 lint + 5 typecheck 错误已全部清零。 |
+
 ## 2026-09-22 工程诚信与权限落地（D71）
 
 | # | 决策 | 结论 |

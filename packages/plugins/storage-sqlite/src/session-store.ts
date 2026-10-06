@@ -1,6 +1,17 @@
 import type { SqliteDatabase } from './database.ts';
 import type { SessionModel } from '@harness/protocol';
 
+type SessionRow = {
+  id: string;
+  title: string;
+  workspace_path: string;
+  preset: SessionModel['preset'];
+  active_model_id: string;
+  created_at: number;
+  updated_at: number;
+  is_archived: number;
+};
+
 export class SessionStore {
   private readonly db: SqliteDatabase;
 
@@ -28,7 +39,7 @@ export class SessionStore {
 
   public get(id: string): SessionModel | undefined {
     const stmt = this.db.raw.prepare('SELECT * FROM sessions WHERE id = ?;');
-    const r = stmt.get(id) as any;
+    const r = stmt.get(id) as SessionRow | undefined;
     if (!r) return undefined;
     return {
       id: r.id,
@@ -44,7 +55,7 @@ export class SessionStore {
 
   public list(): SessionModel[] {
     const stmt = this.db.raw.prepare('SELECT * FROM sessions ORDER BY updated_at DESC;');
-    const rows = stmt.all() as any[];
+    const rows = stmt.all() as SessionRow[];
     return rows.map((r) => ({
       id: r.id,
       title: r.title,

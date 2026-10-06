@@ -70,8 +70,7 @@ function startStubModel(): Promise<{ server: http.Server; port: number }> {
         res.end('{}');
         return;
       }
-      let raw = '';
-      req.on('data', (chunk) => { raw += chunk; });
+      req.on('data', () => {});
       req.on('end', () => {
         res.writeHead(200, { 'Content-Type': 'text/event-stream' });
         res.write(`data: ${JSON.stringify({

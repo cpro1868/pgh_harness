@@ -1,10 +1,10 @@
 (function () {
-  var KEY = 'pgh_theme';
-  var VALID = ['dark-geek', 'slate-blue', 'oled-black', 'light-clean'];
+  const KEY = 'pgh_theme';
+  const VALID = ['dark-geek', 'slate-blue', 'oled-black', 'light-clean'];
 
   function read() {
     try {
-      var raw = localStorage.getItem(KEY);
+      const raw = localStorage.getItem(KEY);
       return raw ? JSON.parse(raw) : null;
     } catch (_) {
       return null;
@@ -17,7 +17,7 @@
 
   function apply(appearance) {
     if (!appearance || typeof appearance !== 'object') return;
-    var style = VALID.indexOf(appearance.themeStyle) >= 0 ? appearance.themeStyle : 'dark-geek';
+    const style = VALID.indexOf(appearance.themeStyle) >= 0 ? appearance.themeStyle : 'dark-geek';
     document.documentElement.setAttribute('data-theme', style);
     if (appearance.editorFontFamily) {
       document.documentElement.style.setProperty('--font-mono', appearance.editorFontFamily + ', monospace');
@@ -29,7 +29,7 @@
     }
   }
 
-  var cached = read();
+  const cached = read();
   if (cached) apply(cached);
 
   window.PGHTheme = {
@@ -40,7 +40,7 @@
 
   window.addEventListener('storage', function (e) {
     if (e.key === KEY) {
-      var next = read();
+      const next = read();
       if (next) apply(next);
     }
   });

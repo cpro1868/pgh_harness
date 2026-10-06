@@ -13,6 +13,8 @@ import type { PipelineTemplate, PipelineStage } from '@harness/protocol';
 import { OpenAICompatibleProvider } from '../../../packages/plugins/provider-openai/src/index.ts';
 import { encryptSecret, decryptSecret } from './security/crypto.ts';
 import { resolveMasterKey } from './security/master-key.ts';
+import { sanitizeProxyConfig } from './security/proxy-config.ts';
+import type { ProviderProxyOption } from './network/proxy-dispatcher.ts';
 import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff, PipelineRunner, LockDelegator, ArtifactManager } from '../../../packages/core/src/index.ts';
 import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult, PipelineExecutionOutcome, GateDecision, StageArtifactSnapshot, StageRunResult } from '../../../packages/core/src/index.ts';
 import { FileTools, ShellExecutor, SearchTools } from '../../../packages/plugins/tools-coding/src/index.ts';
@@ -22,14 +24,13 @@ import {
   loadSkillContent,
   installSkill,
   isValidSkillName,
-  filterEnabledSkills,
   parseExplicitSkillInvocation,
   skillContextBlock,
 } from '../../../packages/plugins/skills/src/index.ts';
-import type { SkillMeta } from '../../../packages/plugins/skills/src/index.ts';
 import { McpClientPool, MCP_PREFIX } from '../../../packages/plugins/tools-mcp/src/index.ts';
 import type { McpServerConfig } from '../../../packages/plugins/tools-mcp/src/index.ts';
 import { MemoryCascade, migrateMemory } from '../../../packages/plugins/memory/src/index.ts';
+import type { MemoryStorageMode } from '../../../packages/plugins/memory/src/index.ts';
 import { openNativeFolderDialog, listDirectory, createDirectory, revealInFileManager } from './native-dialog.ts';
 import type { BaseEvent, NetworkProxyConfig } from '@harness/protocol';
 
@@ -66,6 +67,30 @@ export interface ServerOptions {
 
 /** 会话运行态：等待人类回答提问或裁决审批时进入等待态（TC-01-04-006 / §6.3）。 */
 export type SessionState = 'idle' | 'running' | 'waiting_user_input' | 'waiting_approval';
+
+/** 单个工作区的记忆存储参数（settingsStore 'workspace.memoryConfigs' 的值类型）。 */
+export interface MemoryWorkspaceConfig {
+  mode?: MemoryStorageMode;
+  filePath?: string;
+  sqlitePath?: string;
+  sqliteTable?: string;
+  sqliteFts?: boolean;
+  gitAutoAdd?: boolean;
+  embeddingModel?: string;
+  similarityThreshold?: number;
+  updatedAt?: number;
+  [key: string]: unknown;
+}
+
+/** workspacePath → MemoryWorkspaceConfig 的映射。 */
+export type MemoryWorkspaceConfigs = Record<string, MemoryWorkspaceConfig>;
+
+const MEMORY_MODES: readonly MemoryStorageMode[] = ['file', 'sqlite', 'hybrid', 'disabled'];
+
+/** 归一化客户端上报的记忆介质模式；未知值 fail-closed 回落到 'file'。 */
+function normalizeMemoryMode(mode: unknown): MemoryStorageMode {
+  return MEMORY_MODES.includes(mode as MemoryStorageMode) ? (mode as MemoryStorageMode) : 'file';
+}
 
 /** 单条消息最多附件数（最小版：仅 markdown 参考材料）。 */
 const MAX_ATTACHMENTS = 3;
@@ -444,10 +469,10 @@ export class HarnessServer {
     }
 
     if (method === 'PUT' && url.pathname === '/api/settings/section') {
-      const body = await this.readJsonBody<{ section: string; data: any }>(req);
+      const body = await this.readJsonBody<{ section: string; data: NetworkProxyConfig | boolean | string }>(req);
       if (body.section === 'proxy') {
         this.settingsStore.set('network.proxy', body.data);
-        this.proxyDispatcher.updateGlobalProxy(body.data);
+        this.proxyDispatcher.updateGlobalProxy(body.data as NetworkProxyConfig);
       } else if (body.section === 'general') {
         this.settingsStore.set('system.general', body.data);
       } else if (body.section === 'appearance') {
@@ -537,7 +562,7 @@ export class HarnessServer {
         protocol: (typeof body.protocol === 'string' && body.protocol) || 'openai-compatible',
         baseUrl: (typeof body.baseUrl === 'string' && body.baseUrl) || 'https://api.deepseek.com/v1',
         apiKeyCipher: cipher,
-        proxy: (body.proxy as Record<string, unknown> | undefined) ?? { enabled: false, mode: 'inherit' },
+        proxy: sanitizeProxyConfig(body.proxy),
         models: Array.isArray(body.models) ? body.models : [],
       });
 
@@ -568,7 +593,15 @@ export class HarnessServer {
 
     // 4. 关键：真实向远端大模型服务器发起 /models 动态探测 (绝不写死假数据！)
     if (method === 'POST' && url.pathname === '/api/providers/models') {
-      let body: any = {};
+      let body: {
+        protocol?: string;
+        baseUrl?: string;
+        base_url?: string;
+        apiKey?: string;
+        api_key?: string;
+        providerId?: string;
+        proxy?: ProviderProxyOption;
+      };
       try {
         body = await this.readJsonBody(req);
       } catch {
@@ -605,7 +638,7 @@ export class HarnessServer {
         baseUrl?: string;
         apiKey?: string;
         protocol?: string;
-        proxy?: { enabled: boolean; mode: 'inherit' | 'custom' | 'direct'; customConfig?: object };
+        proxy?: ProviderProxyOption;
       }>(req);
 
       const modelId = (body.modelId || '').trim();
@@ -747,7 +780,7 @@ export class HarnessServer {
     }
 
     if (method === 'POST' && url.pathname === '/api/workspaces') {
-      const body = await this.readJsonBody<any>(req);
+      const body = await this.readJsonBody<{ path?: string; id?: string; name?: string; description?: string; ignorePatterns?: string[] }>(req);
       const rawPath = (body.path || '').trim();
       if (!rawPath) {
         res.writeHead(400, { 'Content-Type': 'application/json' });
@@ -817,7 +850,7 @@ export class HarnessServer {
         res.end(JSON.stringify({ code: 400, message: '尚未配置任何模型 Provider，请先前往【模型与 Provider 资产池】配置' }));
         return;
       }
-      let optimizeKey = this.resolveProviderApiKey(activeProvider);
+      const optimizeKey = this.resolveProviderApiKey(activeProvider);
       const keyUsable = Boolean(
         optimizeKey && optimizeKey !== 'none' && !optimizeKey.startsWith('sk-test')
         && !optimizeKey.includes('xxx') && optimizeKey.length > 5,
@@ -1014,7 +1047,7 @@ export class HarnessServer {
         return;
       }
       // 权限预设：显式传入时校验白名单，未传入回落到全局默认
-      let initialPreset: PermissionPreset = 'edit';
+      let initialPreset: PermissionPreset;
       if (body.preset !== undefined) {
         const normalized = normalizePermissionPreset(body.preset);
         if (!normalized) {
@@ -1388,8 +1421,7 @@ export class HarnessServer {
         return;
       }
       const resolved = path.resolve(wsPath);
-      const wsRecord = this.workspaceStore.getByPath(resolved);
-      const savedConfig = this.settingsStore.get<Record<string, any>>('workspace.memoryConfigs')?.[resolved] || {};
+      const savedConfig = this.settingsStore.get<MemoryWorkspaceConfigs>('workspace.memoryConfigs')?.[resolved] || {};
 
       const mode = savedConfig.mode || 'file';
       const projectPath = mode === 'sqlite'
@@ -1436,9 +1468,9 @@ export class HarnessServer {
         return;
       }
       const resolved = path.resolve(wsPath);
-      const allConfigs = this.settingsStore.get<Record<string, any>>('workspace.memoryConfigs') || {};
+      const allConfigs = this.settingsStore.get<MemoryWorkspaceConfigs>('workspace.memoryConfigs') || {};
       allConfigs[resolved] = {
-        mode: body.mode || 'file',
+        mode: normalizeMemoryMode(body.mode),
         filePath: body.filePath,
         sqlitePath: body.sqlitePath,
         sqliteTable: body.sqliteTable,
@@ -2007,7 +2039,7 @@ export class HarnessServer {
         });
 
         // 迁移成功后同步更新并持久化当前工作区的介质模式
-        const allConfigs = this.settingsStore.get<Record<string, any>>('workspace.memoryConfigs') || {};
+        const allConfigs = this.settingsStore.get<MemoryWorkspaceConfigs>('workspace.memoryConfigs') || {};
         allConfigs[resolved] = {
           ...(allConfigs[resolved] || {}),
           mode: result.targetMode,
@@ -2277,7 +2309,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
               sendEvent,
             });
           }
-          let output = '';
+          let output: string;
           switch (name) {
             case 'read_file':
               output = files.readFile(String(args.path ?? ''));
@@ -2439,7 +2471,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
             }
           }
           console.warn(`[Harness] Fallback: No active provider or valid key found (activeProvider=${activeProvider?.name}, hasKey=${Boolean(realKey)})`);
-          let filesSummary = '工作区为空';
+          let filesSummary: string;
           try {
             const entries = fs.readdirSync(wsPath);
             filesSummary = `包含 ${entries.length} 个顶级文件/目录 (例如: ${entries.slice(0, 5).join(', ')}${entries.length > 5 ? '...' : ''})`;
@@ -2504,9 +2536,13 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
     try {
       result = await loop.run();
     } catch (err) {
-      pushLog({ type: 'summary', actor: 'system', content: `❌ 阶段执行失败：${(err as Error).message}` });
-      inst.updatedAt = Date.now();
-      this.pipelineStore.saveInstance(inst);
+      this.eventStore.appendEvent({
+        sessionId: activeSession.id,
+        turnId,
+        stepIndex: 0,
+        type: 'turn/completed',
+        payload: { error: (err as Error).message },
+      });
       throw err;
     }
         this.sessionStore.touch(activeSession.id);
@@ -2537,7 +2573,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
 
     // 7. Static frontend hosting (strictly apps/server/client, CWD-independent)
     // Resolve relative to this source file so `scripts/*.ps1` work from any CWD.
-    let rawPath = url.pathname;
+    let rawPath: string;
     try {
       rawPath = decodeURIComponent(url.pathname);
     } catch {
@@ -2655,7 +2691,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
 
   /** 一次性（非流式）补全调用：供 AI 优化等无需流式的场景复用代理与 Provider 配置。 */
   private async completeOnce(
-    provider: { baseUrl: string; proxy?: { enabled: boolean; mode: 'inherit' | 'custom' | 'direct'; customConfig?: object } },
+    provider: { baseUrl: string; proxy?: ProviderProxyOption },
     apiKey: string,
     model: string,
     messages: MessageItem[],
@@ -2751,7 +2787,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
   }
 
   private async streamChatCompletion(
-    provider: { baseUrl: string; proxy?: { enabled: boolean; mode: 'inherit' | 'custom' | 'direct'; customConfig?: object } },
+    provider: { baseUrl: string; proxy?: ProviderProxyOption },
     apiKey: string,
     model: string,
     messages: MessageItem[],
@@ -2872,7 +2908,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
     const parsedCalls = [...toolCalls.values()]
       .filter((c) => c.name && validToolNames.has(c.name.trim()))
       .map((c, i) => {
-        let args: Record<string, unknown> = {};
+        let args: Record<string, unknown>;
         try {
           args = c.argsText ? (JSON.parse(c.argsText) as Record<string, unknown>) : {};
         } catch {
@@ -2889,7 +2925,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
     protocol: string,
     rawBaseUrl: string,
     apiKey: string,
-    providerProxy: any
+    providerProxy?: ProviderProxyOption
   ): Promise<void> {
     // Anthropic 官方协议并不暴露公开的 /models 列表端点，其模型列表按官方文档标准规范化解析
     if (protocol === 'anthropic-native') {
@@ -2936,7 +2972,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
         return;
       }
 
-      const json = await response.json() as any;
+      const json = await response.json() as { data?: Array<{ id: string }> };
       const provider = new OpenAICompatibleProvider({
         id: 'probe',
         name: 'Probe',
@@ -3149,7 +3185,7 @@ Constraints:
         return await this.streamChatCompletion(provider, realKey, modelId, messages, onDelta);
       } catch (err) {
         // 模型调用失败必须上抛，交由状态机将本阶段/实例标记为 failed（禁止把失败伪装成完成）
-        throw new Error(`调用模型失败：${(err as Error).message}`);
+        throw new Error(`调用模型失败：${(err as Error).message}`, { cause: err });
       }
     };
 
@@ -3299,7 +3335,7 @@ Constraints:
             // 兼容某些命令行逃逸后的特殊 payload
             const unescaped = data.replace(/\\"/g, '"');
             resolve(JSON.parse(unescaped) as T);
-          } catch (err) {
+          } catch {
             reject(new Error('Invalid JSON payload'));
           }
         }

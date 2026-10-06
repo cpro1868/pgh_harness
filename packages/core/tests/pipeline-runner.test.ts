@@ -8,7 +8,8 @@ import {
   LockDelegator,
   ArtifactManager,
 } from '../src/index.ts';
-import type { PipelineStage, StageRunResult } from '../src/index.ts';
+import type { PipelineStage } from '../../protocol/src/index.ts';
+import type { StageRunResult } from '../src/index.ts';
 import { PIPELINE_DEFAULT_TEMPLATE } from '../../plugins/storage-sqlite/src/pipeline-schema.ts';
 import { WorkspaceWriteLock } from '../src/workspace-lock.ts';
 

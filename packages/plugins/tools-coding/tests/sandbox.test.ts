@@ -49,7 +49,7 @@ test('TC-01-04-003 & TC-01-04-004: 沙箱 realpath 符号链接防逃逸与 Shel
           return true;
         }
       );
-    } catch (e) {
+    } catch {
       // 若受 Windows 权限限制跳过 symlink 创建测试，验证相对路径
     }
   });
@@ -67,9 +67,10 @@ test('TC-01-04-003 & TC-01-04-004: 沙箱 realpath 符号链接防逃逸与 Shel
       async () => {
         await executor.exec(sleepCmd, { timeoutMs: 200 });
       },
-      (err: any) => {
+      (err: unknown) => {
         const elapsed = Date.now() - start;
-        assert.ok(elapsed < 2000, '必须在超时后快速强制掐断子进程');
+        assert.ok(elapsed < 2000, '进程应在超时后被强制终止');
+        assert.ok(err instanceof Error);
         assert.ok(err.message.includes('timeout') || err.message.includes('terminated'));
         return true;
       }
