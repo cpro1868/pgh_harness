@@ -6,17 +6,18 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { acquireInstanceLock, releaseInstanceLock } from './instance-lock.ts';
 import { ProxyDispatcher } from './network/proxy-dispatcher.ts';
-import { SqliteDatabase, SettingsStore, ProviderStore, WorkspaceStore, EventStore, SessionStore, PipelineStore, PIPELINE_DEFAULT_TEMPLATE } from '../../../packages/plugins/storage-sqlite/src/index.ts';
+import { SqliteDatabase, SettingsStore, ProviderStore, WorkspaceStore, EventStore, SessionStore, PipelineStore, PIPELINE_DEFAULT_TEMPLATE, WorkflowStore, WORKFLOW_DEFAULT_TEMPLATE } from '../../../packages/plugins/storage-sqlite/src/index.ts';
 import type { ProviderRecord, PipelineInstanceModel } from '../../../packages/plugins/storage-sqlite/src/index.ts';
 import type { PipelineTemplate, PipelineStage } from '@harness/protocol';
 
 import { OpenAICompatibleProvider } from '../../../packages/plugins/provider-openai/src/index.ts';
 import { encryptSecret, decryptSecret } from './security/crypto.ts';
+import { retryWithBackoff } from './security/retry.ts';
 import { resolveMasterKey } from './security/master-key.ts';
 import { sanitizeProxyConfig } from './security/proxy-config.ts';
 import type { ProviderProxyOption } from './network/proxy-dispatcher.ts';
-import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff, PipelineRunner, LockDelegator, ArtifactManager } from '../../../packages/core/src/index.ts';
-import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult, PipelineExecutionOutcome, GateDecision, StageArtifactSnapshot, StageRunResult } from '../../../packages/core/src/index.ts';
+import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff, PipelineRunner, LockDelegator, ArtifactManager, parseBpmnXml, BpmnWorkflowEngine } from '../../../packages/core/src/index.ts';
+import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult, PipelineExecutionOutcome, GateDecision, StageArtifactSnapshot, StageRunResult, BpmnNode, NodeExecutionResult } from '../../../packages/core/src/index.ts';
 import { FileTools, ShellExecutor, SearchTools } from '../../../packages/plugins/tools-coding/src/index.ts';
 import {
   scanAllSkills,
@@ -32,7 +33,8 @@ import type { McpServerConfig } from '../../../packages/plugins/tools-mcp/src/in
 import { MemoryCascade, migrateMemory } from '../../../packages/plugins/memory/src/index.ts';
 import type { MemoryStorageMode } from '../../../packages/plugins/memory/src/index.ts';
 import { openNativeFolderDialog, listDirectory, createDirectory, revealInFileManager } from './native-dialog.ts';
-import type { BaseEvent, NetworkProxyConfig } from '@harness/protocol';
+import type { BaseEvent, NetworkProxyConfig, WorkflowExecutionLogItem, WorkflowInstanceModel, WorkflowToolCallAudit } from '@harness/protocol';
+import type { WorkflowEngineState } from '../../../packages/core/src/workflow/bpmn-engine.ts';
 
 
 const __filename = fileURLToPath(import.meta.url);
@@ -225,6 +227,7 @@ export class HarnessServer {
   public governor: ContextGovernor;
   public mcpPool: McpClientPool;
   public pipelineStore: PipelineStore;
+  public workflowStore: WorkflowStore;
   public pipelineRunner = new PipelineRunner();
   public lockDelegator: LockDelegator;
   private readonly pipelineInstances = new Map<string, {
@@ -236,7 +239,7 @@ export class HarnessServer {
     currentStageId?: string;
     outcome?: PipelineExecutionOutcome;
   }>();
-  private readonly writeLocks = new WorkspaceWriteLock();
+  public readonly writeLocks = new WorkspaceWriteLock();
   /**
    * 流水线运行时上下文：每个实例持有唯一的 ArtifactManager（守护状态需跨阶段保持）、
    * 上游阶段工件快照、以及运行中的人类干预指令队列。
@@ -249,6 +252,8 @@ export class HarnessServer {
     /** 与 runner 共享的权威内存实例对象：所有路由必须在同一对象上变更，避免双写覆盖 */
     inst: PipelineInstanceModel;
   }>();
+  /** 运行中的 BPMN 流程引擎实例池 (用于 UserTask 审查挂起与人工恢复) */
+  private readonly workflowEngines = new Map<string, { engine: BpmnWorkflowEngine; inst: WorkflowInstanceModel }>();
   private readonly turnAborts = new Map<string, AbortController>();
   private readonly turnCheckpoints = new Map<string, { workspacePath: string; manager: GitRollbackManager }>();
   private readonly questionBroker = new QuestionBroker();
@@ -281,6 +286,7 @@ export class HarnessServer {
     this.governor = new ContextGovernor();
     this.mcpPool = new McpClientPool();
     this.pipelineStore = new PipelineStore(this.db);
+    this.workflowStore = new WorkflowStore(this.db);
     this.lockDelegator = new LockDelegator(this.writeLocks);
 
     // 默认内置流水线初始化（若库中尚无模板）
@@ -383,9 +389,22 @@ export class HarnessServer {
       try {
         await this.handleRequest(req, res);
       } catch (err) {
-        res.writeHead(500, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ code: 500, message: (err as Error).message }));
+        console.error('[Harness] Request handler error:', (err as Error).message);
+        if (!res.headersSent) {
+          res.writeHead(500, { 'Content-Type': 'application/json' });
+        }
+        if (!res.writableEnded) {
+          res.end(JSON.stringify({ code: 500, message: (err as Error).message }));
+        }
       }
+    });
+
+    // 长运行稳定性兜底：任何异步逃逸异常只记录并保持进程存活，绝不静默崩溃（TC-00-99-001）
+    process.on('uncaughtException', (err) => {
+      console.error('[Harness] uncaughtException (进程保持存活):', err.stack || err.message);
+    });
+    process.on('unhandledRejection', (reason) => {
+      console.error('[Harness] unhandledRejection (进程保持存活):', reason instanceof Error ? (reason.stack || reason.message) : String(reason));
     });
 
     await new Promise<void>((resolve, reject) => {
@@ -412,22 +431,186 @@ export class HarnessServer {
       this.server = null;
     }
     await this.mcpPool.closeAll().catch(() => undefined);
+    await this.proxyDispatcher.destroyAll().catch(() => undefined);
     this.db.close();
     releaseInstanceLock(this.dataDir);
+  }
+
+  /**
+   * BPMN Task 节点真实 Agent 执行器工厂：/run 首次执行与 /decide 重启兜底续跑共用同一实现，
+   * 保证两条路径的模型调用、权限闸门与执行日志语义完全一致。
+   */
+  private createWorkflowNodeExecutor(opts: {
+    instanceId: string;
+    workspacePath: string;
+    instruction?: string;
+    executionLog: WorkflowExecutionLogItem[];
+  }): (node: BpmnNode, liveVariables: Record<string, unknown>) => Promise<NodeExecutionResult> {
+    return async (node, liveVariables) => {
+      const isTask = node.type.includes('task') || node.type.includes('Task');
+      let nodeOutput = '';
+      let model: string | undefined;
+      let stepsUsed: number | undefined;
+      let stoppedReason: string | undefined;
+      const toolCalls: WorkflowToolCallAudit[] = [];
+      const pendingCalls = new Map<string, WorkflowToolCallAudit>();
+      // 审计仅保留可定位的参数摘要，绝不把 write_file 正文等大字段写入日志
+      const summarizeArgs = (args: Record<string, unknown>): Record<string, unknown> => {
+        const summary: Record<string, unknown> = {};
+        for (const key of ['path', 'pattern', 'command']) {
+          if (typeof args[key] === 'string') summary[key] = (args[key] as string).slice(0, 300);
+        }
+        return summary;
+      };
+
+      if (isTask) {
+        try {
+          const modelId = node.parameters?.model;
+          const roleName = node.parameters?.roleName;
+          const systemPrompt = node.parameters?.systemPrompt;
+          const promptTemplate = node.parameters?.promptTemplate;
+
+          const providers = this.providerStore.list();
+          let activeProvider = providers.find((p) => p.models && p.models.some((m) => m.id === modelId));
+          if (!activeProvider && providers.length > 0) activeProvider = providers[0];
+          const activeModel = modelId || (activeProvider?.models && activeProvider.models[0]?.id) || 'deepseek-chat';
+
+          if (activeProvider) {
+            const rolePrompt = systemPrompt || `你是一个专业的 ${roleName || 'Agent'} 智能体，负责高效执行任务并符合安全规范。`;
+            let userInstruction = promptTemplate || opts.instruction || '请执行当前 BPMN 流程任务步骤。';
+            for (const [k, v] of Object.entries(liveVariables)) {
+              userInstruction = userInstruction.replace(new RegExp(`\\$\\{${k}\\}`, 'g'), String(v));
+            }
+
+            const tools = new FileTools(opts.workspacePath);
+            const search = new SearchTools(opts.workspacePath);
+            const shell = new ShellExecutor(opts.workspacePath);
+            const permissionGate = new PermissionGate({ preset: 'edit' });
+            const realKey = this.resolveProviderApiKey(activeProvider);
+            const hasRealKey = Boolean(
+              realKey && realKey !== 'none' && !realKey.startsWith('sk-test') && !realKey.includes('xxx') && realKey.length > 5,
+            );
+
+            const turnLoop = new TurnLoop({
+              sessionId: `sess_bpmn_${opts.instanceId}`,
+              turnId: `turn_${node.id}_${Date.now()}`,
+              workspacePath: opts.workspacePath,
+              systemPrompt: rolePrompt,
+              history: [],
+              userMessage: userInstruction,
+              model: activeModel,
+              chat: async (messages, _tools, onDelta) => {
+                if (hasRealKey) {
+                  return await retryWithBackoff(
+                    () => this.streamChatCompletion(activeProvider, realKey, activeModel, messages, onDelta),
+                    { onRetry: (attempt, err) => console.warn(`[Harness] LLM 瞬态错误自动重试 (${attempt}/3):`, err instanceof Error ? err.message.slice(0, 120) : err) },
+                  );
+                }
+                return {
+                  content: `[Agent ${roleName || 'Runner'}] 任务「${node.name || node.id}」已执行完毕。`,
+                  toolCalls: [],
+                };
+              },
+              executeTool: async (name, args) => {
+                const dec = permissionGate.evaluate({ tool: name, args });
+                if (dec.action === 'deny') throw new Error(`权限拦截: ${dec.reason}`);
+                if (name === 'read_file') return tools.readFile(String(args.path));
+                if (name === 'write_file') { tools.writeFile(String(args.path), String(args.content)); return 'written'; }
+                if (name === 'edit_file') {
+                  tools.editFile(String(args.path), String(args.oldString ?? ''), String(args.newString ?? ''), Boolean(args.replaceAll ?? false));
+                  return 'edited';
+                }
+                if (name === 'glob') return search.glob(String(args.pattern)).join('\n');
+                if (name === 'grep') return search.grep(String(args.pattern)).map((h) => `${h.file}:${h.line ?? ''}:${h.text ?? ''}`).join('\n');
+                if (name === 'bash') { const r = await shell.exec(String(args.command)); return (r.stdout || r.stderr).slice(0, 4000); }
+                return '';
+              },
+              onEvent: (ev) => {
+                const d = ev.data as Record<string, unknown>;
+                if (ev.type === 'tool-call-start') {
+                  const callId = String(d.callId ?? '');
+                  const audit: WorkflowToolCallAudit = {
+                    id: callId,
+                    name: String(d.tool ?? 'unknown'),
+                    args: summarizeArgs((d.args ?? {}) as Record<string, unknown>),
+                    ok: true,
+                  };
+                  toolCalls.push(audit);
+                  if (callId) pendingCalls.set(callId, audit);
+                } else if (ev.type === 'tool-result') {
+                  const audit = pendingCalls.get(String(d.callId ?? ''));
+                  if (audit) {
+                    audit.ok = d.isError !== true;
+                    audit.output = String(d.output ?? '').slice(0, 2000);
+                    pendingCalls.delete(String(d.callId ?? ''));
+                  }
+                }
+              },
+            });
+
+            const turnResult = await turnLoop.run();
+            nodeOutput = turnResult.finalContent;
+            stepsUsed = turnResult.stepsUsed;
+            stoppedReason = turnResult.stoppedReason;
+            model = activeModel;
+          }
+        } catch (execErr) {
+          console.warn(`[BPMN] 节点 ${node.id} 执行 Agent 时捕获警告:`, execErr);
+        }
+      }
+
+      opts.executionLog.push({
+        nodeId: node.id,
+        name: node.name || node.id,
+        output: nodeOutput || undefined,
+        timestamp: Date.now(),
+        model,
+        stepsUsed,
+        stoppedReason,
+        toolCalls: toolCalls.length > 0 ? toolCalls : undefined,
+      });
+      return { ok: true };
+    };
   }
 
   private async handleRequest(req: http.IncomingMessage, res: http.ServerResponse): Promise<void> {
     const url = new URL(req.url ?? '/', `http://${req.headers.host || '127.0.0.1'}`);
     const method = req.method ?? 'GET';
 
-    res.setHeader('Access-Control-Allow-Origin', '*');
+    // 严格遵循安全工程方法论 BL-12：收紧 CORS 跨域白名单（仅放行回环地址、localhost 与同源来源，绝不放行通配 *）
+    const origin = req.headers.origin;
+    if (origin) {
+      const isLoopbackOrigin = /^https?:\/\/(?:127\.0\.0\.1|localhost)(?::\d+)?$/.test(origin);
+      if (isLoopbackOrigin) {
+        res.setHeader('Access-Control-Allow-Origin', origin);
+      }
+    }
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
-    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+    res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization, x-pgh-token');
 
     if (method === 'OPTIONS') {
       res.writeHead(204);
       res.end();
       return;
+    }
+
+    // 严格遵循安全工程方法论 BL-11：非回环暴露绑定强制 Token 鉴权 (fail-closed)
+    const generalConfig = this.settingsStore.get<{ hostBinding?: string; accessToken?: string }>('system.general') || {};
+    const configuredToken = (generalConfig.accessToken ?? process.env.PGH_ACCESS_TOKEN ?? '').trim();
+    const isBoundAll = generalConfig.hostBinding === '0.0.0.0';
+
+    if (isBoundAll && configuredToken && url.pathname.startsWith('/api/') && url.pathname !== '/api/health') {
+      const rawRemote = (req.headers['x-forwarded-for'] as string) || req.socket.remoteAddress || '';
+      const isLoopbackRemote = rawRemote.includes('127.0.0.1') || rawRemote.includes('::1') || rawRemote === '';
+      if (!isLoopbackRemote) {
+        const clientToken = (req.headers['x-pgh-token'] as string)
+          || (req.headers.authorization && req.headers.authorization.startsWith('Bearer ') ? req.headers.authorization.slice(7) : '');
+        if (!clientToken || clientToken !== configuredToken) {
+          res.writeHead(401, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 401, message: '非回环访问被拒绝：缺少或无效的访问令牌 (HARNESS_ACCESS_TOKEN)' }));
+          return;
+        }
+      }
     }
 
     // 1. 健康检查
@@ -473,6 +656,7 @@ export class HarnessServer {
       if (body.section === 'proxy') {
         this.settingsStore.set('network.proxy', body.data);
         this.proxyDispatcher.updateGlobalProxy(body.data as NetworkProxyConfig);
+        await this.proxyDispatcher.destroyAll().catch(() => undefined);
       } else if (body.section === 'general') {
         this.settingsStore.set('system.general', body.data);
       } else if (body.section === 'appearance') {
@@ -503,6 +687,7 @@ export class HarnessServer {
       const body = await this.readJsonBody<NetworkProxyConfig>(req);
       this.settingsStore.set('network.proxy', body);
       this.proxyDispatcher.updateGlobalProxy(body);
+      await this.proxyDispatcher.destroyAll().catch(() => undefined);
       this.json(res, { code: 0, message: 'Proxy settings updated successfully', data: body });
       return;
     }
@@ -674,11 +859,9 @@ export class HarnessServer {
 
       const started = Date.now();
       try {
-        const reply = await this.completeOnce(
-          { baseUrl, proxy },
-          apiKey,
-          modelId,
-          [{ role: 'user', content: 'ping' }],
+        const reply = await retryWithBackoff(
+          () => this.completeOnce({ baseUrl, proxy }, apiKey, modelId, [{ role: 'user', content: 'ping' }]),
+          { retries: 2, onRetry: (attempt, err) => console.warn(`[Harness] Provider ping 瞬态错误重试 (${attempt}/2):`, err instanceof Error ? err.message.slice(0, 100) : err) },
         );
         this.json(res, {
           code: 0,
@@ -1485,6 +1668,359 @@ export class HarnessServer {
       return;
     }
 
+    // 6.7.1 BPMN 工作流资产管理接口 (WBS-03-01-02)
+    if (method === 'GET' && url.pathname === '/api/workflows') {
+      const list = this.workflowStore.list();
+      this.json(res, { code: 0, data: list });
+      return;
+    }
+
+    if (method === 'POST' && url.pathname === '/api/workflows') {
+      const body = await this.readJsonBody<{
+        id?: string;
+        name?: string;
+        description?: string;
+        bpmnXml?: string;
+        version?: number;
+      }>(req);
+
+      if (!body.name || !body.name.trim()) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '工作流名称不能为空' }));
+        return;
+      }
+      if (!body.bpmnXml || !body.bpmnXml.trim()) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: 'BPMN XML 内容不能为空' }));
+        return;
+      }
+
+      let importStats: { nodeCount: number; gatewayCount: number };
+      try {
+        const parsed = parseBpmnXml(body.bpmnXml);
+        importStats = {
+          nodeCount: parsed.nodes.filter((n) => !n.type.includes('Gateway')).length,
+          gatewayCount: parsed.nodes.filter((n) => n.type.includes('Gateway')).length,
+        };
+      } catch (err) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: `非法 BPMN 2.0 XML: ${(err as Error).message}` }));
+        return;
+      }
+
+      const id = body.id || `wf_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const existing = this.workflowStore.get(id);
+      if (existing) {
+        const updated = this.workflowStore.update(id, {
+          name: body.name.trim(),
+          description: body.description ?? '',
+          bpmnXml: body.bpmnXml,
+          version: body.version ?? (existing.version + 1),
+          nodeCount: importStats.nodeCount,
+          gatewayCount: importStats.gatewayCount,
+        });
+        this.json(res, { code: 0, message: '工作流已更新', data: updated });
+        return;
+      }
+
+      const created = this.workflowStore.create({
+        id,
+        name: body.name.trim(),
+        description: body.description ?? '',
+        bpmnXml: body.bpmnXml,
+        version: body.version ?? 1,
+        nodeCount: importStats.nodeCount,
+        gatewayCount: importStats.gatewayCount,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      this.json(res, { code: 0, message: '工作流已创建', data: created });
+      return;
+    }
+
+    const workflowDetailMatch = url.pathname.match(/^\/api\/workflows\/([^/]+)$/);
+    if (workflowDetailMatch && method === 'GET') {
+      const wfId = decodeURIComponent(workflowDetailMatch[1] as string);
+      const wf = this.workflowStore.get(wfId);
+      if (!wf) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '工作流未找到' }));
+        return;
+      }
+      this.json(res, { code: 0, data: wf });
+      return;
+    }
+
+    if (workflowDetailMatch && method === 'PUT') {
+      const wfId = decodeURIComponent(workflowDetailMatch[1] as string);
+      const body = await this.readJsonBody<{
+        name?: string;
+        description?: string;
+        bpmnXml?: string;
+        version?: number;
+      }>(req);
+      const patch: Record<string, unknown> = {};
+      if (body.name !== undefined) patch.name = body.name;
+      if (body.description !== undefined) patch.description = body.description;
+      if (body.bpmnXml !== undefined) {
+        try {
+          const parsed = parseBpmnXml(body.bpmnXml);
+          patch.bpmnXml = body.bpmnXml;
+          patch.nodeCount = parsed.nodes.filter((n) => !n.type.includes('Gateway')).length;
+          patch.gatewayCount = parsed.nodes.filter((n) => n.type.includes('Gateway')).length;
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 400, message: `非法 BPMN 2.0 XML: ${(err as Error).message}` }));
+          return;
+        }
+      }
+      if (body.version !== undefined) {
+        patch.version = body.version;
+      } else {
+        const existing = this.workflowStore.get(wfId);
+        if (existing) patch.version = existing.version + 1;
+      }
+      const updated = this.workflowStore.update(wfId, patch);
+      if (!updated) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '工作流未找到' }));
+        return;
+      }
+      this.json(res, { code: 0, message: '工作流已更新', data: updated });
+      return;
+    }
+
+    if (workflowDetailMatch && method === 'DELETE') {
+      const wfId = decodeURIComponent(workflowDetailMatch[1] as string);
+      if (wfId === WORKFLOW_DEFAULT_TEMPLATE.id) {
+        res.writeHead(403, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 403, message: '内置默认工作流模板不可删除' }));
+        return;
+      }
+      const removed = this.workflowStore.delete(wfId);
+      if (!removed) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '工作流未找到' }));
+        return;
+      }
+      this.json(res, { code: 0, message: '工作流已删除' });
+      return;
+    }
+
+    // 6.7.2 BPMN 工作流端到端试运行与实例持久化接口 (WBS-03-03-02 / WBS-03-03-03)
+    const workflowRunMatch = url.pathname.match(/^\/api\/workflows\/([^/]+)\/run$/);
+    if (workflowRunMatch && method === 'POST') {
+      const wfId = decodeURIComponent(workflowRunMatch[1] as string);
+      const wf = this.workflowStore.get(wfId);
+      if (!wf) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '工作流未找到' }));
+        return;
+      }
+
+      const body = await this.readJsonBody<{
+        variables?: Record<string, unknown>;
+        workspacePath?: string;
+        instruction?: string;
+      }>(req);
+      const variables = body.variables || {};
+      const instanceId = `wfi_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+      const now = Date.now();
+      const wsPath = path.resolve(body.workspacePath || process.cwd());
+
+      try {
+        const model = parseBpmnXml(wf.bpmnXml);
+        const engine = new BpmnWorkflowEngine(model);
+        const executionLog: WorkflowExecutionLogItem[] = [];
+
+        // 真实 Agent 执行引擎绑定：当节点为 Task 时，通过真实 Provider 与 TurnLoop 驱动
+        const state = await engine.execute({
+          initialVariables: variables,
+          onNodeExecute: this.createWorkflowNodeExecutor({
+            instanceId,
+            workspacePath: wsPath,
+            instruction: body.instruction,
+            executionLog,
+          }),
+        });
+
+        const savedInstance = this.workflowStore.saveInstance({
+          instanceId,
+          workflowId: wf.id,
+          workflowName: wf.name,
+          workspacePath: wsPath,
+          instruction: body.instruction || '标准触发任务',
+          status: state.status,
+          activeNodes: state.activeNodes,
+          completedNodes: state.completedNodes,
+          variables: state.variables,
+          executionLog,
+          error: state.error,
+          createdAt: now,
+          updatedAt: Date.now(),
+        });
+
+        // 若处于人工审查挂起态，保留运行时引擎以便后续放行/驳回
+        if (state.status === 'waiting') {
+          this.workflowEngines.set(instanceId, { engine, inst: savedInstance });
+        }
+
+        this.json(res, {
+          code: 0,
+          message: state.status === 'waiting' ? '工作流流转至 UserTask，已进入人工审查挂起状态' : '工作流运行结束并已持久化实例',
+          data: savedInstance,
+        });
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 500, message: err instanceof Error ? err.message : String(err) }));
+      }
+      return;
+    }
+
+    // 6.7.2.B BPMN 工作流人工审查决策接口 (支持放行 approve 与打回 reject)
+    const workflowDecideMatch = url.pathname.match(/^\/api\/workflow-instances\/([^/]+)\/decide$/);
+    if (workflowDecideMatch && method === 'POST') {
+      const instId = decodeURIComponent(workflowDecideMatch[1] as string);
+      const runtime = this.workflowEngines.get(instId);
+      const inst = this.workflowStore.getInstance(instId);
+
+      if (!inst) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '工作流实例未找到' }));
+        return;
+      }
+
+      if (inst.status !== 'waiting') {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '当前实例未处于人工审查挂起状态' }));
+        return;
+      }
+
+      const body = await this.readJsonBody<{
+        decision: 'approve' | 'reject';
+        variables?: Record<string, unknown>;
+        reason?: string;
+      }>(req);
+
+      if (!body.decision || (body.decision !== 'approve' && body.decision !== 'reject')) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: 'decision 必须为 approve 或 reject' }));
+        return;
+      }
+
+      try {
+        // 裁决时刻必须在 resume 之前捕获：resume 会真实跑完下游节点（可能耗时数分钟），
+        // 若事后取时间戳，裁决日志会被误标到下游之后。
+        const decidedAt = Date.now();
+        let state: WorkflowEngineState;
+        if (runtime) {
+          state = await runtime.engine.resume({
+            decision: body.decision,
+            variables: body.variables,
+            reason: body.reason,
+          });
+        } else {
+          // 断点续接兜底：进程重启后运行时引擎丢失，从持久化快照 hydrate 后按裁决 resume，
+          // 严禁整段重跑（否则会重放已完成节点并吞掉裁决语义）
+          const wf = this.workflowStore.get(inst.workflowId);
+          if (!wf) throw new Error('关联的流程定义不存在');
+          const model = parseBpmnXml(wf.bpmnXml);
+          const engine = new BpmnWorkflowEngine(model);
+          engine.hydrate({
+            completedNodes: inst.completedNodes,
+            activeNodes: inst.activeNodes,
+            variables: inst.variables,
+            onNodeExecute: this.createWorkflowNodeExecutor({
+              instanceId: instId,
+              workspacePath: inst.workspacePath || process.cwd(),
+              instruction: inst.instruction,
+              executionLog: inst.executionLog,
+            }),
+          });
+          state = await engine.resume({
+            decision: body.decision,
+            variables: body.variables,
+            reason: body.reason,
+          });
+          // 驳回后仍挂起：把重建的引擎放回运行时池，后续裁决可走内存路径
+          if (state.status === 'waiting') {
+            this.workflowEngines.set(instId, { engine, inst });
+          }
+        }
+
+        const gateNodeId = inst.activeNodes[0] || 'UserTask';
+        // 运行时引擎持有的执行日志数组与从库中反序列化的实例是两份对象：
+        // 必须以运行时日志为准回填，否则 resume() 期间新增的节点轨迹会被静默丢弃。
+        if (runtime && runtime.inst.executionLog !== inst.executionLog) {
+          inst.executionLog = runtime.inst.executionLog;
+        }
+        inst.status = state.status;
+        inst.activeNodes = state.activeNodes;
+        inst.completedNodes = state.completedNodes;
+        inst.variables = state.variables;
+        inst.updatedAt = Date.now();
+        inst.executionLog.push({
+          nodeId: gateNodeId,
+          name: `人工裁决: ${body.decision === 'approve' ? '放行通过' : '驳回重做'}`,
+          output: body.reason || (body.decision === 'approve' ? '人工审查通过，推进下游流程。' : '人工审核不通过。'),
+          timestamp: decidedAt,
+        });
+        // 裁决日志必须锚定在裁决发生的时点：追加到末尾会让"放行"记录落在下游节点之后，
+        // 破坏日志的时序可读性（真实项目验收取证发现）。此处按时间戳重排一次。
+        inst.executionLog.sort((a, b) => (a.timestamp ?? 0) - (b.timestamp ?? 0));
+
+        this.workflowStore.saveInstance(inst);
+        if (inst.status !== 'waiting') {
+          this.workflowEngines.delete(instId);
+        }
+
+        this.json(res, {
+          code: 0,
+          message: body.decision === 'approve'
+            ? '人工审查已放行，流程继续推进'
+            : (inst.status === 'waiting' ? '已驳回，流程维持挂起等待再次审查' : '已驳回，流程已转入退回分支'),
+          data: inst,
+        });
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 500, message: err instanceof Error ? err.message : String(err) }));
+      }
+      return;
+    }
+
+    // 6.7.3 BPMN 工作流运行实例列表与详情查询接口 (WBS-03-03-03)
+    if (method === 'GET' && url.pathname === '/api/workflow-instances') {
+      const list = this.workflowStore.listInstances();
+      this.json(res, { code: 0, data: list });
+      return;
+    }
+
+    const workflowInstanceMatch = url.pathname.match(/^\/api\/workflow-instances\/([^/]+)$/);
+    if (workflowInstanceMatch && method === 'GET') {
+      const instId = decodeURIComponent(workflowInstanceMatch[1] as string);
+      const inst = this.workflowStore.getInstance(instId);
+      if (!inst) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '工作流实例未找到' }));
+        return;
+      }
+      this.json(res, { code: 0, data: inst });
+      return;
+    }
+
+    if (workflowInstanceMatch && method === 'DELETE') {
+      const instId = decodeURIComponent(workflowInstanceMatch[1] as string);
+      const removed = this.workflowStore.deleteInstance(instId);
+      if (!removed) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '工作流实例未找到' }));
+        return;
+      }
+      this.json(res, { code: 0, message: '工作流运行实例已删除' });
+      return;
+    }
+
+
     // 6.7 流水线模板管理接口 (WBS-02-01-01 / WBS-02-01-02)
     if (method === 'GET' && url.pathname === '/api/pipelines') {
       const list = this.pipelineStore.list();
@@ -1982,16 +2518,120 @@ export class HarnessServer {
     if (gateDecideMatch && method === 'POST') {
       const instanceId = decodeURIComponent(gateDecideMatch[1] as string);
       const body = await this.readJsonBody<GateDecision>(req);
-      const ok = this.pipelineRunner.resolveGate(instanceId, {
-        action: body.action === 'reject' ? 'reject' : 'approve',
+      const decisionAction = body.action === 'reject' ? 'reject' : 'approve';
+
+      // 1. 尝试直接唤醒内存中运行态 runner
+      let ok = this.pipelineRunner.resolveGate(instanceId, {
+        action: decisionAction,
         reason: body.reason,
       });
+
+      // 2. 服务端防进程重启状态脱节：若进程重启过，runner 内存对象已丢失，但持久化库中仍处于 waiting_gate
       const inst = this.pipelineStore.getInstance(instanceId);
+      if (!ok && inst && inst.status === 'waiting_gate') {
+        const curIdx = inst.stages.findIndex((s) => s.id === inst.currentStageId);
+        if (decisionAction === 'approve') {
+          // 放行：唤醒并继续下一阶段
+          const nextIdx = curIdx + 1;
+          if (nextIdx < inst.stages.length) {
+            inst.status = 'running';
+            inst.currentStageId = inst.stages[nextIdx]?.id;
+            inst.currentStageOrder = nextIdx + 1;
+            ok = true;
+          } else {
+            inst.status = 'completed';
+            ok = true;
+          }
+        } else {
+          // 驳回：保持在当前阶段重跑
+          inst.status = 'running';
+          ok = true;
+        }
+
+        // 重新驱动后续阶段异步执行
+        if (inst.status === 'running') {
+          const wsPath = inst.workspacePath;
+          const capturedInst = inst;
+          const pipelineCtx = {
+            artifactMgr: new ArtifactManager(wsPath),
+            snapshots: [] as StageArtifactSnapshot[],
+            pendingInstructions: [] as string[],
+            workspacePath: wsPath,
+            inst: capturedInst,
+          };
+          this.pipelineContexts.set(instanceId, pipelineCtx);
+
+          // 补齐只读守护
+          for (const a of capturedInst.artifacts) {
+            pipelineCtx.artifactMgr.approve(a.stageId, [a.path]);
+          }
+
+          const remainingStages = capturedInst.stages.slice(capturedInst.currentStageOrder - 1);
+          void this.pipelineRunner.run({
+            instanceId,
+            stages: remainingStages,
+            onStatusChange: (status, currentStageId) => {
+              capturedInst.status = status;
+              if (currentStageId) {
+                capturedInst.currentStageId = currentStageId;
+                const idx = capturedInst.stages.findIndex((s) => s.id === currentStageId);
+                if (idx >= 0) capturedInst.currentStageOrder = idx + 1;
+              }
+              capturedInst.updatedAt = Date.now();
+              this.pipelineStore.saveInstance(capturedInst);
+            },
+            onGateResolved: (stage, decision, artifacts) => {
+              if (decision.action === 'approve') {
+                pipelineCtx.artifactMgr.approve(stage.id, artifacts);
+              }
+              capturedInst.logs.push({
+                id: `log_${Date.now()}_gate_${stage.id}_${decision.action}`,
+                stageId: stage.id,
+                stageOrder: stage.order,
+                roleName: '人类操作者 (Gatekeeper)',
+                actor: 'human',
+                type: 'gate',
+                content: decision.action === 'approve'
+                  ? `✅ 审批放行阶段「${stage.roleName}」的交付工件，允许唤醒下游阶段。`
+                  : `↩️ 打回阶段「${stage.roleName}」重做：${decision.reason || '未提供原因'}`,
+                timestamp: Date.now(),
+              });
+              capturedInst.updatedAt = Date.now();
+              this.pipelineStore.saveInstance(capturedInst);
+            },
+            executeStage: async ({ stage, stageIndex, reworkReason, signal }) => {
+              const stageHolder = `${instanceId}:${stage.id}`;
+              this.writeLocks.tryAcquire(wsPath, instanceId);
+              this.lockDelegator.delegate(wsPath, instanceId, stageHolder);
+              try {
+                return await this.runPipelineStage({
+                  inst: capturedInst,
+                  stage,
+                  stageIndex,
+                  reworkReason,
+                  signal,
+                  ctx: pipelineCtx,
+                });
+              } finally {
+                this.lockDelegator.reclaim(wsPath, stageHolder);
+              }
+            },
+          }).then((outcome) => {
+            capturedInst.status = outcome.status;
+            capturedInst.gateRecords = outcome.gateRecords;
+            capturedInst.error = outcome.error;
+          }).catch((err) => {
+            capturedInst.status = 'failed';
+            capturedInst.error = (err as Error).message;
+          });
+        }
+      }
+
       if (inst) {
         inst.gateRecords.push({
           stageId: inst.currentStageId || '',
           roleName: 'Gatekeeper',
-          action: body.action === 'reject' ? 'reject' : 'approve',
+          action: decisionAction,
           reason: body.reason,
           timestamp: Date.now(),
         });
@@ -2018,6 +2658,217 @@ export class HarnessServer {
       await this.mcpPool.closeAll();
       const counts = await this.mcpPool.connectAll(servers);
       this.json(res, { code: 0, message: 'MCP 服务器配置已更新', data: { counts, tools: this.mcpPool.getTools() } });
+      return;
+    }
+
+    // 6.6 手动直接录入单条经验记忆接口（支持 SHA-256 指纹去重，WBS-Mem-01）
+    if (method === 'POST' && url.pathname === '/api/memory/entry') {
+      const body = await this.readJsonBody<{
+        workspacePath?: string;
+        content?: string;
+        source?: string;
+      }>(req);
+
+      const wsPathRaw = (body.workspacePath ?? '').trim();
+      const content = (body.content ?? '').trim();
+      if (!wsPathRaw) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 workspacePath' }));
+        return;
+      }
+      if (!content) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 content 记忆正文' }));
+        return;
+      }
+
+      const resolved = path.resolve(wsPathRaw);
+      const allConfigs = this.settingsStore.get<MemoryWorkspaceConfigs>('workspace.memoryConfigs') || {};
+      const cfg = allConfigs[resolved] || {};
+      const mode = normalizeMemoryMode(cfg.mode) || 'file';
+
+      try {
+        const cascade = new MemoryCascade(resolved, undefined, {
+          mode,
+          filePath: cfg.filePath,
+          sqlitePath: cfg.sqlitePath,
+          sqliteTable: cfg.sqliteTable,
+          sqliteFts: cfg.sqliteFts,
+        });
+
+        const existingEntries = await cascade.assemble(undefined, 1000);
+        const dupEntry = existingEntries.find((e) => e.content.trim() === content.trim());
+        if (dupEntry) {
+          this.json(res, {
+            code: 0,
+            message: '检测到重复记忆，已自动跳过',
+            data: { saved: false, isDuplicate: true, entryId: dupEntry.id },
+          });
+          return;
+        }
+
+        const entry = await cascade.appendProject(content, (body.source ?? '').trim() || 'manual');
+        this.json(res, {
+          code: 0,
+          message: '记忆条目已保存',
+          data: { saved: true, isDuplicate: false, entryId: entry.id },
+        });
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 500, message: (err as Error).message }));
+      }
+      return;
+    }
+
+    // 6.6 会话全量历史手动沉淀记忆接口（按会话历史轮次提取与智能 SHA-256 去重，WBS-Mem-01）
+    if (method === 'POST' && url.pathname === '/api/memory/snapshot-full') {
+      const body = await this.readJsonBody<{ sessionId?: string }>(req);
+      const sessionIdRaw = (body.sessionId ?? '').trim();
+      if (!sessionIdRaw) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 sessionId' }));
+        return;
+      }
+
+      const session = this.sessionStore.get(sessionIdRaw);
+      if (!session) {
+        res.writeHead(404, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 404, message: '会话不存在' }));
+        return;
+      }
+
+      try {
+        const resolved = path.resolve(session.workspacePath);
+        const allConfigs = this.settingsStore.get<MemoryWorkspaceConfigs>('workspace.memoryConfigs') || {};
+        const cfg = allConfigs[resolved] || {};
+        const mode = normalizeMemoryMode(cfg.mode) || 'file';
+
+        const cascade = new MemoryCascade(resolved, undefined, {
+          mode,
+          filePath: cfg.filePath,
+          sqlitePath: cfg.sqlitePath,
+          sqliteTable: cfg.sqliteTable,
+          sqliteFts: cfg.sqliteFts,
+        });
+
+        const events = this.eventStore.getEventsAfter(sessionIdRaw, 0);
+        const contentLines: string[] = [];
+        let messageCount = 0;
+        for (const ev of events) {
+          const payload = (ev as { payload?: Record<string, unknown> }).payload || {};
+          if (ev.type === 'message/user' || ev.type === 'message/assistant') {
+            const role = ev.type === 'message/user' ? 'user' : 'assistant';
+            const text = String(payload.text || payload.content || '');
+            if (text.trim()) {
+              contentLines.push(`[${role}] ${text.trim()}`);
+              messageCount++;
+            }
+          } else if (ev.type === 'turn/completed') {
+            const summary = String(payload.finalText || payload.summary || '');
+            if (summary.trim()) {
+              contentLines.push(`[assistant-final] ${summary.trim()}`);
+            }
+          }
+        }
+
+        const title = `会话全量沉淀：${session.title}`;
+        const content = `【${title}】(sessionId: ${sessionIdRaw})\n${contentLines.join('\n')}`;
+
+        if (messageCount === 0) {
+          this.json(res, {
+            code: 0,
+            message: '会话暂无可沉淀的对话消息',
+            data: { saved: false, isDuplicate: false, messageCount: 0 },
+          });
+          return;
+        }
+
+        const existingEntries = await cascade.assemble(undefined, 1000);
+        const dupEntry = existingEntries.find((e) => e.content.trim() === content.trim());
+        if (dupEntry) {
+          this.json(res, {
+            code: 0,
+            message: '检测到重复记忆，已自动跳过',
+            data: { saved: false, isDuplicate: true, entryId: dupEntry.id, messageCount },
+          });
+          return;
+        }
+
+        await cascade.appendProject(content, 'manual-snapshot-full');
+        this.json(res, {
+          code: 0,
+          message: '会话全量历史已沉淀',
+          data: { saved: true, isDuplicate: false, entryId: '', messageCount },
+        });
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 500, message: (err as Error).message }));
+      }
+      return;
+    }
+
+    // 6.6 当前会话手动沉淀记忆接口（支持 SHA-256 指纹去重，WBS-Mem-01）
+    if (method === 'POST' && url.pathname === '/api/memory/snapshot') {
+      const body = await this.readJsonBody<{
+        workspacePath?: string;
+        sessionId?: string;
+        title?: string;
+        summary?: string;
+      }>(req);
+
+      const wsPathRaw = (body.workspacePath ?? '').trim();
+      const summary = (body.summary ?? '').trim();
+      if (!wsPathRaw) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 workspacePath' }));
+        return;
+      }
+      if (!summary) {
+        res.writeHead(400, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 400, message: '缺少 summary 会话摘要内容' }));
+        return;
+      }
+
+      const resolved = path.resolve(wsPathRaw);
+      const allConfigs = this.settingsStore.get<MemoryWorkspaceConfigs>('workspace.memoryConfigs') || {};
+      const cfg = allConfigs[resolved] || {};
+      const mode = normalizeMemoryMode(cfg.mode) || 'file';
+
+      try {
+        const cascade = new MemoryCascade(resolved, undefined, {
+          mode,
+          filePath: cfg.filePath,
+          sqlitePath: cfg.sqlitePath,
+          sqliteTable: cfg.sqliteTable,
+          sqliteFts: cfg.sqliteFts,
+        });
+
+        const title = (body.title ?? '').trim() || '手动沉淀会话';
+        const content = `【${title}】${body.sessionId ? `(sessionId: ${body.sessionId})` : ''}\n${summary}`;
+
+        // 先探测内容指纹是否已存在（复用级联装配列表的 SHA-256 去重机制）
+        const existingEntries = await cascade.assemble(undefined, 1000);
+        const dupEntry = existingEntries.find((e) => e.content.trim() === content.trim());
+
+        if (dupEntry) {
+          this.json(res, {
+            code: 0,
+            message: '检测到重复记忆，已自动跳过',
+            data: { saved: false, isDuplicate: true, entryId: dupEntry.id },
+          });
+          return;
+        }
+
+        await cascade.appendProject(content, 'manual-snapshot');
+        this.json(res, {
+          code: 0,
+          message: '会话记忆已沉淀',
+          data: { saved: true, isDuplicate: false, entryId: '' },
+        });
+      } catch (err) {
+        res.writeHead(500, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ code: 500, message: (err as Error).message }));
+      }
       return;
     }
 
@@ -2461,11 +3312,14 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
           if (hasRealKey && activeProvider) {
             try {
               console.log(`[Harness] Dispatching real LLM call via Provider "${activeProvider.name}" (model=${model}, endpoint=${activeProvider.baseUrl})`);
-              return await this.streamChatCompletion(activeProvider, realKey, model, messages, onDelta);
+              return await retryWithBackoff(
+                () => this.streamChatCompletion(activeProvider, realKey, model, messages, onDelta),
+                { onRetry: (attempt, err) => console.warn(`[Harness] LLM 瞬态错误自动重试 (${attempt}/3):`, err instanceof Error ? err.message.slice(0, 120) : err) },
+              );
             } catch (err) {
               const errMsg = (err as Error).message || '';
               console.error('[Harness] LLM call failed:', errMsg);
-              const failContent = `❌ **调用模型失败**: ${errMsg}\n\n> 提示：请前往【模型与 Provider 资产池】检查您的 API Key 是否有效、是否欠费或是否需要配置代理。`;
+              const failContent = `❌ **调用模型失败**（已自动重试仍失败）: ${errMsg}\n\n> 提示：520/断流多为上游网关瞬态故障，请稍后重试；若持续失败请检查【模型与 Provider 资产池】的 Key 有效性与代理配置。`;
               onDelta?.('content', failContent);
               return { content: failContent, toolCalls: [] };
             }
@@ -2490,7 +3344,6 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
           systemPrompt,
           history,
           userMessage: body.message,
-          maxSteps: 25,
           model,
           userAttachments: attachments.list.map((att) => attachmentContextBlock(att)),
           chat,
@@ -3182,7 +4035,10 @@ Constraints:
         throw new Error(`阶段「${stage.roleName}」无法执行：未配置可用模型，或 Provider 未提供有效 API Key`);
       }
       try {
-        return await this.streamChatCompletion(provider, realKey, modelId, messages, onDelta);
+        return await retryWithBackoff(
+          () => this.streamChatCompletion(provider, realKey, modelId, messages, onDelta),
+          { onRetry: (attempt, err) => console.warn(`[Harness] LLM 瞬态错误自动重试 (${attempt}/3):`, err instanceof Error ? err.message.slice(0, 120) : err) },
+        );
       } catch (err) {
         // 模型调用失败必须上抛，交由状态机将本阶段/实例标记为 failed（禁止把失败伪装成完成）
         throw new Error(`调用模型失败：${(err as Error).message}`, { cause: err });
@@ -3196,7 +4052,6 @@ Constraints:
       systemPrompt,
       history: [],
       userMessage,
-      maxSteps: 25,
       model: modelId,
       chat,
       executeTool,

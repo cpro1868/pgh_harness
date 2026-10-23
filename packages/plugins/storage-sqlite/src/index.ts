@@ -7,6 +7,7 @@ export * from './settings-store.ts';
 export * from './provider-store.ts';
 export * from './workspace-store.ts';
 export * from './pipeline-schema.ts';
+export * from './workflow-schema.ts';
 
 
 

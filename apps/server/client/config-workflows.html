@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="ico/pgh.svg">
+  <title>BPMN 业务流程定义与设计 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans app-shell">
+
+  <!-- 统一 40px 顶栏 (对齐系统全局与原型体系) -->
+  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs z-30">
+    <div class="flex items-center space-x-2.5">
+      <img src="ico/pgh.svg" alt="PGH" class="w-5 h-5 rounded shadow-sm">
+      <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-mono">模式C · 流程设计</span>
+      <h1 class="text-xs font-bold text-white">BPMN 2.0 业务流程定义资产库 (Workflow Definitions)</h1>
+    </div>
+
+    <div class="flex items-center space-x-2 text-xs">
+      <button type="button" onclick="openImportModal()" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium flex items-center space-x-1 transition">
+        <svg class="w-3.5 h-3.5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+        <span>导入 BPMN 2.0 XML</span>
+      </button>
+      <a href="run-workflow.html" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition">切至运行大盘</a>
+      <a href="config-workflow-design.html" class="px-3.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center space-x-1.5 shadow transition">
+        <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+        <span>创建新 BPMN 流程</span>
+      </a>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+
+    <!-- 48px 一级侧边栏 -->
+    <aside class="activity-bar h-full">
+      <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      </a>
+      <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+      </a>
+      <a href="run-workflow.html" class="activity-btn" title="BPMN 业务工作流 (Workflow)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      </a>
+      <a href="config-workflows.html" class="activity-btn active" title="BPMN 流程设计">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+      </a>
+      <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </a>
+      <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+      </a>
+      <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+      </a>
+      <a href="config-skills.html" class="activity-btn" title="Skills 技能库">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </a>
+      <div class="flex-1"></div>
+      <a href="config-settings.html" class="activity-btn" title="系统全局设置 (Settings)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </a>
+    </aside>
+
+    <!-- 2. 主内容区 (严格 1:1 对齐原型 config-workflows.html) -->
+    <div class="flex-1 flex flex-col overflow-y-auto">
+      <main class="flex-1 p-6 space-y-6 max-w-[1720px] w-full mx-auto">
+        
+        <!-- 说明横幅 (原型 1:1) -->
+        <div class="p-4 rounded-xl bg-gradient-to-r from-emerald-950/30 to-blue-950/20 border border-emerald-800/40 text-xs text-slate-300 space-y-1">
+          <div class="font-bold text-white text-sm">🌐 BPMN 2.0 业务流程模型定义管理</div>
+          <p class="text-slate-400">
+            管理本地所有的 BPMN 业务流程图定义。在下方列表中选择具体的业务流程，可直接打开 Dify 风格可视化画布进行拖拽设计、查看/编辑底层 XML，或查看该流程已产生的并发运行实例。
+          </p>
+        </div>
+
+        <!-- 流程模型大表格 (原型 1:1) -->
+        <div class="rounded-xl bg-[#0c1220] border border-slate-800 overflow-hidden shadow-2xl">
+          <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <h2 class="text-sm font-bold text-white">已定义的 BPMN 业务流程模型清单</h2>
+              <span id="model-count-badge" class="text-xs text-slate-500 font-mono">加载中...</span>
+            </div>
+            <span class="text-xs text-slate-400 font-mono">标准: OMG BPMN 2.0 Specification</span>
+          </div>
+
+          <table class="w-full text-left text-xs font-sans">
+            <thead class="bg-[#090e1a] text-slate-400 uppercase text-[10px] font-mono border-b border-slate-800">
+              <tr>
+                <th class="py-3.5 px-4">流程模型名称 / ID</th>
+                <th class="py-3.5 px-4">版本 / 格式</th>
+                <th class="py-3.5 px-4">节点拓扑规模</th>
+                <th class="py-3.5 px-4">业务描述</th>
+                <th class="py-3.5 px-4">最后更新</th>
+                <th class="py-3.5 px-4 text-right">设计与 XML 操作</th>
+              </tr>
+            </thead>
+            <tbody id="workflow-tbody" class="divide-y divide-slate-800/80 text-slate-300">
+              <tr>
+                <td colspan="6" class="py-8 text-center text-slate-500 font-mono">正在载入流程模型资产...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- 查看/编辑 XML 源码弹窗 (原型 1:1) -->
+  <div id="xml-view-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#0e1424] border border-slate-700 rounded-xl max-w-3xl w-full p-6 shadow-2xl space-y-4 text-xs flex flex-col" style="max-height: 85vh;">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 id="xml-modal-title" class="text-sm font-bold text-white flex items-center">
+          <span class="text-blue-400 mr-2 font-mono">&lt;/&gt;</span>
+          <span>BPMN 2.0 XML 源码定义</span>
+        </h3>
+        <button type="button" onclick="closeXmlModal()" class="text-slate-400 hover:text-white text-base">&times;</button>
+      </div>
+
+      <div class="flex-1 overflow-hidden flex flex-col space-y-2">
+        <div class="flex items-center justify-between text-slate-400 font-mono text-[11px]">
+          <span>标准 OMG 语义规范标签</span>
+          <button type="button" onclick="copyXmlSource()" class="text-blue-400 hover:text-blue-300">复制 XML</button>
+        </div>
+        <textarea id="modal-xml-content" class="w-full flex-1 bg-[#090d18] border border-slate-800 rounded p-3 text-slate-200 font-mono text-[11px] leading-relaxed focus:outline-none focus:border-blue-500 resize-none"></textarea>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
+        <button type="button" onclick="closeXmlModal()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">关闭</button>
+        <button type="button" onclick="saveXmlSource()" class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs shadow transition">保存 XML 变更</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let workflows = [];
+    let currentModalWf = null;
+
+    async function loadWorkflows() {
+      try {
+        const res = await fetch('/api/workflows');
+        const json = await res.json();
+        if (json.code === 0) {
+          workflows = json.data || [];
+          document.getElementById('model-count-badge').textContent = `共 ${workflows.length} 个标准化模型`;
+          renderTable();
+        }
+      } catch (err) {
+        console.error('加载工作流失败:', err);
+      }
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('workflow-tbody');
+      if (workflows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="py-8 text-center text-slate-500 font-mono">暂无工作流模型定义</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = workflows.map(wf => {
+        const dateStr = new Date(wf.updatedAt || wf.createdAt || Date.now()).toLocaleDateString();
+        const isBuiltin = wf.id === 'wf_std_feature_dev';
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3.5 px-4">
+              <div class="text-white text-xs font-bold flex items-center space-x-1.5">
+                <span class="w-2 h-2 rounded-full ${isBuiltin ? 'bg-emerald-400' : 'bg-blue-400'}"></span>
+                <span>${escapeHtml(wf.name)}</span>
+              </div>
+              <div class="text-[10px] text-slate-500 font-mono mt-0.5">${escapeHtml(wf.id)}</div>
+            </td>
+            <td class="py-3.5 px-4 font-mono">
+              <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 text-[10px]">v${wf.version || 1}.0 · BPMN 2.0</span>
+            </td>
+            <td class="py-3.5 px-4 font-mono text-[11px]">
+              <span class="text-slate-200">${wf.nodeCount || 0} Nodes</span>
+              <span class="text-amber-400 text-[10px] block">${wf.gatewayCount || 0} Gateways</span>
+            </td>
+            <td class="py-3.5 px-4 text-slate-400 max-w-xs truncate">
+              ${escapeHtml(wf.description || '标准特性研发与交付协作流')}
+            </td>
+            <td class="py-3.5 px-4 font-mono text-slate-400 text-[10px]">
+              ${dateStr}
+            </td>
+            <td class="py-3.5 px-4 text-right space-x-1.5">
+              <button type="button" onclick="openXmlModal('${escapeHtml(wf.id)}')" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[11px] border border-slate-700 transition">
+                查看 XML
+              </button>
+              <a href="config-workflow-design.html?id=${encodeURIComponent(wf.id)}" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] inline-flex items-center space-x-1 shadow transition">
+                <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                <span>Dify 可视化设计 &rarr;</span>
+              </a>
+              ${!isBuiltin ? `<button type="button" onclick="deleteWorkflow('${escapeHtml(wf.id)}')" class="px-2 py-1 rounded hover:bg-slate-800 text-rose-400 hover:text-rose-300 text-[11px] border border-slate-800 transition">删除</button>` : ''}
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function openXmlModal(id) {
+      currentModalWf = workflows.find(w => w.id === id);
+      if (!currentModalWf) return;
+      document.getElementById('xml-modal-title').innerHTML = `<span class="text-blue-400 mr-2 font-mono">&lt;/&gt;</span><span>BPMN 2.0 XML: ${escapeHtml(currentModalWf.name)}</span>`;
+      document.getElementById('modal-xml-content').value = currentModalWf.bpmnXml;
+      document.getElementById('xml-view-modal').classList.remove('hidden');
+    }
+
+    function closeXmlModal() {
+      document.getElementById('xml-view-modal').classList.add('hidden');
+    }
+
+    function copyXmlSource() {
+      const text = document.getElementById('modal-xml-content').value;
+      navigator.clipboard.writeText(text).then(() => {
+        showToast('✓ XML 源码已复制至剪贴板', 'success');
+      });
+    }
+
+    async function saveXmlSource() {
+      if (!currentModalWf) return;
+      const xml = document.getElementById('modal-xml-content').value.trim();
+      if (!xml) {
+        showToast('BPMN XML 源码不能为空！', 'warning');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/workflows/${encodeURIComponent(currentModalWf.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: currentModalWf.name,
+            description: currentModalWf.description,
+            bpmnXml: xml,
+          }),
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          showToast('✓ XML 源码保存成功！', 'success');
+          closeXmlModal();
+          await loadWorkflows();
+        } else {
+          showToast('保存失败: ' + json.message, 'error');
+        }
+      } catch (err) {
+        showToast('保存异常: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteWorkflow(id) {
+      if (!confirm(`确认删除该流程模型定义 (${id})？`)) return;
+      try {
+        const res = await fetch(`/api/workflows/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.code === 0) {
+          showToast('流程模型已删除', 'success');
+          await loadWorkflows();
+        } else {
+          showToast('删除失败: ' + json.message, 'error');
+        }
+      } catch (err) {
+        showToast('删除异常: ' + err.message, 'error');
+      }
+    }
+
+    function openImportModal() {
+      const xml = prompt('请粘贴合法的 BPMN 2.0 XML 源码：');
+      if (!xml || !xml.trim()) return;
+      const name = prompt('请输入新导入的流程名称：', '导入的业务流程');
+      if (!name || !name.trim()) return;
+
+      fetch('/api/workflows', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name: name.trim(), bpmnXml: xml.trim() }),
+      }).then(r => r.json()).then(j => {
+        if (j.code === 0) {
+          showToast('✓ BPMN 流程成功导入！', 'success');
+          loadWorkflows();
+        } else {
+          showToast('导入失败: ' + j.message, 'error');
+        }
+      }).catch(e => showToast('导入异常: ' + e.message, 'error'));
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[s]));
+    }
+
+    window.addEventListener('DOMContentLoaded', loadWorkflows);
+  </script>
+</body>
+</html>

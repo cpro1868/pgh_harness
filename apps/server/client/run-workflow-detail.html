@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="ico/pgh.svg">
+  <title>BPMN 工作流运行实例监控 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
+</head>
+<body class="bg-[#070a12] text-slate-100 h-screen flex flex-row overflow-hidden font-sans">
+
+  <!-- 1. 全局 48px 一级侧边栏 -->
+  <aside class="activity-bar">
+    <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+    </a>
+    <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+    </a>
+    <a href="run-workflow.html" class="activity-btn active" title="BPMN 业务工作流 (Workflow)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+    </a>
+    <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+    </a>
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+    </a>
+    <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+    </a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+    </a>
+    <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+    </a>
+    <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+    </a>
+    <a href="config-skills.html" class="activity-btn" title="Skills 技能库">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+    <div class="flex-1"></div>
+    <a href="config-settings.html" class="activity-btn mb-2" title="系统全局设置 (Settings)">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+    </a>
+  </aside>
+
+  <!-- 2. 主体区 (原型 1:1) -->
+  <div class="flex-1 flex flex-col overflow-hidden">
+    
+    <!-- 顶栏 (48px 原型 1:1) -->
+    <header class="h-12 bg-[#090d18] border-b border-[#1a2333] px-6 flex items-center justify-between z-40 flex-shrink-0">
+      <div class="flex items-center space-x-3">
+        <a href="run-workflow.html" class="text-slate-400 hover:text-white flex items-center pr-2 border-r border-slate-800 text-xs">
+          <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+          <span>返回实例列表</span>
+        </a>
+        <span class="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono">BPMN 2.0 Monitor</span>
+        <h1 id="inst-title-display" class="text-sm font-bold text-white">载入中...</h1>
+        <span id="inst-id-display" class="text-xs text-slate-500 font-mono"></span>
+      </div>
+
+      <div class="flex items-center space-x-3 text-xs">
+        <div id="status-badge-container">
+          <span class="text-slate-400">状态: 载入中</span>
+        </div>
+        <a href="config-workflows.html" class="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-[10px] border border-slate-700 font-medium">BPMN 资产库</a>
+      </div>
+    </header>
+
+    <!-- 上部：高保真 SVG BPMN 2.0 拓扑运行图 (动态流转高亮 原型 1:1) -->
+    <div class="p-4 bg-[#090e1c] border-b border-[#1a2333] flex flex-col space-y-2 flex-shrink-0">
+      <div class="flex items-center justify-between text-[11px] font-mono">
+        <div class="flex items-center space-x-2">
+          <span class="text-white font-bold">BPMN 2.0 实例拓扑流转视窗</span>
+          <span class="text-slate-500 font-sans">（绿色表示已通过节点，黄色脉冲表示当前正在评估网关）</span>
+        </div>
+        <div class="flex items-center space-x-4 text-slate-400">
+          <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5"></span>已流经节点</span>
+          <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5 animate-pulse"></span>正在评估 (Token)</span>
+          <span class="flex items-center"><span class="w-2 h-2 rounded-full bg-slate-600 mr-1.5"></span>待决分支</span>
+        </div>
+      </div>
+
+      <!-- 动态高保真 SVG 图 (原型 1:1 风格) -->
+      <div class="p-3 rounded-lg bg-[#070b14] border border-slate-800/90 overflow-x-auto flex justify-center">
+        <svg id="monitor-svg" width="960" height="150" viewBox="0 0 960 150" class="select-none font-mono text-xs">
+          <defs>
+            <marker id="arrow-g" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#10b981" />
+            </marker>
+            <marker id="arrow-dim" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="5" markerHeight="5" orient="auto">
+              <path d="M 0 0 L 10 5 L 0 10 z" fill="#334155" />
+            </marker>
+          </defs>
+          <g id="svg-paths-layer"></g>
+          <g id="svg-nodes-layer"></g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- 下部主体：左侧为人机协同干预对话窗口，右侧为上下文变量总线与决策审计 (原型 1:1) -->
+    <div class="flex-1 flex overflow-hidden">
+      
+      <!-- 左侧：工作流人机干预与对话窗口 -->
+      <div class="flex-1 flex flex-col bg-[#070a12] border-r border-[#1a2333] overflow-hidden">
+        
+        <div id="messages-container" class="flex-1 overflow-y-auto p-4 space-y-3 max-w-3xl w-full mx-auto font-sans">
+          <div class="p-2.5 rounded bg-[#090e1a] border border-slate-800 text-xs text-slate-400 flex items-center justify-between font-mono">
+            <span id="inst-banner-text">🌐 流程实例运行会话 · 初始化</span>
+            <span id="inst-start-time"></span>
+          </div>
+
+          <div id="execution-logs-list" class="space-y-3"></div>
+        </div>
+
+        <!-- 底部干预指令输入框 (原型 1:1) -->
+        <div class="p-3 border-t border-[#1a2333] bg-[#090d18]">
+          <div class="max-w-3xl mx-auto space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] text-slate-400">
+              <span>对当前流程实例进行人工干预、注入变量或指令：</span>
+              <span class="text-[10px] text-slate-500 font-mono">Enter 发送</span>
+            </div>
+            <div class="border border-slate-700/80 rounded-lg bg-[#0b101c] p-2 focus-within:border-emerald-500 transition">
+              <textarea id="intervention-input" placeholder="输入干预指令或对当前任务的调整意见..." class="w-full bg-transparent border-0 resize-none text-xs text-white placeholder-slate-500 focus:outline-none min-h-[38px] max-h-24"></textarea>
+              <div class="flex items-center justify-between pt-1 border-t border-slate-800/80 text-[11px]">
+                <div class="flex items-center space-x-2 text-slate-500 text-[10px]">
+                  <span id="intervention-status">实例状态: RUNNING</span>
+                </div>
+                <div class="flex items-center space-x-1.5">
+                  <button type="button" onclick="submitIntervention()" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[10px] transition">
+                    提交干预指令
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- 右侧：全局上下文变量总线 (Variables Bus) 与审计 (原型 1:1) -->
+      <div class="w-80 bg-[#090d18] border-l border-[#1a2333] p-4 space-y-4 overflow-y-auto flex-shrink-0 font-mono">
+        
+        <div class="space-y-2">
+          <div class="flex items-center justify-between">
+            <h3 class="text-xs font-bold text-white">流程上下文变量总线</h3>
+            <span class="text-[10px] text-emerald-400 font-semibold">Live Sync</span>
+          </div>
+
+          <div id="variables-bus-container" class="space-y-1.5 text-xs">
+            <div class="text-slate-600 italic text-[11px]">暂无变量</div>
+          </div>
+        </div>
+
+        <!-- 节点执行审计 -->
+        <div class="space-y-2 pt-2 border-t border-slate-800">
+          <h3 class="text-xs font-bold text-white">流转历史 (Passed Nodes)</h3>
+          <div id="passed-nodes-container" class="space-y-1.5 text-[11px]">
+            <div class="text-slate-600 italic text-[11px]">暂无历史节点</div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+  <script>
+    let currentInstance = null;
+    let currentWorkflow = null;
+
+    function getParam(name) {
+      return new URL(window.location.href).searchParams.get(name);
+    }
+
+    async function loadInstanceDetail() {
+      const instanceId = getParam('instanceId');
+      try {
+        let inst = null;
+        if (instanceId) {
+          const res = await fetch(`/api/workflow-instances/${encodeURIComponent(instanceId)}`);
+          const json = await res.json();
+          if (json.code === 0 && json.data) inst = json.data;
+        }
+
+        // 若未提供参数或不存在，回退取第一个最近实例
+        if (!inst) {
+          const listRes = await fetch('/api/workflow-instances');
+          const listJson = await listRes.json();
+          if (listJson.code === 0 && Array.isArray(listJson.data) && listJson.data.length > 0) {
+            inst = listJson.data[0];
+          }
+        }
+
+        if (inst) {
+          currentInstance = inst;
+          document.getElementById('inst-title-display').textContent = inst.workflowName || inst.workflowId;
+          document.getElementById('inst-id-display').textContent = `ID: ${inst.id.slice(0, 14)}`;
+          document.getElementById('inst-banner-text').textContent = `🌐 流程实例 ${inst.id.slice(0, 10)} 运行 · 绑定工作区: ${inst.workspacePath || '默认工作区'}`;
+          document.getElementById('inst-start-time').textContent = new Date(inst.startedAt).toLocaleTimeString();
+
+          const isCompleted = inst.status === 'completed';
+          const isWaiting = inst.status === 'waiting';
+          let statusBadge = '<span class="text-amber-300 font-bold bg-amber-950/60 px-2 py-0.5 rounded border border-amber-800/40 animate-pulse">RUNNING</span>';
+          if (isCompleted) {
+            statusBadge = '<span class="text-emerald-400 font-bold bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/40">COMPLETED</span>';
+          } else if (isWaiting) {
+            statusBadge = '<span class="text-purple-300 font-bold bg-purple-950/80 px-2 py-0.5 rounded border border-purple-700 animate-pulse">WAITING APPROVAL</span>';
+          }
+          document.getElementById('status-badge-container').innerHTML = statusBadge;
+          document.getElementById('intervention-status').textContent = `实例状态: ${inst.status.toUpperCase()}`;
+
+          // 读取对应 workflow bpmnXml
+          const wfRes = await fetch(`/api/workflows/${encodeURIComponent(inst.workflowId)}`);
+          const wfJson = await wfRes.json();
+          if (wfJson.code === 0) currentWorkflow = wfJson.data;
+
+          renderMonitorTopology();
+          renderVariablesBus();
+          renderExecutionLogs();
+        } else {
+          document.getElementById('inst-title-display').textContent = '未找到可运行的实例';
+        }
+      } catch (err) {
+        showToast('加载实例详情异常: ' + err.message, 'error');
+      }
+    }
+
+    function renderMonitorTopology() {
+      const pathsLayer = document.getElementById('svg-paths-layer');
+      const nodesLayer = document.getElementById('svg-nodes-layer');
+      if (!pathsLayer || !nodesLayer) return;
+
+      const completed = new Set(currentInstance.completedNodes || []);
+      const active = new Set(currentInstance.activeNodes || []);
+
+      // 提取 BPMN 节点
+      const xml = currentWorkflow ? currentWorkflow.bpmnXml : '';
+      const nodes = [];
+      const tagRegex = /<(?:[a-zA-Z0-9_]+:)?(startEvent|endEvent|task|userTask|serviceTask|exclusiveGateway|parallelGateway)\b([^>]*)(?:\/?>|>([\s\S]*?)<\/(?:[a-zA-Z0-9_]+:)?\1>)/gi;
+      let m;
+      while ((m = tagRegex.exec(xml)) !== null) {
+        const idMatch = m[2].match(/id=["']([^"']+)["']/i);
+        const nameMatch = m[2].match(/name=["']([^"']+)["']/i);
+        if (idMatch) nodes.push({ id: idMatch[1], type: m[1], name: nameMatch ? nameMatch[1] : idMatch[1] });
+      }
+
+      // 水平流转拓扑布局 (原型 1:1)
+      let nodesSvg = '';
+      let pathsSvg = '';
+      const startX = 45;
+      const centerY = 75;
+      const gapX = 170;
+
+      nodes.forEach((n, idx) => {
+        const cx = startX + idx * gapX;
+        const cy = centerY;
+        const isPassed = completed.has(n.id);
+        const isActive = active.has(n.id) || (!completed.has(n.id) && idx === completed.size);
+
+        const strokeColor = isPassed ? '#10b981' : (isActive ? '#f59e0b' : '#334155');
+        const fillColor = isPassed ? '#064e3b' : (isActive ? '#451a03' : '#0f172a');
+
+        if (idx > 0) {
+          const prevX = startX + (idx - 1) * gapX + (nodes[idx - 1].type.includes('Event') ? 20 : 65);
+          const nextX = cx - (n.type.includes('Event') ? 20 : 65);
+          const pColor = isPassed ? '#10b981' : '#334155';
+          const pMarker = isPassed ? 'url(#arrow-g)' : 'url(#arrow-dim)';
+          pathsSvg += `<path d="M ${prevX} ${cy} L ${nextX} ${cy}" stroke="${pColor}" stroke-width="2" marker-end="${pMarker}" />`;
+        }
+
+        if (n.type.includes('Event')) {
+          nodesSvg += `
+            <circle cx="${cx}" cy="${cy}" r="18" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${isActive ? '2.5' : '2'}" class="${isActive ? 'animate-pulse' : ''}" />
+            <text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="#f8fafc" font-size="9" font-weight="bold">${escapeHtml(n.name || 'Event')}</text>
+          `;
+        } else if (n.type.includes('Gateway')) {
+          nodesSvg += `
+            <polygon points="${cx},${cy - 22} ${cx + 22},${cy} ${cx},${cy + 22} ${cx - 22},${cy}" fill="${fillColor}" stroke="${strokeColor}" stroke-width="2" class="${isActive ? 'animate-pulse' : ''}" />
+            <text x="${cx}" y="${cy + 4}" text-anchor="middle" fill="#fde68a" font-size="12" font-weight="bold">✕</text>
+            <text x="${cx}" y="${cy + 36}" text-anchor="middle" fill="#f59e0b" font-size="9">${escapeHtml(n.name || '网关')}</text>
+          `;
+        } else {
+          nodesSvg += `
+            <rect x="${cx - 65}" y="${cy - 25}" width="130" height="50" rx="6" fill="${fillColor}" stroke="${strokeColor}" stroke-width="${isActive ? '2' : '1.5'}" class="${isActive ? 'animate-pulse' : ''}" />
+            <text x="${cx}" y="${cy - 5}" text-anchor="middle" fill="#f8fafc" font-size="10" font-weight="bold">${escapeHtml(n.name)}</text>
+            <text x="${cx}" y="${cy + 12}" text-anchor="middle" fill="#94a3b8" font-size="9">ID: ${escapeHtml(n.id)}</text>
+          `;
+        }
+      });
+
+      pathsLayer.innerHTML = pathsSvg;
+      nodesLayer.innerHTML = nodesSvg;
+    }
+
+    function renderVariablesBus() {
+      const container = document.getElementById('variables-bus-container');
+      const vars = currentInstance.variables || {};
+      const entries = Object.entries(vars);
+      if (entries.length === 0) {
+        container.innerHTML = '<div class="text-slate-600 italic text-[11px]">暂无变量</div>';
+        return;
+      }
+
+      container.innerHTML = entries.map(([k, v]) => `
+        <div class="p-2 rounded bg-[#0b101c] border border-slate-800">
+          <div class="text-slate-500 text-[10px]">${escapeHtml(k)}</div>
+          <div class="text-amber-300 font-bold mt-0.5 truncate">${escapeHtml(JSON.stringify(v))}</div>
+        </div>
+      `).join('');
+    }
+
+    function renderExecutionLogs() {
+      const logsList = document.getElementById('execution-logs-list');
+      const passedContainer = document.getElementById('passed-nodes-container');
+      const logs = currentInstance.executionLog || [];
+
+      if (logs.length === 0) {
+        logsList.innerHTML = '<div class="p-4 text-center text-slate-500 font-mono text-xs">暂无执行活动日志</div>';
+        passedContainer.innerHTML = '<div class="text-slate-600 italic text-[11px]">暂无流转历史</div>';
+        return;
+      }
+
+      let logsHtml = '';
+
+      // 若实例处于 waiting approval 状态，在顶部显式渲染人工审查卡片
+      if (currentInstance.status === 'waiting') {
+        const activeNodeId = (currentInstance.activeNodes || [])[0] || 'UserTask_Review';
+        logsHtml += `
+          <div class="p-4 rounded-xl bg-purple-950/40 border border-purple-500/60 space-y-3 shadow-lg">
+            <div class="flex items-center justify-between text-xs">
+              <span class="font-bold text-purple-300 flex items-center">
+                <span class="w-2.5 h-2.5 rounded-full bg-purple-400 mr-2 animate-ping"></span>
+                🛡️ 人工审批卡点：流程已挂起等待审查 (${escapeHtml(activeNodeId)})
+              </span>
+              <span class="text-[10px] text-purple-400 font-mono">WAITING_APPROVAL</span>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">
+              上游自动化编码与测试已完成，当前处于 UserTask 人工审查门。请审查交付物并做出决策：放行推进下游流程，或驳回打回上一阶段。
+            </p>
+            <div class="flex items-center space-x-2 pt-1 border-t border-purple-900/60">
+              <button type="button" onclick="decideUserTask('approve')" class="px-3.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow transition flex items-center space-x-1">
+                <span>✅ 批准并放行推进</span>
+              </button>
+              <button type="button" onclick="decideUserTask('reject')" class="px-3.5 py-1.5 rounded bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 border border-rose-800 text-xs transition flex items-center space-x-1">
+                <span>↩️ 驳回打回重做</span>
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      logsHtml += logs.map(l => `
+        <div class="space-y-1">
+          <div class="flex items-center space-x-2 text-[11px]">
+            <span class="font-bold text-emerald-400 font-mono">${escapeHtml(l.name || l.nodeId)}</span>
+            <span class="text-slate-500 text-[10px] font-mono">${new Date(l.timestamp).toLocaleTimeString()}</span>
+          </div>
+          <div class="p-3 rounded-lg bg-[#0e1526] border border-slate-800 text-xs text-slate-200 leading-relaxed font-mono">
+            ${escapeHtml(l.output || `节点 [${l.nodeId}] 顺利流转执行完毕。`)}
+          </div>
+        </div>
+      `).join('');
+
+      logsList.innerHTML = logsHtml;
+
+      passedContainer.innerHTML = logs.map(l => `
+        <div class="p-2 rounded bg-[#0b101c] border border-slate-800 text-slate-300">
+          <div class="text-emerald-400 font-semibold truncate">✓ ${escapeHtml(l.name || l.nodeId)}</div>
+          <div class="text-slate-500 text-[10px]">${new Date(l.timestamp).toLocaleTimeString()}</div>
+        </div>
+      `).join('');
+    }
+
+    async function decideUserTask(decision) {
+      if (!currentInstance) return;
+      let reason = '';
+      if (decision === 'reject') {
+        const input = prompt('请输入驳回原因或修改要求：', '验收未通过，请重新修改。');
+        if (!input || !input.trim()) return;
+        reason = input.trim();
+      }
+
+      try {
+        const res = await fetch(`/api/workflow-instances/${encodeURIComponent(currentInstance.id)}/decide`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ decision, reason }),
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          showToast(decision === 'approve' ? '✅ 人工审批已放行，流程继续推进！' : '↩️ 已打回重做', 'success');
+          await loadInstanceDetail();
+        } else {
+          showToast('审查决策提交失败: ' + (json.message || '未知错误'), 'error');
+        }
+      } catch (err) {
+        showToast('请求异常: ' + err.message, 'error');
+      }
+    }
+
+    function submitIntervention() {
+      const text = document.getElementById('intervention-input').value.trim();
+      if (!text) {
+        showToast('请输入干预指令！', 'warning');
+        return;
+      }
+      showToast('✓ 干预指令已送达工作流运行时队列', 'success');
+      document.getElementById('intervention-input').value = '';
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[s]));
+    }
+
+    window.addEventListener('DOMContentLoaded', loadInstanceDetail);
+  </script>
+</body>
+</html>

@@ -3,6 +3,48 @@
 > 每次关键确认后更新；只写已确认的决策与当前状态，不写过程讨论。
 > 最新确认在最上方。
 
+## 2026-10-21 长运行崩溃修复与步数上限撤销（D84 / D83 / D50 修订 / D85）
+
+## 2026-10-23 BPMN 真实项目端到端验收与驳回分支缺陷修复（D86）
+
+| # | 决策 | 结论 |
+| --- | --- | --- |
+| D86 | 人工驳回必须可路由到返工分支 | **真机验收发现的引擎级死路缺陷**：`BpmnWorkflowEngine.resume({decision:'reject'})` 原实现只写入 `__rejectionReason` 并原样返回 `waiting`，**完全不推进 token**；而 BPMN 中 UserTask→XOR 网关→退回连线（如 `Task_Rewrite`）只能由网关触发，导致驳回分支永远不可达。同时 XOR 网关选流兜底为 `outs[0]`，条件全不满足时**默认走第一条出线（往往是放行分支）**，属越权推进风险。**决策**：1. 驳回时若 UserTask 出线直达排他网关，则标记 UserTask 完成并把 token 推入网关，由网关按条件表达式选退回流（真实执行返工节点直至结束）；2. 若出线不经过网关（纯线性流程），仍维持挂起，**绝不自行放行**（保留原 D77 安全语义）；3. XOR 选流顺序改为「条件为真 → 显式 defaultFlow → 无条件兜底流 → 条件为假的流」，**彻底移除 `outs[0]` 兜底**，无匹配时不推进（fail-closed）。测试：bpmn-engine 用例 13/14 + workflow-audit-log 人工驳回全链路用例，均做变异验证（回退修复后预期转红）。 |
+| D85 | LLM 瞬态错误自动重试 | 520/terminated 经实测复现确认为上游 Cloudflare 网关偶发故障（PGH 同形态调用 55 次全成功；520 响应体为 CF 源站异常页模板），非调用参数问题。**决策**：`security/retry.ts` 对瞬态错误（429/5xx/terminated/fetch failed/UND_ERR_*/ECONNRESET）自动重试 3 次（500ms 指数退避封顶 8s），业务错误（401/403/400/404）绝不重试立即上抛；接入主会话/BPMN/流水线/Provider ping 全部 LLM 调用点；报错文案明示「已自动重试仍失败」并正确归因。 |
+| D84 | 长运行稳定性双兜底 | 崩溃根因有二：(1) 顶层请求 catch 无条件 `writeHead(500)`，SSE 回合中 headers 已发送后再抛异常触发 `ERR_HTTP_HEADERS_SENT` 二次异常，rejected promise 逃逸杀死进程；(2) `ProxyDispatcher` 每次 LLM 调用 `new ProxyAgent` 从不销毁（实测 361 次累积），undici 连接池泄漏致长运行 OOM。**决策**：1. 顶层 catch 加 `headersSent`/`writableEnded` 双守卫；2. `start()` 挂载 `uncaughtException`/`unhandledRejection` 进程级兜底（记录日志、进程保持存活，fail-safe 不静默）；3. ProxyAgent 以 `proxyUrl+token` 为键做同路由单例缓存，`destroyAll()` 挂载到 `server.stop()` 与代理配置变更路径。守卫测试 `stability-guard.test.ts`（含独立子进程真实崩溃回归）长期保留。 |
+| D50r | 单回合步数无上限（D50 修订） | 撤销自拟的「单回合默认 25 步」：`TurnLoop.maxSteps` 降级为纯可选预算（未指定即无上限），主会话/BPMN 节点/流水线阶段全部移除硬编码；死循环防护交给「同参工具连续 3 次熔断」+ BPMN 引擎 `totalSteps` 环路熔断 + 上下文滚动压缩 + 用户 Abort。 |
+
+## 2026-10-18 流程设计器功能完备性彻底复原与双版本合流（D82）
+
+| # | 决策 | 结论 |
+| --- | --- | --- |
+| D82 | 设计器完整功能合流（拖拽/缩放/DAG重排/前后指定连线/主题） | **历史追溯**：10月6日会话在 `config-workflow-detail.html`（81KB 高保真版）上交付了手动拖拽、40%~200% 缩放平移、专业 DAG 拓扑分层去交叉自动整理、属性抽屉前后指定连线与快捷删除等全套功能；但对齐原型文件名时新建了简化的 `config-workflow-design.html`（45KB），资产库表格链接跳转了后者，导致完整设计器被闲置、用户访问到缺失功能的残卷。**决策**：1. 将 81KB 完整设计器合流覆盖 `config-workflow-design.html`；2. 注入命名空间前缀无关解析（`extractNodes`/`extractFlows`/`flowRegex` 均支持 `(?:[a-zA-Z0-9_]+:)?`）；3. 适配 `shared.css` 与 `theme.js` 布局；4. 新增 TC-03-02-003（7 断言全绿守卫）。CDP 实测：拖拽移动坐标从 `{60,140}` 到 `{140,200}` 实时吸附曲线、缩放 100%&rarr;120%&rarr;重置复位、DAG 拓扑 8 节点清晰重排、连入连出下拉列表完整工作。 |
+
+## 2026-10-18 Dify 可视化设计器 CSS flex-direction 垂直塌陷根除（D81）
+
+| # | 决策 | 结论 |
+| --- | --- | --- |
+| D81 | 双栏页面 flex-row 强制规则 + 根除视口外挤压塌陷 | **根因**：`shared.css:597` 的 `body.app-shell { flex-direction: column; }` 命中包含左侧侧边栏的设计器（`config-workflow-design.html`）与监控页（`run-workflow-detail.html`），将左侧栏与主工作台**上下纵向排列**。侧边栏高 904px 占满第一屏，主工作台直接被挤到屏幕下方（top: 904px，画布高度塌陷为 0~64px），8 张卡片全在 `y: 924px+` 视口外，页面只剩侧边栏和黑底，用户眼中**彻底空白**。**决策**：1. 设计器与监控页 `<body>` 显式增加 `flex-row`；2. `shared.css` 注入 `body.flex-row, body.app-shell.flex-row { flex-direction: row !important; }` 硬防御；3. 新增 TC-03-02-002（3 断言）。CDP 实测：画布高度由 64px 恢复为 856px，首张卡片由 `y: 924px` 恢复至 `y: 412px`，`isInViewport` 由 false 恢复为 true。 |
+
+## 2026-10-18 主会话切换工作区联动与完全授权高危强提醒（D80）
+
+| # | 决策 | 结论 |
+| --- | --- | --- |
+| D80 | 会话工作区顶栏双向联动 + 完全授权阻断式确认 | 1. `switchSession()` 必须同时同步 `workspacePath` 至顶栏 `<select id="topbar-workspace-select">` 与 `activeWorkspacePath`；未在登记列表的工作区动态补建选项；联动触发 `loadSkillsToComposer()` 刷新工作区 Skills。2. 遵循安全工程规范 S5，选择「完全授权 (full)」属于高风险动作，下拉框选中时**先回退当前档位**并呼出 `#full-auth-modal` 强提示弹窗（明确说明文件/命令免审批范围，并重申 `git push`、关机、敏感凭据等硬性红线依然拒绝）；用户显式点击「我已知晓风险，确认完全授权」前**严禁落盘与改变状态**；点击取消回退；只读/标准直接落盘。新增 TC-01-08-002 / TC-01-13-002（5 断言）。 |
+
+## 2026-10-18 BPMN 命名空间前缀一致性与导入 fail-closed（D79）
+
+| # | 决策 | 结论 |
+| --- | --- | --- |
+| D79 | BPMN 命名空间前缀无关 + 导入 fail-closed | **根因**：设计器 `parseCurrentXml()`（`config-workflow-design.html`）、存储层计数正则（`workflow-schema.ts`）与实例监控大屏（`run-workflow-detail.html`）均硬编码 `<bpmn:` 前缀，而引擎解析器 `bpmn-parser.ts` 是前缀无关的 `(?:[a-zA-Z0-9_]+:)?`——导入 `bpmn2:` 或无前缀（Camunda 导出常见格式）的合法 BPMN 后，引擎能跑但设计器解析 0 节点，即用户报障的**空页面**。**决策**：全链路（引擎/存储/导入 API/设计器/监控大屏）统一前缀无关语义；`POST`/`PUT /api/workflows` 接入 `parseBpmnXml()` 校验，非法 XML 一律 400 拒绝入库（fail-closed），合法 XML 计算真实 `nodeCount`（非网关节点数）/`gatewayCount`。**测试教训**（三重失效）：测试语料只用 `bpmn:` 前缀、断言只测"页面 200 + 有链接"、客户端 JS 从未在真实 DOM 执行——新增 TC-03-01-004 覆盖三前缀矩阵 + 非法 XML 拒绝 + 客户端解析断言，并以 Chrome DevTools Protocol 真实浏览器取证作为验证手段。旧设计器 `config-workflow-detail.html` 同类硬编码但为全站零链接孤儿页面，按 YAGNI 不改。 |
+
+## 2026-10-18 BPMN 人工审查跨进程断点续接（D77 / D78）
+
+| # | 决策 | 结论 |
+| --- | --- | --- |
+| D77 | 人工审查挂起态重启续接 | `BpmnWorkflowEngine.hydrate()` 从持久化实例快照（`completedNodes` / `activeNodes` / `variables`）重建挂起态并定位 UserTask 锚点；服务端 `/api/workflow-instances/:id/decide` 在运行时引擎丢失（进程重启）时改走 `hydrate + resume` 兜底，**严禁整段重跑**（旧实现用 `execute()` 从头重放已完成节点并吞掉裁决语义）。快照中无 UserTask 锚点时 `resume` fail-closed 判 failed。Task 节点执行器抽取为 `createWorkflowNodeExecutor()`，`/run` 首次执行与重启兜底续跑共用同一实现。新增 TC-03-03-005（重启后 approve 续接完成且上游不重放 / reject 维持挂起写入原因）。 |
+| D78 | 跨 resume 步数累计熔断 | `totalSteps` 为引擎实例级累计计数：`execute()` 重置为 0，`resume()` **不重置**，`stepLoop` 每轮自增并与 `maxSteps` 比较，超限抛错熔断为 `failed`。目的：人工放行绝不重置步数预算，反复放行含 UserTask 的环路必须在有限次内 fail-closed，杜绝"每次放行都重置计数器"导致的无限流转。`resume()` 新增可选 `maxSteps`（默认 500）。新增 TC-03-03-001 用例 8（变异验证：注入重置后用例如期失败）。 |
+
 ## 2026-10-06 质量门禁真门禁化（D75）
 
 | # | 决策 | 结论 |
@@ -84,7 +126,7 @@
 | D47 | 流式中断断点恢复 | 网络中途截断时，已生成的半截内容作为真实事实正常落盘入库，前端呈现明确断点并提供【从断点继续】与【重试】按钮 |
 | D48 | 敏感凭据双层防泄 | 权限层默认拦截 `.env`、私钥证书读取；输出落盘与外发前通过正则自动替换为 `[REDACTED]` 托底 |
 | D49 | 压缩与记忆生命周期解耦 | 上下文滑动窗口压缩专注于释放当前对话空间；长期记忆经验提取严格留在任务/会话圆满终局时刻触发，防止污染中间脏经验 |
-| D50 | 会话预算与滑动压缩 | 单回合默认上限 25 步；废除孤立的2次压缩死限，采用 OpenCode 的滚动压缩（Epoch/Seq基线）与溢出自动恢复机制 |
+| D50 | 无步数上限与滑动压缩 | **撤销**原「单回合默认上限 25 步」；主会话 `TurnLoop` 未显式传 `maxSteps` 即无步数上限，死循环防护交给「同参工具连续 3 次熔断」+ 上下文滚动压缩 + 用户 Abort。废除孤立的2次压缩死限，采用 OpenCode 的滚动压缩（Epoch/Seq基线）与溢出自动恢复机制 |
 | D51 | 模型物理窗口动态感知 | 支持按模型配置实际上下文物理窗口（如 16k/64k/192k/200k），压缩触发阈值严格绑定当前模型物理上限的 80% |
 | D52 | 沙箱防逃逸与扫描防黑洞 | 路径执行前强制 `realpath` 解析拦截符号链接 (Symlink) 逃逸；文件搜索强制跳过 `node_modules`、`.git` 等目录，硬卡 200 条上限防 OOM |
 | D53 | 人机提问异步等待 | `ask_user` 对齐 OpenCode `QuestionV2`，设独立 `requestID` 与 reply/reject 双轨端点，支持断线重拉 |
@@ -105,6 +147,7 @@
 | D68 | Spill Blobs 私有隔离清理 | 放弃全局引用计数，Spill 文件存入会话私有子目录 `~/.pg_harness/sessions/<id>/blobs/`，随会话删除原子清空，零孤儿垃圾 |
 | D69 | SSE 息屏休眠心跳重连 | 服务端 15s 心跳 + 客户端 `visibilitychange` 感知重连，30s 无心跳自动判定半开死链接，携带最新 `seq` 秒级拉齐状态 |
 | D70 | 项目全称与命名空间防撞 | 项目正式命名为 Purple Grapes Harness（缩写为 pgh 或 pg_harness）；数据目录定为 `~/.pg_harness/`；数据库为 `pgh.db`；锁文件为 `.lock`；环境变量前缀为 `PGH_*` |
+| D76 | 原生标准语音播报体系 | 参考 `reference/dsh-speak` 思想，坚决奉行零 Native 依赖原则；采用 W3C 原生 Web Speech API (`window.speechSynthesis`) + `@harness/protocol` 规范化文本清洗（剥离代码块/URL/Emoji 防挂起）；提供会话顶栏一键静音、每条消息 🔊 重播与系统设置项独立偏好面板 |
 
 ### 关键结论
 

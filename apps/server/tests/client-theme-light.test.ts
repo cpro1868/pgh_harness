@@ -98,8 +98,10 @@ const BG_EXEMPT = new Set([
   'bg-blue-400',
   'bg-emerald-400',
   'bg-amber-400',
-  'bg-purple-500',
   'bg-amber-500',
+  'bg-amber-600',
+  'bg-purple-500',
+
   'bg-blue-500/10',
   'bg-blue-600/10',
   'bg-blue-600/20',
@@ -120,6 +122,7 @@ const BG_EXEMPT = new Set([
   'hover:bg-rose-500',
   'hover:bg-rose-600',
   'hover:bg-rose-700',
+  'hover:bg-amber-500',
 ]);
 
 describe('TC-01-12: 清新明亮模式文字对比度覆盖（light-clean 文字/背景映射完整性）', () => {

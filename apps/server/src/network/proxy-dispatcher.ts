@@ -39,6 +39,7 @@ export interface ProviderProxyOption {
 export class ProxyDispatcher {
   private globalProxy: NetworkProxyConfig;
   private silentTimeoutMs: number;
+  private readonly dispatcherCache = new Map<string, unknown>();
 
   constructor(options: DispatcherOptions) {
     this.globalProxy = options.globalProxy;
@@ -131,7 +132,8 @@ export class ProxyDispatcher {
   }
 
   /**
-   * 针对 Node 22 原生 fetch 构建带代理的 RequestInit 配置
+   * 针对流式路由构建带代理的 RequestInit 配置；dispatcher 为共享单例，
+   * 防止每次 LLM 调用都泄漏一个 undici 连接池（长运行 OOM 根因，TC-00-99-003）。
    */
   public async fetchWithProxy(
     targetUrl: string,
@@ -142,21 +144,54 @@ export class ProxyDispatcher {
     const options: RequestInit & { dispatcher?: unknown } = { ...init };
 
     if (route.useProxy && route.proxyUrl) {
-      // 动态使用 Node 22 内置支持的 undici ProxyAgent
-      try {
-        const { ProxyAgent } = await import('undici');
-        options.dispatcher = new ProxyAgent({
-          uri: route.proxyUrl,
-          token: route.auth?.username && route.auth?.password
-            ? `Basic ${Buffer.from(`${route.auth.username}:${route.auth.password}`).toString('base64')}`
-            : undefined,
-        });
-      } catch (err) {
-        console.warn(`[Harness] ProxyAgent 加载失败，本次请求将绕过代理直连: ${(err as Error).message}`);
+      const shared = await this.getSharedDispatcher(route);
+      if (shared) {
+        options.dispatcher = shared;
       }
     }
 
     return fetch(targetUrl, options);
+  }
+
+  /**
+   * 取同一路由的共享 ProxyAgent 单例；相同 (proxyUrl + 凭据) 复用同一连接池。
+   */
+  public async getSharedDispatcher(route: RouteResolution): Promise<unknown> {
+    if (!route.useProxy || !route.proxyUrl) return null;
+    try {
+      const { ProxyAgent } = await import('undici');
+      const token = route.auth?.username && route.auth?.password
+        ? `Basic ${Buffer.from(`${route.auth.username}:${route.auth.password}`).toString('base64')}`
+        : undefined;
+      const key = `${route.proxyUrl}::${token ?? ''}`;
+      const existing = this.dispatcherCache.get(key);
+      if (existing) return existing;
+      const agent = new ProxyAgent({ uri: route.proxyUrl, token });
+      this.dispatcherCache.set(key, agent);
+      return agent;
+    } catch (err) {
+      console.warn(`[Harness] ProxyAgent 加载失败，本次请求将绕过代理直连: ${(err as Error).message}`);
+      return null;
+    }
+  }
+
+  /** 销毁指定共享 dispatcher 并移除缓存（配置变更时调用）。 */
+  public async destroyDispatcher(dispatcher: unknown): Promise<void> {
+    for (const [key, agent] of this.dispatcherCache) {
+      if (agent === dispatcher) {
+        this.dispatcherCache.delete(key);
+        await (agent as { close?: () => Promise<void> }).close?.().catch(() => undefined);
+        return;
+      }
+    }
+  }
+
+  /** 服务停止时销毁全部共享 dispatcher，释放所有代理连接池。 */
+  public async destroyAll(): Promise<void> {
+    for (const [, agent] of this.dispatcherCache) {
+      await (agent as { close?: () => Promise<void> }).close?.().catch(() => undefined);
+    }
+    this.dispatcherCache.clear();
   }
 
   public async *wrapStreamWithTimeout<T>(stream: AsyncIterable<T>): AsyncIterable<T> {

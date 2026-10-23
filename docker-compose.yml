@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  pgh-server:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: pgh-server
+    restart: unless-stopped
+    ports:
+      - "3210:3210"
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3210
+    volumes:
+      - pgh_data:/home/pgh/.pg_harness
+      # 可根据需要挂载主机工作区目录至容器内进行协同编码
+      # - /path/to/my-workspace:/workspace
+
+volumes:
+  pgh_data:
+    name: pgh_data_volume

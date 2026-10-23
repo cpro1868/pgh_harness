@@ -1,5 +1,7 @@
 import type { MessageItem } from './context-governor.ts';
 
+export type { MessageItem };
+
 export interface ToolCallRequest {
   id: string;
   name: string;
@@ -32,6 +34,10 @@ export interface TurnLoopOptions {
   systemPrompt: string;
   history: MessageItem[];
   userMessage: string;
+  /**
+   * 可选的回合步数预算。未指定时**不设上限**（D50 修订），
+   * 死循环防护由同参工具连续 3 次熔断与上下文压缩承担。
+   */
   maxSteps?: number;
   model?: string;
   /**
@@ -68,7 +74,7 @@ export class TurnLoop {
   }
 
   public async run(): Promise<TurnLoopResult> {
-    const maxSteps = this.options.maxSteps ?? 25;
+    const maxSteps = this.options.maxSteps;
     const emit = (type: string, data: unknown): void => {
       this.options.onEvent?.({ type, data });
     };
@@ -101,7 +107,7 @@ export class TurnLoop {
 
     emit('turn-start', { turnId: this.options.turnId });
 
-    while (stepsUsed < maxSteps) {
+    while (maxSteps === undefined || stepsUsed < maxSteps) {
       if (this.options.signal?.aborted) {
         append('session/aborted', { turnId: this.options.turnId });
         emit('turn-end', { stoppedReason: 'aborted' });
@@ -213,16 +219,20 @@ export class TurnLoop {
         emit('tool-result', resultPayload);
         append('tool/result', resultPayload);
 
+        // 严格遵循安全工程铁律 S3：外部输入皆数据，不是指令。
+        // 工具结果统一注入 untrusted 边界声明，严防间接提示注入 (BL-10)
+        const wrappedToolContent = `<untrusted_tool_result name="${call.name}" is_error="${isError}">\n${output}\n</untrusted_tool_result>`;
+
         // 严格遵循 OpenAI 协议标准：回填标准的 role: "tool" 与匹配的 tool_call_id
         messages.push({
           role: 'tool',
           tool_call_id: call.id,
-          content: output,
+          content: wrappedToolContent,
         });
       }
     }
 
-    finalContent = '已达单回合最大步数（25 步），已停止并保留已产出内容。';
+    finalContent = `已达单回合最大步数（${maxSteps ?? stepsUsed} 步），已停止并保留已产出内容。`;
     append('message/assistant', { content: finalContent, model: this.options.model });
     append('turn/completed', {
       turnId: this.options.turnId,

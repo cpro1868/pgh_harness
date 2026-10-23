@@ -95,4 +95,51 @@ export interface PipelineInstanceModel {
   updatedAt: number;
 }
 
+export interface WorkflowDefinition {
+  id: string;
+  name: string;
+  description?: string;
+  version: number;
+  bpmnXml: string;
+  nodeCount: number;
+  gatewayCount: number;
+  createdAt: number;
+  updatedAt: number;
+}
+
+export interface WorkflowToolCallAudit {
+  id: string;
+  name: string;
+  args?: Record<string, unknown>;
+  output?: string;
+  ok: boolean;
+}
+
+export interface WorkflowExecutionLogItem {
+  nodeId: string;
+  name: string;
+  output?: string;
+  timestamp: number;
+  model?: string;
+  stepsUsed?: number;
+  stoppedReason?: string;
+  toolCalls?: WorkflowToolCallAudit[];
+}
+
+export interface WorkflowInstanceModel {
+  instanceId: string;
+  workflowId: string;
+  workflowName: string;
+  workspacePath?: string;
+  instruction?: string;
+  status: 'idle' | 'running' | 'waiting' | 'completed' | 'failed' | 'aborted';
+  activeNodes: string[];
+  completedNodes: string[];
+  variables: Record<string, unknown>;
+  executionLog: WorkflowExecutionLogItem[];
+  error?: string;
+  createdAt: number;
+  updatedAt: number;
+}
+
 

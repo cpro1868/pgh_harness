@@ -1,0 +1,1570 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <link rel="icon" type="image/svg+xml" href="ico/pgh.svg">
+  <title>BPMN 2.0 流程可视化设计器 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
+  <style>
+    /* 点阵画布背景 (对齐原型 canvas-grid) */
+    .canvas-grid {
+      background-color: #070a13;
+      background-image: radial-gradient(#1e293b 1.5px, transparent 1.5px);
+      background-size: 20px 20px;
+      cursor: grab;
+      user-select: none;
+    }
+    .canvas-grid.panning {
+      cursor: grabbing;
+    }
+    [data-theme='light-clean'] .canvas-grid {
+      background-color: #f8fafc;
+      background-image: radial-gradient(rgba(0, 0, 0, 0.12) 1.5px, transparent 1.5px);
+    }
+
+    /* 节点交互与发光样式 */
+    .bpmn-node {
+      cursor: grab;
+      transition: filter 0.15s ease;
+    }
+    .bpmn-node:active {
+      cursor: grabbing;
+    }
+    .bpmn-node:hover {
+      filter: drop-shadow(0 4px 12px rgba(59, 130, 246, 0.4));
+    }
+
+    /* 选中节点：精准作用于图形轮廓，严禁对 text 造成描边糊字 (修复问题 1) */
+    .bpmn-node.selected > rect:first-of-type,
+    .bpmn-node.selected > circle,
+    .bpmn-node.selected > polygon {
+      stroke: #10b981 !important;
+      stroke-width: 2.5px !important;
+      filter: drop-shadow(0 0 10px rgba(16, 185, 129, 0.6)) !important;
+    }
+    .bpmn-node text {
+      stroke: none !important;
+      stroke-width: 0 !important;
+      pointer-events: none;
+      user-select: none;
+    }
+
+    /* 连线端点 Handle 锚点 (支持拖拽拉线直连) */
+    .handle-dot {
+      fill: #3b82f6;
+      stroke: #070a13;
+      stroke-width: 2;
+      cursor: crosshair;
+      transition: r 0.15s ease, fill 0.15s ease;
+    }
+    .handle-dot:hover {
+      fill: #60a5fa;
+      r: 6;
+    }
+    .handle-dot.drag-source {
+      fill: #10b981;
+      stroke: #ffffff;
+      r: 7;
+    }
+
+    /* 物料库条目可抓取效果 (拖拽新增，修复问题 3) */
+    .palette-item {
+      cursor: grab;
+      user-select: none;
+      transition: all 0.15s ease;
+    }
+    .palette-item:active {
+      cursor: grabbing;
+    }
+    .palette-item:hover {
+      border-color: rgba(59, 130, 246, 0.6);
+      transform: translateY(-1px);
+    }
+    /* 拖拽调节面板宽度的 Resizer 分割条 */
+    .panel-resizer {
+      width: 5px;
+      cursor: col-resize;
+      transition: background-color 0.15s ease;
+      position: relative;
+      z-index: 25;
+      user-select: none;
+    }
+    .panel-resizer:hover, .panel-resizer.resizing {
+      background-color: #3b82f6 !important;
+    }
+
+    /* 迷你唤醒条 (Mini Bar) */
+    .mini-bar {
+      width: 28px;
+      background: #090d18;
+      border-color: #1a2333;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 10px 0;
+      gap: 12px;
+      cursor: pointer;
+      z-index: 20;
+      user-select: none;
+      transition: background-color 0.15s ease;
+    }
+    .mini-bar:hover {
+      background: #0f172a;
+    }
+    .mini-bar-text {
+      writing-mode: vertical-rl;
+      font-size: 11px;
+      color: #94a3b8;
+      letter-spacing: 2px;
+    }
+    [data-theme='light-clean'] .mini-bar {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+    [data-theme='light-clean'] .mini-bar:hover {
+      background: #e2e8f0;
+    }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
+
+  <!-- 1. 全局 40px 顶栏 (精简去重，按需宽松排布) -->
+  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-5 bg-[#0a0f1d] shrink-0 text-xs z-30">
+    <div class="flex items-center space-x-3">
+      <a href="config-workflows.html" class="text-slate-400 hover:text-white flex items-center pr-2.5 border-r border-slate-800 text-xs transition">
+        <span>&larr; 返回列表</span>
+      </a>
+      <span class="text-xs px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-mono font-semibold">BPMN 2.0</span>
+      <h1 id="wf-name-display" class="font-bold text-white text-xs tracking-wide">载入中...</h1>
+      <span id="wf-id-display" class="text-slate-500 font-mono text-[10px]"></span>
+    </div>
+
+    <!-- 顶部动作条：按钮增加内外间距，更宽裕舒适 -->
+    <div class="flex items-center space-x-3">
+      <button type="button" onclick="runWorkflowSim()" class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold flex items-center space-x-1.5 shadow-sm transition">
+        <span>▶️ 试运行流程</span>
+      </button>
+      <button type="button" onclick="toggleDrawer('xml')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs border border-slate-700 font-medium flex items-center space-x-1.5 transition">
+        <span>&lt;/&gt; 查看 XML 源码</span>
+      </button>
+      <button id="toggle-inspector-btn" type="button" onclick="toggleDrawer('node')" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-blue-300 text-xs border border-slate-700 font-medium flex items-center space-x-1.5 transition">
+        <span>⚙️ 节点参数面板</span>
+      </button>
+      <button type="button" onclick="saveWorkflowChanges()" class="px-4 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs shadow transition">
+        <span>保存工作流</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+
+    <!-- 2. 全局 48px 一级侧边栏 -->
+    <aside class="activity-bar h-full">
+      <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      </a>
+      <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+      </a>
+      <a href="config-workflows.html" class="activity-btn active" title="BPMN工作流管理">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+      </a>
+      <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </a>
+      <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+      </a>
+      <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+      </a>
+      <a href="config-skills.html" class="activity-btn" title="Skills 技能库">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </a>
+      <div class="flex-1"></div>
+      <a href="config-settings.html" class="activity-btn" title="系统全局设置 (Settings)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </a>
+    </aside>
+
+    <!-- 3. 主编排工作室：左侧物料栏 + 拖拽分割条 + 中央点阵画布 + 拖拽分割条 + 右侧参数检查器 -->
+    <div class="flex-1 flex overflow-hidden relative">
+
+      <!-- 3.1.A 左侧节点物料库 (展开态，支持拖拽调节宽度、折叠隐藏) -->
+      <aside id="left-palette-panel" style="width: 240px; min-width: 180px; max-width: 400px;" class="bg-[#090d18] border-r border-[#1a2333] flex flex-col flex-shrink-0 z-20 select-none">
+        <div class="p-3 border-b border-[#1a2333] flex items-center justify-between">
+          <span class="text-xs font-bold text-white uppercase font-mono tracking-wider">🧩 节点物料库</span>
+          <button type="button" onclick="toggleLeftPalette(false)" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white text-xs" title="折叠物料库">
+            ◀
+          </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
+          <!-- 分组 1: 事件类 (Events) -->
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-mono font-semibold text-slate-400 uppercase">事件类 (Events)</div>
+            <div draggable="true" ondragstart="handlePaletteDragStart(event, 'startEvent')" onclick="addNewNodeToCanvas('startEvent')" class="palette-item p-2 rounded bg-slate-950 border border-slate-800 hover:border-emerald-500/50 flex items-center space-x-2">
+              <span class="w-5 h-5 rounded-full bg-emerald-950 text-emerald-400 border border-emerald-800 flex items-center justify-center font-bold text-[9px]">●</span>
+              <span class="text-white text-[11px]">Start Event (开始)</span>
+            </div>
+            <div draggable="true" ondragstart="handlePaletteDragStart(event, 'endEvent')" onclick="addNewNodeToCanvas('endEvent')" class="palette-item p-2 rounded bg-slate-950 border border-slate-800 hover:border-rose-500/50 flex items-center space-x-2">
+              <span class="w-5 h-5 rounded-full bg-rose-950 text-rose-400 border border-rose-800 flex items-center justify-center font-bold text-[9px]">■</span>
+              <span class="text-white text-[11px]">End Event (结束)</span>
+            </div>
+          </div>
+
+          <!-- 分组 2: 任务类 (Tasks) -->
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-mono font-semibold text-slate-400 uppercase">任务类 (Tasks)</div>
+            <div draggable="true" ondragstart="handlePaletteDragStart(event, 'task')" onclick="addNewNodeToCanvas('task')" class="palette-item p-2 rounded bg-slate-950 border border-slate-800 hover:border-blue-500/60 flex items-center space-x-2">
+              <span class="w-5 h-5 rounded bg-blue-950 text-blue-400 border border-blue-800 flex items-center justify-center text-[10px]">🤖</span>
+              <span class="text-white text-[11px]">Agent ServiceTask</span>
+            </div>
+            <div draggable="true" ondragstart="handlePaletteDragStart(event, 'userTask')" onclick="addNewNodeToCanvas('userTask')" class="palette-item p-2 rounded bg-slate-950 border border-slate-800 hover:border-purple-500/60 flex items-center space-x-2">
+              <span class="w-5 h-5 rounded bg-purple-950 text-purple-400 border border-purple-800 flex items-center justify-center text-[10px]">👤</span>
+              <span class="text-white text-[11px]">UserTask (人工放行)</span>
+            </div>
+          </div>
+
+          <!-- 分组 3: 网关路由 (Gateways) -->
+          <div class="space-y-1.5">
+            <div class="text-[10px] font-mono font-semibold text-slate-400 uppercase">网关路由 (Gateways)</div>
+            <div draggable="true" ondragstart="handlePaletteDragStart(event, 'exclusiveGateway')" onclick="addNewNodeToCanvas('exclusiveGateway')" class="palette-item p-2 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/60 flex items-center space-x-2">
+              <span class="w-5 h-5 rotate-45 rounded bg-amber-950 text-amber-300 border border-amber-800 flex items-center justify-center text-[9px]"><span class="-rotate-45">✕</span></span>
+              <span class="text-white text-[11px]">ExclusiveGateway (排他)</span>
+            </div>
+            <div draggable="true" ondragstart="handlePaletteDragStart(event, 'parallelGateway')" onclick="addNewNodeToCanvas('parallelGateway')" class="palette-item p-2 rounded bg-slate-950 border border-slate-800 hover:border-amber-500/60 flex items-center space-x-2">
+              <span class="w-5 h-5 rotate-45 rounded bg-amber-950 text-amber-300 border border-amber-800 flex items-center justify-center text-[9px]"><span class="-rotate-45">+</span></span>
+              <span class="text-white text-[11px]">ParallelGateway (并行)</span>
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 text-[10px] text-slate-500 leading-relaxed font-mono">
+            💡 支持按住物料拖入画布任意位置；按住空白处可平移画布。
+          </div>
+        </div>
+      </aside>
+
+      <!-- 3.1.B 左侧折叠迷你唤醒条 -->
+      <div id="left-palette-mini" onclick="toggleLeftPalette(true)" class="mini-bar border-r hidden" title="展开物料库">
+        <span class="text-slate-400 hover:text-white text-xs">▶</span>
+        <span class="mini-bar-text">物料库</span>
+      </div>
+
+      <!-- 左侧面板 Resizer 拖拽分割条 -->
+      <div id="left-resizer" class="panel-resizer bg-transparent border-r border-[#1a2333]/80"></div>
+
+      <!-- 3.2 中央点阵画布主容器 (支持画布手势拖拽平移 Pan + 放置物料 Drop) -->
+      <main id="bpmn-canvas" class="flex-1 canvas-grid relative overflow-auto p-8"
+            onmousedown="handleCanvasPanMouseDown(event)"
+            ondragover="handleCanvasDragOver(event)"
+            ondrop="handleCanvasDrop(event)">
+        
+        <!-- 画布右上角快捷控制器 (包含视口缩放控制与重置居中/自动重排) -->
+        <div class="absolute top-4 right-4 flex items-center space-x-2 z-30 font-mono text-xs select-none">
+          <!-- 缩放控制器 -->
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-1 flex items-center space-x-1 text-slate-300 shadow-xl">
+            <button type="button" onclick="zoomCanvas(-0.1)" class="w-6 h-6 flex items-center justify-center hover:bg-slate-800 hover:text-white rounded text-sm font-bold" title="缩小 (Ctrl + 滚轮向下)">−</button>
+            <span id="canvas-zoom-display" onclick="setCanvasZoom(1)" class="px-2 py-0.5 text-center text-[11px] font-mono text-purple-300 cursor-pointer hover:bg-slate-800 rounded min-w-[48px]" title="点击恢复 100%">100%</span>
+            <button type="button" onclick="zoomCanvas(0.1)" class="w-6 h-6 flex items-center justify-center hover:bg-slate-800 hover:text-white rounded text-sm font-bold" title="放大 (Ctrl + 滚轮向上)">+</button>
+          </div>
+
+          <div class="bg-slate-900 border border-slate-800 rounded-lg p-1 flex items-center space-x-1 text-slate-400 shadow-xl">
+            <button type="button" onclick="resetCanvasView()" class="px-2.5 py-0.5 hover:text-white rounded hover:bg-slate-800 text-[11px]">视口居中</button>
+            <button type="button" onclick="autoLayoutNodes()" class="px-2.5 py-0.5 text-emerald-400 hover:text-emerald-400 rounded hover:bg-slate-800 text-[11px]">📐 自动重排</button>
+          </div>
+        </div>
+
+        <!-- SVG 图形与连线渲染载体 (支持 CSS transform scale 缩放) -->
+        <div id="svg-stage-wrapper" class="min-w-full min-h-full inline-block p-4 origin-top-left transition-transform duration-75">
+          <div id="svg-stage">
+            <div class="text-xs text-slate-500 font-mono">正在渲染 BPMN 拓扑图形...</div>
+          </div>
+        </div>
+      </main>
+
+      <!-- 右侧面板 Resizer 拖拽分割条 -->
+      <div id="right-resizer" class="panel-resizer bg-transparent border-l border-[#1a2333]/80"></div>
+
+      <!-- 3.3.A 右侧节点参数检查器 (展开态，支持拖拽调节宽度、折叠隐藏) -->
+      <aside id="node-drawer" style="width: 360px; min-width: 260px; max-width: 600px;" class="bg-[#090d18] border-l border-[#1a2333] flex flex-col flex-shrink-0 z-20">
+        <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+          <span class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">节点属性检查器 (Inspector)</span>
+          <button type="button" onclick="toggleDrawer('node')" class="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-white" title="收起面板">✕</button>
+        </div>
+
+        <div class="p-4 space-y-4 overflow-y-auto flex-1 text-xs">
+          <!-- 节点类型标签头 -->
+          <div class="flex items-center justify-between border-b border-slate-800 pb-2.5">
+            <div class="flex items-center space-x-2">
+              <span id="node-type-dot" class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+              <h3 id="node-type-title" class="text-xs font-bold text-white">Agent 任务节点配置</h3>
+            </div>
+            <span id="node-id-badge" class="text-[10px] font-mono text-slate-500"></span>
+          </div>
+
+          <!-- 基础设置 -->
+          <div class="space-y-3">
+            <div>
+              <label class="block text-slate-400 text-[11px] mb-1">节点名称 (Label)：</label>
+              <input type="text" id="node-name" oninput="updateCurrentNodeMeta('name', this.value)" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white font-medium focus:outline-none focus:border-blue-500">
+            </div>
+
+            <div id="task-fields-group">
+              <div class="grid grid-cols-2 gap-2 mb-3">
+                <div>
+                  <label class="block text-slate-400 text-[11px] mb-1">执行角色 (Role)：</label>
+                  <input type="text" id="node-role" oninput="updateCurrentNodeMeta('roleName', this.value)" placeholder="如：Senior Dev" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-blue-500">
+                </div>
+                <div>
+                  <label class="block text-slate-400 text-[11px] mb-1">调用模型 (Model)：</label>
+                  <select id="node-model" onchange="updateCurrentNodeMeta('model', this.value)" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-blue-500">
+                    <option value="">自动继承全局模型</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Dify 风格：输入变量消费 (Input Variables) -->
+              <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-300 font-bold text-[11px] flex items-center">
+                    <span class="text-blue-400 mr-1">📥</span> 输入变量映射 (Inputs)
+                  </span>
+                  <button type="button" onclick="addInputVariableRow()" class="text-[10px] text-blue-400 hover:text-blue-300 font-mono">＋ 添加变量</button>
+                </div>
+                <div id="input-variables-list" class="space-y-1.5 text-[11px] font-mono"></div>
+              </div>
+
+              <!-- Dify 风格：严谨区分 System Prompt 与 User Prompt -->
+              <div class="space-y-3 pt-1">
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between">
+                    <label class="block text-slate-300 font-bold text-[11px] text-purple-300">
+                      🛡️ System Prompt (角色设定与规约边界)：
+                    </label>
+                    <span class="text-[10px] text-slate-500 font-mono">固定约束</span>
+                  </div>
+                  <textarea id="node-system-prompt" oninput="updateCurrentNodeMeta('systemPrompt', this.value)" rows="3" placeholder="定义角色职责、安全红线与准则..." class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-200 font-mono text-[11px] leading-relaxed focus:outline-none focus:border-purple-500"></textarea>
+                </div>
+
+                <div class="space-y-1">
+                  <div class="flex items-center justify-between">
+                    <label class="block text-slate-300 font-bold text-[11px] text-emerald-300">
+                      💬 User Prompt 模板 (带变量插值)：
+                    </label>
+                    <span class="text-[10px] text-blue-400 font-mono">支持 ${var} 语法</span>
+                  </div>
+                  <textarea id="node-prompt" oninput="updateCurrentNodeMeta('promptTemplate', this.value)" rows="4" placeholder="具体执行目标、产出规范与变量引用..." class="w-full bg-[#0c1220] border border-slate-700 rounded p-2 text-slate-200 font-mono text-[11px] leading-relaxed focus:outline-none focus:border-emerald-500"></textarea>
+                </div>
+              </div>
+
+              <!-- Dify 风格：输出变量总线绑定 (Outputs) -->
+              <div class="p-2.5 rounded-lg bg-slate-950 border border-slate-800 space-y-2">
+                <div class="flex items-center justify-between">
+                  <span class="text-slate-300 font-bold text-[11px] flex items-center">
+                    <span class="text-amber-400 mr-1">📤</span> 输出变量总线 (Outputs)
+                  </span>
+                  <button type="button" onclick="addOutputVariableRow()" class="text-[10px] text-amber-400 hover:text-amber-300 font-mono">＋ 添加输出</button>
+                </div>
+                <div id="output-variables-list" class="space-y-1.5 text-[11px] font-mono"></div>
+              </div>
+
+              <!-- Dify 风格：高级执行参数 (超时与重试) -->
+              <div class="grid grid-cols-2 gap-2 pt-1 font-mono text-[11px]">
+                <div>
+                  <label class="block text-slate-400 text-[10px] mb-0.5">超时终结 (秒)：</label>
+                  <input type="number" id="node-timeout" oninput="updateCurrentNodeMeta('timeout', this.value)" placeholder="120" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2 py-1 text-slate-200">
+                </div>
+                <div>
+                  <label class="block text-slate-400 text-[10px] mb-0.5">重试次数：</label>
+                  <input type="number" id="node-retry" oninput="updateCurrentNodeMeta('retry', this.value)" placeholder="0" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2 py-1 text-slate-200">
+                </div>
+              </div>
+            </div>
+
+            <!-- 网关条件表达式 -->
+            <div id="gateway-condition-group" class="hidden space-y-2">
+              <label class="block text-slate-300 font-bold text-[11px] text-amber-300">
+                ⚡ 网关流向判断条件 (Condition)：
+              </label>
+              <input type="text" id="node-condition" oninput="updateCurrentNodeMeta('condition', this.value)" placeholder="${testCoverage >= 80}" class="w-full bg-[#0c1220] border border-slate-700 rounded px-2.5 py-1.5 text-amber-300 font-mono text-[11px] focus:outline-none focus:border-amber-500">
+              <p class="text-[10px] text-slate-500 font-mono">支持根据上下文全局变量或上一节点输出变量进行分支跳转。</p>
+            </div>
+          </div>
+
+          <!-- 连线管理：可视化下拉建立前置/后置关系，替代手输 ID -->
+          <div class="pt-3 border-t border-slate-800 space-y-3">
+            <div class="text-[11px] font-bold text-blue-400 font-mono uppercase tracking-wider">🔗 连线管理</div>
+
+            <div class="grid grid-cols-1 gap-2">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[10px] text-slate-500 w-14 shrink-0 font-mono">后置 ↓</span>
+                <select id="link-target-select" class="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-[11px] font-mono focus:outline-none focus:border-blue-500">
+                  <option value="">选择目标节点…</option>
+                </select>
+                <button type="button" onclick="addLinkFromSelect()" class="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold">＋</button>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-[10px] text-slate-500 w-14 shrink-0 font-mono">前置 ↑</span>
+                <select id="link-source-select" class="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-slate-200 text-[11px] font-mono focus:outline-none focus:border-blue-500">
+                  <option value="">选择来源节点…</option>
+                </select>
+                <button type="button" onclick="addLinkToSelect()" class="px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold">＋</button>
+              </div>
+            </div>
+
+            <div class="space-y-1.5">
+              <div class="text-[10px] text-slate-500 font-mono">当前连线（点击可移除）</div>
+              <div id="link-list" class="space-y-1 text-[10px] font-mono"></div>
+            </div>
+          </div>
+
+          <!-- 底部动作条 -->
+          <div class="pt-3 border-t border-slate-800 flex items-center justify-end">
+            <button type="button" onclick="deleteCurrentSelectedNode()" class="px-2.5 py-1.5 rounded bg-rose-950/40 hover:bg-rose-900/60 text-rose-300 border border-rose-800/50 text-xs transition">
+              <span>🗑️ 删除该节点</span>
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <!-- 3.3.B 右侧折叠迷你唤醒条 -->
+      <div id="right-inspector-mini" onclick="toggleDrawer('node')" class="mini-bar border-l hidden" title="展开参数面板">
+        <span class="text-slate-400 hover:text-white text-xs">◀</span>
+        <span class="mini-bar-text">参数面板</span>
+      </div>
+
+      <!-- 3.4 XML 源码抽屉 (可折叠) -->
+      <aside id="xml-editor" class="w-96 bg-slate-950 border-l border-slate-800 flex flex-col flex-shrink-0 transition-all duration-200 hidden z-20">
+        <div class="p-3 border-b border-slate-800 flex items-center justify-between">
+          <span class="text-xs font-bold text-white uppercase font-mono">&lt;/&gt; BPMN 2.0 XML 源码</span>
+          <button type="button" onclick="toggleDrawer('xml')" class="text-slate-400 hover:text-white text-xs">✕</button>
+        </div>
+        <div class="flex-1 p-2 flex flex-col">
+          <textarea id="xml-textarea" oninput="onXmlModified()" class="w-full flex-1 bg-transparent border-0 text-slate-200 font-mono text-[11px] leading-relaxed resize-none focus:outline-none"></textarea>
+        </div>
+      </aside>
+
+    </div>
+  </div>
+
+  <script>
+    let currentWorkflow = null;
+    let selectedNodeId = null;
+    let availableModels = []; // 系统中配置的真实可用模型列表
+    
+    // 节点拖拽移动状态
+    let dragNodeId = null;
+    let dragStartX = 0;
+    let dragStartY = 0;
+    let nodeInitX = 0;
+    let nodeInitY = 0;
+    let nodeCoordinates = new Map(); // nodeId -> { x, y }
+
+    // 交互式锚点拉线状态 (Handle Drag-to-Connect)
+    let isConnecting = false;
+    let connectSourceId = null;
+    let connectStartX = 0;
+    let connectStartY = 0;
+    let connectCurrentX = 0;
+    let connectCurrentY = 0;
+
+    // 画布抓手平移 (Pan) 状态 (修复问题 2)
+    let isPanningCanvas = false;
+    let panStartX = 0;
+    let panStartY = 0;
+    let panInitScrollLeft = 0;
+    let panInitScrollTop = 0;
+
+    function getParam(name) {
+      const url = new URL(window.location.href);
+      return url.searchParams.get(name);
+    }
+
+    async function loadWorkflow() {
+      const id = getParam('id') || 'wf_std_feature_dev';
+      try {
+        await loadAvailableModels();
+        const res = await fetch(`/api/workflows/${encodeURIComponent(id)}`);
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}: ${res.statusText}`);
+        }
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          currentWorkflow = json.data;
+          document.getElementById('wf-name-display').textContent = currentWorkflow.name;
+          document.getElementById('wf-id-display').textContent = currentWorkflow.id;
+          document.getElementById('xml-textarea').value = currentWorkflow.bpmnXml;
+          renderDiagramFromXml(currentWorkflow.bpmnXml);
+        } else {
+          document.getElementById('svg-stage').innerHTML = `<div class="p-6 text-rose-400 font-mono text-xs bg-rose-950/20 border border-rose-800 rounded">未能获取流程定义数据: ${escapeXml(json.message || '未知错误')}</div>`;
+        }
+      } catch (err) {
+        console.error('加载工作流详情失败:', err);
+        document.getElementById('svg-stage').innerHTML = `<div class="p-6 text-rose-400 font-mono text-xs bg-rose-950/20 border border-rose-800 rounded">加载流程失败: ${escapeXml(err.message)}</div>`;
+      }
+    }
+
+    // 从 /api/providers 动态读取已配置可用的真实模型清单 (满足要求 1)
+    async function loadAvailableModels() {
+      try {
+        const res = await fetch('/api/providers');
+        const json = await res.json();
+        if (json.code === 0 && Array.isArray(json.data)) {
+          availableModels = [];
+          json.data.forEach(p => {
+            const pName = p.name || 'Provider';
+            if (Array.isArray(p.models)) {
+              p.models.forEach(m => {
+                const mId = m.id || m.name;
+                const mLabel = m.name || m.id;
+                availableModels.push({
+                  id: mId,
+                  label: `${mLabel} (${pName})`,
+                  provider: pName,
+                });
+              });
+            }
+          });
+          populateModelSelect();
+        }
+      } catch (err) {
+        console.warn('获取 Provider 模型清单失败，保留默认项:', err);
+      }
+    }
+
+    function populateModelSelect(selectedModelId) {
+      const sel = document.getElementById('node-model');
+      if (!sel) return;
+      sel.innerHTML = '<option value="">自动继承全局模型</option>';
+      availableModels.forEach(m => {
+        const isSelected = selectedModelId === m.id ? 'selected' : '';
+        sel.innerHTML += `<option value="${escapeXml(m.id)}" ${isSelected}>${escapeXml(m.label)}</option>`;
+      });
+    }
+
+    async function runWorkflowSim() {
+      if (!currentWorkflow) return;
+      try {
+        const res = await fetch(`/api/workflows/${encodeURIComponent(currentWorkflow.id)}/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ variables: {} }),
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          const completed = json.data.completedNodes || [];
+          alert(`试运行完成！状态: ${json.data.status}，执行节点数: ${completed.length}`);
+          completed.forEach(nodeId => {
+            const el = document.querySelector(`[data-node-id="${nodeId}"]`);
+            if (el) {
+              const shape = el.querySelector('rect, circle, polygon');
+              if (shape) {
+                shape.setAttribute('stroke', '#10b981');
+                shape.setAttribute('stroke-width', '2.5');
+              }
+            }
+          });
+        } else {
+          alert('试运行失败: ' + json.message);
+        }
+      } catch (err) {
+        alert('试运行请求异常: ' + err.message);
+      }
+    }
+
+    // 核心渲染：SVG + 贝塞尔曲线 + 高质感节点卡片
+    function renderDiagramFromXml(xml) {
+      const stage = document.getElementById('svg-stage');
+      const nodes = extractNodes(xml);
+      const flows = extractFlows(xml);
+
+      if (nodes.length === 0) {
+        stage.innerHTML = '<div class="text-xs text-slate-500 font-mono">未解析到有效 BPMN 节点</div>';
+        return;
+      }
+
+      // 自动计算边界
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      nodes.forEach((n, idx) => {
+        let x = nodeCoordinates.get(n.id)?.x ?? n.bounds?.x ?? (60 + idx * 180);
+        let y = nodeCoordinates.get(n.id)?.y ?? n.bounds?.y ?? (140);
+        const w = n.bounds?.width ?? (n.type.includes('Event') ? 50 : n.type.includes('Gateway') ? 60 : 160);
+        const h = n.bounds?.height ?? (n.type.includes('Event') ? 50 : n.type.includes('Gateway') ? 60 : 80);
+        minX = Math.min(minX, x);
+        minY = Math.min(minY, y);
+        maxX = Math.max(maxX, x + w);
+        maxY = Math.max(maxY, y + h);
+      });
+
+      const pad = 60;
+      const svgW = Math.max(1400, maxX + pad * 2);
+      const svgH = Math.max(600, maxY + pad * 2);
+
+      const nodeMap = new Map();
+      nodes.forEach((n, idx) => {
+        let x = nodeCoordinates.get(n.id)?.x ?? (n.bounds?.x ?? (60 + idx * 180));
+        let y = nodeCoordinates.get(n.id)?.y ?? (n.bounds?.y ?? 140);
+        nodeCoordinates.set(n.id, { x, y });
+        const w = n.bounds?.width ?? (n.type.includes('Event') ? 50 : n.type.includes('Gateway') ? 60 : 160);
+        const h = n.bounds?.height ?? (n.type.includes('Event') ? 50 : n.type.includes('Gateway') ? 60 : 80);
+        nodeMap.set(n.id, { ...n, x, y, w, h });
+      });
+
+      let svg = `<svg id="main-bpmn-svg" width="${svgW}" height="${svgH}" class="overflow-visible select-none" onmousemove="handleSvgMouseMove(event)" onmouseup="handleSvgMouseUp(event)">
+        <defs>
+          <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#3b82f6" />
+          </marker>
+          <marker id="arrow-loop" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M 0 1 L 10 5 L 0 9 z" fill="#f59e0b" />
+          </marker>
+        </defs>`;
+
+      // 绘制贝塞尔曲线连线
+      flows.forEach(flow => {
+        const src = nodeMap.get(flow.sourceRef);
+        const tgt = nodeMap.get(flow.targetRef);
+        if (!src || !tgt) return;
+
+        if (tgt.x > src.x + src.w) {
+          // 正向连线：左侧入、右侧出，平滑贝塞尔
+          const x1 = src.x + src.w;
+          const y1 = src.y + src.h / 2;
+          const x2 = tgt.x;
+          const y2 = tgt.y + tgt.h / 2;
+          svg += `<path id="flow-${flow.sourceRef}-${flow.targetRef}" d="M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}" 
+                      fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow)" />`;
+        } else if (tgt.x + tgt.w <= src.x) {
+          // 回环/反向连线（如驳回重做）：从顶部绕行，用虚线琥珀色区分，避免横穿主干
+          const x1 = src.x + src.w / 2;
+          const y1 = src.y;
+          const x2 = tgt.x + tgt.w / 2;
+          const y2 = tgt.y;
+          const upY = Math.min(y1, y2) - 70;
+          svg += `<path id="flow-${flow.sourceRef}-${flow.targetRef}" d="M ${x1} ${y1} C ${x1} ${upY}, ${x2} ${upY}, ${x2} ${y2}" 
+                      fill="none" stroke="#f59e0b" stroke-width="2" stroke-dasharray="6 4" marker-end="url(#arrow-loop)" />`;
+        } else {
+          // 同层/部分重叠连线（并行汇合等）：从底部绕行
+          const x1 = src.x + src.w / 2;
+          const y1 = src.y + src.h;
+          const x2 = tgt.x + tgt.w / 2;
+          const y2 = tgt.y + tgt.h;
+          const downY = Math.max(y1, y2) + 60;
+          svg += `<path id="flow-${flow.sourceRef}-${flow.targetRef}" d="M ${x1} ${y1} C ${x1} ${downY}, ${x2} ${downY}, ${x2} ${y2}" 
+                      fill="none" stroke="#3b82f6" stroke-width="2" marker-end="url(#arrow)" />`;
+        }
+      });
+
+      // 绘制节点 (带有支持拖拽拉线直连的 Handle 锚点)
+      for (const [id, node] of nodeMap.entries()) {
+        const isSelected = selectedNodeId === id;
+        if (node.type.includes('startEvent')) {
+          svg += `<g class="bpmn-node ${isSelected ? 'selected' : ''}" data-node-id="${id}" onmousedown="handleNodeMouseDown(event, '${id}')" onclick="selectNode('${id}')">
+            <circle cx="${node.x + node.w / 2}" cy="${node.y + node.h / 2}" r="22" fill="#064e3b" stroke="#10b981" stroke-width="2" />
+            <text x="${node.x + node.w / 2}" y="${node.y + node.h / 2 + 5}" fill="#6ee7b7" font-size="14" font-weight="bold" text-anchor="middle">▶</text>
+            <text x="${node.x + node.w / 2}" y="${node.y + node.h + 16}" fill="#94a3b8" font-size="11" font-weight="600" text-anchor="middle">${escapeXml(node.name || '开始')}</text>
+            <circle cx="${node.x + node.w / 2 + 22}" cy="${node.y + node.h / 2}" r="5" class="handle-dot" data-handle-id="${id}" data-handle-type="source" onmousedown="handleConnectHandleMouseDown(event, '${id}')" />
+          </g>`;
+        } else if (node.type.includes('endEvent')) {
+          svg += `<g class="bpmn-node ${isSelected ? 'selected' : ''}" data-node-id="${id}" onmousedown="handleNodeMouseDown(event, '${id}')" onclick="selectNode('${id}')">
+            <circle cx="${node.x + node.w / 2}" cy="${node.y + node.h / 2}" r="22" fill="#881337" stroke="#f43f5e" stroke-width="3" />
+            <text x="${node.x + node.w / 2}" y="${node.y + node.h / 2 + 5}" fill="#fecdd3" font-size="14" font-weight="bold" text-anchor="middle">■</text>
+            <text x="${node.x + node.w / 2}" y="${node.y + node.h + 16}" fill="#94a3b8" font-size="11" font-weight="600" text-anchor="middle">${escapeXml(node.name || '结束')}</text>
+            <circle cx="${node.x + node.w / 2 - 22}" cy="${node.y + node.h / 2}" r="5" class="handle-dot" data-handle-id="${id}" data-handle-type="target" onmouseup="handleConnectHandleMouseUp(event, '${id}')" />
+          </g>`;
+        } else if (node.type.includes('Gateway')) {
+          const cx = node.x + node.w / 2;
+          const cy = node.y + node.h / 2;
+          const r = node.w / 2;
+          svg += `<g class="bpmn-node ${isSelected ? 'selected' : ''}" data-node-id="${id}" onmousedown="handleNodeMouseDown(event, '${id}')" onclick="selectNode('${id}')">
+            <polygon points="${cx},${cy - r} ${cx + r},${cy} ${cx},${cy + r} ${cx - r},${cy}" fill="#78350f" stroke="#f59e0b" stroke-width="2" />
+            <text x="${cx}" y="${cy + 5}" fill="#fde68a" font-size="15" font-weight="bold" text-anchor="middle">${node.type.includes('parallel') ? '+' : '✕'}</text>
+            <text x="${cx}" y="${cy + r + 18}" fill="#94a3b8" font-size="11" font-weight="600" text-anchor="middle">${escapeXml(node.name || '网关')}</text>
+            <circle cx="${cx - r}" cy="${cy}" r="5" class="handle-dot" data-handle-id="${id}" data-handle-type="target" onmouseup="handleConnectHandleMouseUp(event, '${id}')" />
+            <circle cx="${cx + r}" cy="${cy}" r="5" class="handle-dot" data-handle-id="${id}" data-handle-type="source" onmousedown="handleConnectHandleMouseDown(event, '${id}')" />
+          </g>`;
+        } else {
+          // Task 任务节点 (ServiceTask / UserTask)
+          const isUserTask = node.type.includes('userTask');
+          const headerBg = isUserTask ? '#581c87' : '#1e3a8a';
+          const headerText = isUserTask ? 'USER · ' : 'TASK · ';
+          const roleLabel = escapeXml(node.roleName || (isUserTask ? '审核人' : 'Agent'));
+          
+          svg += `<g class="bpmn-node ${isSelected ? 'selected' : ''}" data-node-id="${id}" onmousedown="handleNodeMouseDown(event, '${id}')" onclick="selectNode('${id}')">
+            <rect x="${node.x}" y="${node.y}" width="${node.w}" height="${node.h}" rx="8" fill="#0d1424" stroke="#1e293b" stroke-width="1.5" />
+            <rect x="${node.x}" y="${node.y}" width="${node.w}" height="22" rx="8" fill="${headerBg}" />
+            <text x="${node.x + 8}" y="${node.y + 15}" fill="#bfdbfe" font-size="10" font-family="monospace">${headerText}${roleLabel}</text>
+            <text x="${node.x + node.w / 2}" y="${node.y + 48}" fill="#ffffff" font-size="11" font-weight="bold" text-anchor="middle">${escapeXml(node.name || id)}</text>
+            <text x="${node.x + 8}" y="${node.y + 68}" fill="#64748b" font-size="9" font-family="monospace">ID: ${escapeXml(id)}</text>
+            <circle cx="${node.x}" cy="${node.y + node.h / 2}" r="5" class="handle-dot" data-handle-id="${id}" data-handle-type="target" onmouseup="handleConnectHandleMouseUp(event, '${id}')" />
+            <circle cx="${node.x + node.w}" cy="${node.y + node.h / 2}" r="5" class="handle-dot" data-handle-id="${id}" data-handle-type="source" onmousedown="handleConnectHandleMouseDown(event, '${id}')" />
+          </g>`;
+        }
+      }
+
+      // 绘制实时拉线预览
+      if (isConnecting) {
+        const x1 = connectStartX;
+        const y1 = connectStartY;
+        const x2 = connectCurrentX;
+        const y2 = connectCurrentY;
+        svg += `<path d="M ${x1} ${y1} C ${(x1 + x2) / 2} ${y1}, ${(x1 + x2) / 2} ${y2}, ${x2} ${y2}" 
+                     fill="none" stroke="#10b981" stroke-width="2.5" stroke-dasharray="4 4" marker-end="url(#arrow)" />`;
+      }
+
+      svg += '</svg>';
+      stage.innerHTML = svg;
+    }
+
+    // 1. 节点拖拽移动逻辑
+    function handleNodeMouseDown(e, id) {
+      if (e.target.classList.contains('handle-dot')) return; // 避免拉线时触发节点移动
+      e.stopPropagation(); // 阻止触发画布 Pan
+      dragNodeId = id;
+      dragStartX = e.clientX;
+      dragStartY = e.clientY;
+      const coord = nodeCoordinates.get(id);
+      if (coord) {
+        nodeInitX = coord.x;
+        nodeInitY = coord.y;
+      }
+    }
+
+    function handleSvgMouseMove(e) {
+      if (isConnecting) {
+        const svgEl = document.getElementById('main-bpmn-svg');
+        const rect = svgEl.getBoundingClientRect();
+        // 计算缩放补偿坐标
+        connectCurrentX = (e.clientX - rect.left) / currentCanvasZoom;
+        connectCurrentY = (e.clientY - rect.top) / currentCanvasZoom;
+        renderDiagramFromXml(document.getElementById('xml-textarea').value);
+        return;
+      }
+
+      if (!dragNodeId) return;
+      const dx = (e.clientX - dragStartX) / currentCanvasZoom;
+      const dy = (e.clientY - dragStartY) / currentCanvasZoom;
+      const newX = Math.max(20, nodeInitX + dx);
+      const newY = Math.max(20, nodeInitY + dy);
+      nodeCoordinates.set(dragNodeId, { x: newX, y: newY });
+      const xml = document.getElementById('xml-textarea').value;
+      renderDiagramFromXml(xml);
+    }
+
+    function handleSvgMouseUp() {
+      if (dragNodeId) dragNodeId = null;
+      if (isConnecting) {
+        isConnecting = false;
+        connectSourceId = null;
+        renderDiagramFromXml(document.getElementById('xml-textarea').value);
+      }
+    }
+
+    // 交互式锚点拉线直连逻辑 (Handle Drag-to-Connect，满足要求 3)
+    function handleConnectHandleMouseDown(e, nodeId) {
+      e.stopPropagation();
+      isConnecting = true;
+      connectSourceId = nodeId;
+      const dot = e.target;
+      connectStartX = parseFloat(dot.getAttribute('cx'));
+      connectStartY = parseFloat(dot.getAttribute('cy'));
+      connectCurrentX = connectStartX;
+      connectCurrentY = connectStartY;
+      renderDiagramFromXml(document.getElementById('xml-textarea').value);
+    }
+
+    function handleConnectHandleMouseUp(e, targetNodeId) {
+      e.stopPropagation();
+      if (isConnecting && connectSourceId && connectSourceId !== targetNodeId) {
+        if (addSequenceFlow(connectSourceId, targetNodeId)) {
+          refreshLinkControls();
+        }
+      }
+      isConnecting = false;
+      connectSourceId = null;
+      renderDiagramFromXml(document.getElementById('xml-textarea').value);
+    }
+
+    // 2. 画布抓手平移逻辑 (Canvas Pan - 修复问题 2)
+    function handleCanvasPanMouseDown(e) {
+      // 仅当点击空白区域（非节点内部）时触发
+      if (e.target.closest('.bpmn-node')) return;
+      isPanningCanvas = true;
+      const canvas = document.getElementById('bpmn-canvas');
+      canvas.classList.add('panning');
+      panStartX = e.clientX;
+      panStartY = e.clientY;
+      panInitScrollLeft = canvas.scrollLeft;
+      panInitScrollTop = canvas.scrollTop;
+
+      const onMouseMove = (ev) => {
+        if (!isPanningCanvas) return;
+        const dx = ev.clientX - panStartX;
+        const dy = ev.clientY - panStartY;
+        canvas.scrollLeft = panInitScrollLeft - dx;
+        canvas.scrollTop = panInitScrollTop - dy;
+      };
+
+      const onMouseUp = () => {
+        isPanningCanvas = false;
+        canvas.classList.remove('panning');
+        window.removeEventListener('mousemove', onMouseMove);
+        window.removeEventListener('mouseup', onMouseUp);
+      };
+
+      window.addEventListener('mousemove', onMouseMove);
+      window.addEventListener('mouseup', onMouseUp);
+    }
+
+    // 3. 物料拖拽直接落入画布 (Drag & Drop - 修复问题 3)
+    function handlePaletteDragStart(e, type) {
+      e.dataTransfer.setData('text/plain', type);
+      e.dataTransfer.effectAllowed = 'copy';
+    }
+
+    function handleCanvasDragOver(e) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+    }
+
+    function handleCanvasDrop(e) {
+      e.preventDefault();
+      const type = e.dataTransfer.getData('text/plain');
+      if (!type) return;
+
+      const canvas = document.getElementById('bpmn-canvas');
+      const rect = canvas.getBoundingClientRect();
+      const dropX = e.clientX - rect.left + canvas.scrollLeft - 40;
+      const dropY = e.clientY - rect.top + canvas.scrollTop - 40;
+
+      addNewNodeToCanvas(type, Math.max(40, dropX), Math.max(40, dropY));
+    }
+
+    // 新增节点物料到画布
+    function addNewNodeToCanvas(type, posX, posY) {
+      let xml = document.getElementById('xml-textarea').value;
+      const id = `${type}_${Date.now().toString().slice(-4)}`;
+      let newTag = '';
+      if (type === 'task') {
+        newTag = `\n    <bpmn:task id="${id}" name="新开发任务">\n      <bpmn:incoming></bpmn:incoming>\n      <bpmn:outgoing></bpmn:outgoing>\n    </bpmn:task>`;
+      } else if (type === 'userTask') {
+        newTag = `\n    <bpmn:userTask id="${id}" name="人工放行审批">\n      <bpmn:incoming></bpmn:incoming>\n      <bpmn:outgoing></bpmn:outgoing>\n    </bpmn:userTask>`;
+      } else if (type === 'exclusiveGateway') {
+        newTag = `\n    <bpmn:exclusiveGateway id="${id}" name="分支网关">\n    </bpmn:exclusiveGateway>`;
+      } else if (type === 'parallelGateway') {
+        newTag = `\n    <bpmn:parallelGateway id="${id}" name="并行网关">\n    </bpmn:parallelGateway>`;
+      } else if (type === 'startEvent') {
+        newTag = `\n    <bpmn:startEvent id="${id}" name="触发开始">\n    </bpmn:startEvent>`;
+      } else if (type === 'endEvent') {
+        newTag = `\n    <bpmn:endEvent id="${id}" name="结束">\n    </bpmn:endEvent>`;
+      }
+
+      xml = xml.replace('</bpmn:process>', `${newTag}\n  </bpmn:process>`);
+      const targetX = posX !== undefined ? posX : (250 + Math.random() * 150);
+      const targetY = posY !== undefined ? posY : (150 + Math.random() * 150);
+      nodeCoordinates.set(id, { x: targetX, y: targetY });
+
+      document.getElementById('xml-textarea').value = xml;
+      if (currentWorkflow) currentWorkflow.bpmnXml = xml;
+      renderDiagramFromXml(xml);
+      selectNode(id);
+    }
+
+    // 画布缩放比例状态
+    let currentCanvasZoom = 1.0;
+
+    function setCanvasZoom(val) {
+      currentCanvasZoom = Math.max(0.4, Math.min(2.0, Math.round(val * 10) / 10));
+      const wrapper = document.getElementById('svg-stage-wrapper');
+      const label = document.getElementById('canvas-zoom-display');
+      if (wrapper) wrapper.style.transform = `scale(${currentCanvasZoom})`;
+      if (label) label.textContent = `${Math.round(currentCanvasZoom * 100)}%`;
+    }
+
+    function zoomCanvas(delta) {
+      setCanvasZoom(currentCanvasZoom + delta);
+    }
+
+    // 重置画布视口居中
+    function resetCanvasView() {
+      setCanvasZoom(1.0);
+      const canvas = document.getElementById('bpmn-canvas');
+      canvas.scrollLeft = 0;
+      canvas.scrollTop = 0;
+    }
+
+    // 专业拓扑分层布局
+    // 核心修复：之前的 BFS + visitedCount 启发式会把汇聚网关 (Join) 与其前置任务
+    // 判到同一层，导致节点在同一列重叠、连线反向穿插成一团。
+    // 这里改为标准的 DAG 分层：先环路检测并剥离回边 -> 拓扑排序 ->
+    // 最长路径分层 (Longest-path layering) -> 重心排序去交叉 -> 逐层居中排布。
+    function autoLayoutNodes() {
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const flows = extractFlows(xml);
+      if (nodes.length === 0) return;
+
+      const ids = nodes.map(n => n.id);
+      const idSet = new Set(ids);
+      const outMap = new Map(ids.map(id => [id, []]));
+      const inMap = new Map(ids.map(id => [id, []]));
+      flows.forEach(f => {
+        if (idSet.has(f.sourceRef) && idSet.has(f.targetRef)) {
+          outMap.get(f.sourceRef).push(f.targetRef);
+          inMap.get(f.targetRef).push(f.sourceRef);
+        }
+      });
+
+      const edgeKey = (a, b) => a + '\u0000' + b;
+
+      // 1) DFS 环路检测，标记回边（回退分支）并从分层图中剥离，避免层级被回环拉乱
+      const color = new Map(ids.map(id => [id, 0]));
+      const backEdges = new Set();
+      function breakCycles(u) {
+        color.set(u, 1);
+        outMap.get(u).forEach(v => {
+          const c = color.get(v);
+          if (c === 1) backEdges.add(edgeKey(u, v));
+          else if (c === 0) breakCycles(v);
+        });
+        color.set(u, 2);
+      }
+      ids.forEach(id => { if (color.get(id) === 0) breakCycles(id); });
+
+      // 2) 构建无回边 DAG 与入度表
+      const dagOut = new Map(ids.map(id => [id, outMap.get(id).filter(v => !backEdges.has(edgeKey(id, v)))]));
+      const indeg = new Map(ids.map(id => [id, 0]));
+      ids.forEach(u => dagOut.get(u).forEach(v => indeg.set(v, indeg.get(v) + 1)));
+
+      // 3) 拓扑排序 + 最长路径分层
+      const layer = new Map(ids.map(id => [id, 0]));
+      const queue = ids.filter(id => indeg.get(id) === 0);
+      const topo = [];
+      for (let qi = 0; qi < queue.length; qi++) {
+        const u = queue[qi];
+        topo.push(u);
+        for (const v of dagOut.get(u)) {
+          if (layer.get(v) < layer.get(u) + 1) layer.set(v, layer.get(u) + 1);
+          indeg.set(v, indeg.get(v) - 1);
+          if (indeg.get(v) === 0) queue.push(v);
+        }
+      }
+      ids.forEach(id => { if (!topo.includes(id)) { topo.push(id); layer.set(id, 0); } });
+
+      // 4) 逐层分组
+      const rankGroups = new Map();
+      nodes.forEach(n => {
+        const lv = layer.get(n.id);
+        if (!rankGroups.has(lv)) rankGroups.set(lv, []);
+        rankGroups.get(lv).push(n.id);
+      });
+
+      // 5) Y 轴分配：主干居中，分支由前置节点均值推导，再逐层拉开间距
+      const CENTER_Y = 260;
+      const RAW_GAP = 160;
+      const centerY = new Map();
+      topo.forEach(id => {
+        const preds = inMap.get(id).filter(p => !backEdges.has(edgeKey(p, id)) && centerY.has(p));
+        if (preds.length === 0) {
+          centerY.set(id, CENTER_Y);
+        } else {
+          const sum = preds.reduce((acc, p) => acc + centerY.get(p), 0);
+          centerY.set(id, sum / preds.length);
+        }
+      });
+
+      // 6) 逐层排序：先按重心值升序（减少交叉），再在整层垂直方向居中铺开
+      const sortedLevels = Array.from(rankGroups.keys()).sort((a, b) => a - b);
+      sortedLevels.forEach(lv => {
+        const list = rankGroups.get(lv);
+        list.sort((a, b) => (centerY.get(a) - centerY.get(b)) || ids.indexOf(a) - ids.indexOf(b));
+        const total = (list.length - 1) * RAW_GAP;
+        const startY = CENTER_Y - total / 2;
+        list.forEach((id, idx) => {
+          nodeCoordinates.set(id, { x: 80 + lv * 300, y: startY + idx * RAW_GAP });
+        });
+      });
+
+      renderDiagramFromXml(xml);
+    }
+
+    // 删除当前选中的节点
+    function deleteCurrentSelectedNode() {
+      if (!selectedNodeId) return;
+      if (!confirm(`确认删除节点 ${selectedNodeId} 及其关联连线？`)) return;
+
+      let xml = document.getElementById('xml-textarea').value;
+      const nodeTagRegex = new RegExp(`<(?:[a-zA-Z0-9_]+:)?[a-zA-Z0-9]+[^>]*id=["']${selectedNodeId}["'][\\s\\S]*?<\\/(?:[a-zA-Z0-9_]+:)?[a-zA-Z0-9]+>|<(?:[a-zA-Z0-9_]+:)?[a-zA-Z0-9]+[^>]*id=["']${selectedNodeId}["'][^>]*\\/>`, 'gi');
+      xml = xml.replace(nodeTagRegex, '');
+
+      // 删除关联的 sequenceFlow
+      const flowRegex = new RegExp(`<(?:[a-zA-Z0-9_]+:)?sequenceFlow[^>]*(?:sourceRef=["']${selectedNodeId}["']|targetRef=["']${selectedNodeId}["'])[^>]*\\/?>`, 'gi');
+      xml = xml.replace(flowRegex, '');
+
+      nodeCoordinates.delete(selectedNodeId);
+      selectedNodeId = null;
+      document.getElementById('node-drawer').classList.add('hidden');
+      document.getElementById('xml-textarea').value = xml;
+      if (currentWorkflow) currentWorkflow.bpmnXml = xml;
+      renderDiagramFromXml(xml);
+    }
+
+    // ---- 连线管理（可视化下拉，替代手输 ID） ----
+
+    function addSequenceFlow(sourceRef, targetRef) {
+      if (!sourceRef || !targetRef || sourceRef === targetRef) return false;
+      let xml = document.getElementById('xml-textarea').value;
+      const dup = new RegExp(
+        `<bpmn:sequenceFlow[^>]*sourceRef=["']${escapeRegExp(sourceRef)}["'][^>]*targetRef=["']${escapeRegExp(targetRef)}["']`,
+        'i'
+      );
+      if (dup.test(xml)) return false;
+      const flowId = `Flow_${Date.now().toString().slice(-6)}`;
+      const newFlow = `\n    <bpmn:sequenceFlow id="${flowId}" sourceRef="${sourceRef}" targetRef="${targetRef}" />`;
+      xml = xml.replace('</bpmn:process>', `${newFlow}\n  </bpmn:process>`);
+      document.getElementById('xml-textarea').value = xml;
+      if (currentWorkflow) currentWorkflow.bpmnXml = xml;
+      return true;
+    }
+
+    function removeSequenceFlow(sourceRef, targetRef) {
+      let xml = document.getElementById('xml-textarea').value;
+      const regex = new RegExp(
+        `<bpmn:sequenceFlow[^>]*sourceRef=["']${escapeRegExp(sourceRef)}["'][^>]*targetRef=["']${escapeRegExp(targetRef)}["'][^>]*\\/?>`,
+        'i'
+      );
+      xml = xml.replace(regex, '');
+      document.getElementById('xml-textarea').value = xml;
+      if (currentWorkflow) currentWorkflow.bpmnXml = xml;
+    }
+
+    function escapeRegExp(s) {
+      return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    }
+
+    function addLinkFromSelect() {
+      const sel = document.getElementById('link-target-select');
+      if (!selectedNodeId || !sel.value) return;
+      if (addSequenceFlow(selectedNodeId, sel.value)) {
+        refreshLinkControls();
+        renderDiagramFromXml(document.getElementById('xml-textarea').value);
+      }
+    }
+
+    function addLinkToSelect() {
+      const sel = document.getElementById('link-source-select');
+      if (!selectedNodeId || !sel.value) return;
+      if (addSequenceFlow(sel.value, selectedNodeId)) {
+        refreshLinkControls();
+        renderDiagramFromXml(document.getElementById('xml-textarea').value);
+      }
+    }
+
+    function removeLink(sourceRef, targetRef) {
+      removeSequenceFlow(sourceRef, targetRef);
+      refreshLinkControls();
+      renderDiagramFromXml(document.getElementById('xml-textarea').value);
+    }
+
+    function refreshLinkControls() {
+      if (!selectedNodeId) return;
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const flows = extractFlows(xml);
+
+      const outgoing = flows.filter(f => f.sourceRef === selectedNodeId);
+      const incoming = flows.filter(f => f.targetRef === selectedNodeId);
+      const hasOut = new Set(outgoing.map(f => f.targetRef));
+      const hasIn = new Set(incoming.map(f => f.sourceRef));
+
+      const label = n => `${n.name || n.id}`;
+
+      const targetSel = document.getElementById('link-target-select');
+      const sourceSel = document.getElementById('link-source-select');
+      targetSel.innerHTML = '<option value="">选择目标节点…</option>';
+      sourceSel.innerHTML = '<option value="">选择来源节点…</option>';
+
+      nodes.forEach(n => {
+        if (n.id === selectedNodeId) return;
+        if (!hasOut.has(n.id)) {
+          targetSel.innerHTML += `<option value="${escapeXml(n.id)}">${escapeXml(label(n))}</option>`;
+        }
+        if (!hasIn.has(n.id)) {
+          sourceSel.innerHTML += `<option value="${escapeXml(n.id)}">${escapeXml(label(n))}</option>`;
+        }
+      });
+
+      const listEl = document.getElementById('link-list');
+      const items = [];
+      incoming.forEach(f => {
+        const srcNode = nodes.find(n => n.id === f.sourceRef);
+        items.push(`<div class="flex items-center justify-between p-1 rounded bg-slate-950 border border-slate-800">
+          <span class="text-slate-400 truncate">↑ ${escapeXml(srcNode ? (srcNode.name || srcNode.id) : f.sourceRef)}</span>
+          <button type="button" onclick="removeLink('${escapeXml(f.sourceRef)}','${escapeXml(selectedNodeId)}')" class="text-rose-400 hover:text-rose-300 px-1" title="移除连线">✕</button>
+        </div>`);
+      });
+      outgoing.forEach(f => {
+        const tgtNode = nodes.find(n => n.id === f.targetRef);
+        items.push(`<div class="flex items-center justify-between p-1 rounded bg-slate-950 border border-slate-800">
+          <span class="text-slate-400 truncate">↓ ${escapeXml(tgtNode ? (tgtNode.name || tgtNode.id) : f.targetRef)}</span>
+          <button type="button" onclick="removeLink('${escapeXml(selectedNodeId)}','${escapeXml(f.targetRef)}')" class="text-rose-400 hover:text-rose-300 px-1" title="移除连线">✕</button>
+        </div>`);
+      });
+      listEl.innerHTML = items.length
+        ? items.join('')
+        : '<div class="text-slate-600 italic">暂无连线</div>';
+    }
+
+    // 兼容旧入口
+    function connectToNextNodePrompt() {
+      const sel = document.getElementById('link-target-select');
+      if (sel) sel.focus();
+    }
+
+    function selectNode(id) {
+      selectedNodeId = id;
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const node = nodes.find(n => n.id === id);
+      if (!node) return;
+
+      document.getElementById('node-id-badge').textContent = `ID: ${node.id}`;
+      document.getElementById('node-name').value = node.name || '';
+      document.getElementById('node-role').value = node.roleName || '';
+      document.getElementById('node-prompt').value = node.promptTemplate || '';
+      document.getElementById('node-system-prompt').value = node.systemPrompt || '';
+      document.getElementById('node-timeout').value = node.timeout || '';
+      document.getElementById('node-retry').value = node.retry || '';
+
+      populateModelSelect(node.model || '');
+      renderVariableRows(node);
+
+      const isGateway = node.type.includes('Gateway');
+      const isTask = node.type.includes('task') || node.type.includes('Task');
+      const isEvent = node.type.includes('Event');
+
+      const condGroup = document.getElementById('gateway-condition-group');
+      const taskGroup = document.getElementById('task-fields-group');
+      const typeDot = document.getElementById('node-type-dot');
+      const typeTitle = document.getElementById('node-type-title');
+
+      if (isGateway) {
+        condGroup.classList.remove('hidden');
+        taskGroup.classList.add('hidden');
+        typeDot.className = 'w-2.5 h-2.5 rounded-full bg-amber-400';
+        typeTitle.textContent = '网关路由条件配置';
+      } else if (isEvent) {
+        condGroup.classList.add('hidden');
+        taskGroup.classList.add('hidden');
+        typeDot.className = 'w-2.5 h-2.5 rounded-full bg-emerald-400';
+        typeTitle.textContent = '流程事件配置';
+      } else {
+        condGroup.classList.add('hidden');
+        taskGroup.classList.remove('hidden');
+        typeDot.className = isTask && node.type.includes('user') ? 'w-2.5 h-2.5 rounded-full bg-purple-400' : 'w-2.5 h-2.5 rounded-full bg-blue-400';
+        typeTitle.textContent = isTask && node.type.includes('user') ? '人工审批节点配置 (UserTask)' : 'Agent 任务节点配置 (ServiceTask)';
+      }
+
+      document.getElementById('node-drawer').classList.remove('hidden');
+      document.getElementById('right-inspector-mini').classList.add('hidden');
+      refreshLinkControls();
+      renderDiagramFromXml(xml);
+    }
+
+    function toggleDrawer(type) {
+      if (type === 'node') {
+        const drawer = document.getElementById('node-drawer');
+        const mini = document.getElementById('right-inspector-mini');
+        const isHidden = drawer.classList.contains('hidden');
+        if (isHidden) {
+          drawer.classList.remove('hidden');
+          mini.classList.add('hidden');
+        } else {
+          drawer.classList.add('hidden');
+          mini.classList.remove('hidden');
+        }
+      } else if (type === 'xml') {
+        document.getElementById('xml-editor').classList.toggle('hidden');
+      }
+    }
+
+    function toggleLeftPalette(show) {
+      const panel = document.getElementById('left-palette-panel');
+      const mini = document.getElementById('left-palette-mini');
+      const resizer = document.getElementById('left-resizer');
+      if (show) {
+        panel.classList.remove('hidden');
+        mini.classList.add('hidden');
+        resizer.classList.remove('hidden');
+      } else {
+        panel.classList.add('hidden');
+        mini.classList.remove('hidden');
+        resizer.classList.add('hidden');
+      }
+    }
+
+    // 初始化面板拖拽调节宽度 (Resizer)
+    function initPanelResizers() {
+      // 左侧物料面板 Resizer
+      const leftPanel = document.getElementById('left-palette-panel');
+      const leftResizer = document.getElementById('left-resizer');
+      if (leftResizer && leftPanel) {
+        let isResizingLeft = false;
+        leftResizer.addEventListener('mousedown', (e) => {
+          isResizingLeft = true;
+          leftResizer.classList.add('resizing');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+
+          const onMouseMove = (ev) => {
+            if (!isResizingLeft) return;
+            const newW = Math.max(160, Math.min(420, ev.clientX - leftPanel.getBoundingClientRect().left));
+            leftPanel.style.width = `${newW}px`;
+          };
+
+          const onMouseUp = () => {
+            isResizingLeft = false;
+            leftResizer.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+          };
+
+          window.addEventListener('mousemove', onMouseMove);
+          window.addEventListener('mouseup', onMouseUp);
+        });
+      }
+
+      // 右侧属性面板 Resizer
+      const rightPanel = document.getElementById('node-drawer');
+      const rightResizer = document.getElementById('right-resizer');
+      if (rightResizer && rightPanel) {
+        let isResizingRight = false;
+        rightResizer.addEventListener('mousedown', (e) => {
+          isResizingRight = true;
+          rightResizer.classList.add('resizing');
+          document.body.style.cursor = 'col-resize';
+          document.body.style.userSelect = 'none';
+
+          const onMouseMove = (ev) => {
+            if (!isResizingRight) return;
+            const newW = Math.max(240, Math.min(650, rightPanel.getBoundingClientRect().right - ev.clientX));
+            rightPanel.style.width = `${newW}px`;
+          };
+
+          const onMouseUp = () => {
+            isResizingRight = false;
+            rightResizer.classList.remove('resizing');
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            window.removeEventListener('mousemove', onMouseMove);
+            window.removeEventListener('mouseup', onMouseUp);
+          };
+
+          window.addEventListener('mousemove', onMouseMove);
+          window.addEventListener('mouseup', onMouseUp);
+        });
+      }
+    }
+
+    // ---- Dify 风格变量与元数据持久化 ----
+
+    function renderVariableRows(node) {
+      const inList = document.getElementById('input-variables-list');
+      const outList = document.getElementById('output-variables-list');
+      if (!inList || !outList) return;
+
+      const inputs = node.inputVariables || [];
+      const outputs = node.outputVariables || [];
+
+      inList.innerHTML = inputs.length
+        ? inputs.map((iv, idx) => `
+          <div class="flex items-center space-x-1.5 p-1 rounded bg-[#070b14] border border-slate-800">
+            <input type="text" value="${escapeXml(iv.name)}" oninput="updateInputVariable(${idx}, 'name', this.value)" placeholder="变量名" class="w-20 bg-transparent border-0 text-slate-300 focus:outline-none">
+            <span class="text-slate-600">&larr;</span>
+            <input type="text" value="${escapeXml(iv.expr)}" oninput="updateInputVariable(${idx}, 'expr', this.value)" placeholder="\${variables.foo}" class="flex-1 bg-transparent border-0 text-blue-400 focus:outline-none">
+            <button type="button" onclick="removeInputVariableRow(${idx})" class="text-rose-400 hover:text-rose-300 px-1">✕</button>
+          </div>
+        `).join('')
+        : '<div class="text-slate-600 italic text-[10px]">未配置输入变量</div>';
+
+      outList.innerHTML = outputs.length
+        ? outputs.map((ov, idx) => `
+          <div class="flex items-center space-x-1.5 p-1 rounded bg-[#070b14] border border-slate-800">
+            <input type="text" value="${escapeXml(ov.name)}" oninput="updateOutputVariable(${idx}, 'name', this.value)" placeholder="输出全局名" class="w-24 bg-transparent border-0 text-amber-300 focus:outline-none">
+            <span class="text-slate-600">&rarr;</span>
+            <input type="text" value="${escapeXml(ov.path)}" oninput="updateOutputVariable(${idx}, 'path', this.value)" placeholder="提取路径 result.x" class="flex-1 bg-transparent border-0 text-slate-300 focus:outline-none">
+            <button type="button" onclick="removeOutputVariableRow(${idx})" class="text-rose-400 hover:text-rose-300 px-1">✕</button>
+          </div>
+        `).join('')
+        : '<div class="text-slate-600 italic text-[10px]">未配置输出总线变量</div>';
+    }
+
+    function addInputVariableRow() {
+      if (!selectedNodeId) return;
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (!node) return;
+      const list = node.inputVariables || [];
+      list.push({ name: `var_${list.length + 1}`, expr: `\${workflow.variables.arg${list.length + 1}}` });
+      persistCamundaIo(selectedNodeId, list, node.outputVariables || []);
+      selectNode(selectedNodeId);
+    }
+
+    function removeInputVariableRow(idx) {
+      if (!selectedNodeId) return;
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (!node) return;
+      const list = (node.inputVariables || []).filter((_, i) => i !== idx);
+      persistCamundaIo(selectedNodeId, list, node.outputVariables || []);
+      selectNode(selectedNodeId);
+    }
+
+    function updateInputVariable(idx, field, val) {
+      if (!selectedNodeId) return;
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (!node) return;
+      const list = node.inputVariables || [];
+      if (list[idx]) list[idx][field] = val;
+      persistCamundaIo(selectedNodeId, list, node.outputVariables || []);
+    }
+
+    function addOutputVariableRow() {
+      if (!selectedNodeId) return;
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (!node) return;
+      const list = node.outputVariables || [];
+      list.push({ name: `out_${list.length + 1}`, path: 'result.data' });
+      persistCamundaIo(selectedNodeId, node.inputVariables || [], list);
+      selectNode(selectedNodeId);
+    }
+
+    function removeOutputVariableRow(idx) {
+      if (!selectedNodeId) return;
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (!node) return;
+      const list = (node.outputVariables || []).filter((_, i) => i !== idx);
+      persistCamundaIo(selectedNodeId, node.inputVariables || [], list);
+      selectNode(selectedNodeId);
+    }
+
+    function updateOutputVariable(idx, field, val) {
+      if (!selectedNodeId) return;
+      const xml = document.getElementById('xml-textarea').value;
+      const nodes = extractNodes(xml);
+      const node = nodes.find(n => n.id === selectedNodeId);
+      if (!node) return;
+      const list = node.outputVariables || [];
+      if (list[idx]) list[idx][field] = val;
+      persistCamundaIo(selectedNodeId, node.inputVariables || [], list);
+    }
+
+    // 将 Camunda inputOutput 标签序列化进节点内部
+    function persistCamundaIo(nodeId, inputs, outputs) {
+      let xml = document.getElementById('xml-textarea').value;
+      const nodeRegex = new RegExp(`(<bpmn:[a-zA-Z0-9]+[^>]*id=["']${nodeId}["'][^>]*>)([\\s\\S]*?)(<\\/bpmn:[a-zA-Z0-9]+>)`, 'i');
+      xml = xml.replace(nodeRegex, (m, open, inner, close) => {
+        // 保留原有的非 inputOutput 扩展标签
+        let cleanInner = inner.replace(/<bpmn:extensionElements>[\s\S]*?<\/bpmn:extensionElements>/gi, '');
+        let inXml = inputs.map(iv => `        <camunda:inputParameter name="${escapeXml(iv.name)}">${escapeXml(iv.expr)}</camunda:inputParameter>`).join('\n');
+        let outXml = outputs.map(ov => `        <camunda:outputParameter name="${escapeXml(ov.name)}">${escapeXml(ov.path)}</camunda:outputParameter>`).join('\n');
+        let ext = `\n    <bpmn:extensionElements>\n      <camunda:inputOutput>\n${inXml}\n${outXml}\n      </camunda:inputOutput>\n    </bpmn:extensionElements>\n  `;
+        return `${open}${ext}${cleanInner.trim() ? '\n    ' + cleanInner.trim() + '\n  ' : ''}${close}`;
+      });
+      document.getElementById('xml-textarea').value = xml;
+      if (currentWorkflow) currentWorkflow.bpmnXml = xml;
+    }
+
+    function onXmlModified() {
+      const xml = document.getElementById('xml-textarea').value;
+      if (currentWorkflow) currentWorkflow.bpmnXml = xml;
+      renderDiagramFromXml(xml);
+    }
+
+    function updateCurrentNodeMeta(prop, val) {
+      if (!selectedNodeId) return;
+      let xml = document.getElementById('xml-textarea').value;
+      const nodeRegex = new RegExp(`(<bpmn:[a-zA-Z0-9]+[^>]*id=["']${selectedNodeId}["'][^>]*)>`, 'i');
+      if (prop === 'name') {
+        xml = xml.replace(nodeRegex, (match, prefix) => {
+          if (prefix.includes('name=')) {
+            return prefix.replace(/name=["'][^"']*["']/, `name="${escapeXml(val)}"`) + '>';
+          }
+          return `${prefix} name="${escapeXml(val)}">`;
+        });
+      } else if (['roleName', 'model', 'promptTemplate', 'systemPrompt', 'timeout', 'retry'].includes(prop)) {
+        // 作为 camunda 属性或 extensionParameter 注入
+        const innerRegex = new RegExp(`(<bpmn:[a-zA-Z0-9]+[^>]*id=["']${selectedNodeId}["'][^>]*>)([\\s\\S]*?)(<\\/bpmn:[a-zA-Z0-9]+>)`, 'i');
+        xml = xml.replace(innerRegex, (m, open, inner, close) => {
+          const paramTag = `<camunda:inputParameter name="${prop}">`;
+          const paramRegex = new RegExp(`<camunda:inputParameter name=["']${prop}["']>([\\s\\S]*?)<\\/camunda:inputParameter>`, 'i');
+          if (paramRegex.test(inner)) {
+            inner = inner.replace(paramRegex, `<camunda:inputParameter name="${prop}">${escapeXml(val)}</camunda:inputParameter>`);
+          } else {
+            if (inner.includes('<camunda:inputOutput>')) {
+              inner = inner.replace('<camunda:inputOutput>', `<camunda:inputOutput>\n        <camunda:inputParameter name="${prop}">${escapeXml(val)}</camunda:inputParameter>`);
+            } else if (inner.includes('<bpmn:extensionElements>')) {
+              inner = inner.replace('<bpmn:extensionElements>', `<bpmn:extensionElements>\n      <camunda:inputOutput>\n        <camunda:inputParameter name="${prop}">${escapeXml(val)}</camunda:inputParameter>\n      </camunda:inputOutput>`);
+            } else {
+              inner = `\n    <bpmn:extensionElements>\n      <camunda:inputOutput>\n        <camunda:inputParameter name="${prop}">${escapeXml(val)}</camunda:inputParameter>\n      </camunda:inputOutput>\n    </bpmn:extensionElements>\n  ` + inner;
+            }
+          }
+          return `${open}${inner}${close}`;
+        });
+      }
+      document.getElementById('xml-textarea').value = xml;
+      if (currentWorkflow) currentWorkflow.bpmnXml = xml;
+      renderDiagramFromXml(xml);
+    }
+
+    async function saveWorkflowChanges() {
+      if (!currentWorkflow) return;
+      try {
+        const xml = document.getElementById('xml-textarea').value;
+        const res = await fetch(`/api/workflows/${encodeURIComponent(currentWorkflow.id)}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name: currentWorkflow.name,
+            description: currentWorkflow.description,
+            bpmnXml: xml,
+          }),
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          alert('工作流保存成功！');
+          await loadWorkflow();
+        } else {
+          alert('保存失败: ' + json.message);
+        }
+      } catch (err) {
+        alert('保存异常: ' + err.message);
+      }
+    }
+
+    function extractNodes(xml) {
+      const nodes = [];
+      const tagRegex = /<(?:[a-zA-Z0-9_]+:)?(startEvent|endEvent|task|userTask|serviceTask|exclusiveGateway|parallelGateway)\b([^>]*)(?:\/?>|>([\s\S]*?)<\/(?:[a-zA-Z0-9_]+:)?\1>)/gi;
+      let match;
+      while ((match = tagRegex.exec(xml)) !== null) {
+        const type = match[1];
+        const attrs = match[2];
+        const inner = match[3] || '';
+        const idMatch = attrs.match(/id=["']([^"']+)["']/i);
+        const nameMatch = attrs.match(/name=["']([^"']+)["']/i);
+        if (idMatch) {
+          const id = idMatch[1];
+          const name = nameMatch ? nameMatch[1] : id;
+          
+          let roleName = '';
+          let promptTemplate = '';
+          let systemPrompt = '';
+          let model = '';
+          let timeout = '';
+          let retry = '';
+
+          const roleMatch = inner.match(/<camunda:inputParameter name=["']roleName["']>([\s\S]*?)<\/camunda:inputParameter>/i);
+          if (roleMatch) roleName = roleMatch[1].trim();
+          const promptMatch = inner.match(/<camunda:inputParameter name=["']promptTemplate["']>([\s\S]*?)<\/camunda:inputParameter>/i);
+          if (promptMatch) promptTemplate = promptMatch[1].trim();
+          const sysMatch = inner.match(/<camunda:inputParameter name=["']systemPrompt["']>([\s\S]*?)<\/camunda:inputParameter>/i);
+          if (sysMatch) systemPrompt = sysMatch[1].trim();
+          const modelMatch = inner.match(/<camunda:inputParameter name=["']model["']>([\s\S]*?)<\/camunda:inputParameter>/i);
+          if (modelMatch) model = modelMatch[1].trim();
+          const timeoutMatch = inner.match(/<camunda:inputParameter name=["']timeout["']>([\s\S]*?)<\/camunda:inputParameter>/i);
+          if (timeoutMatch) timeout = timeoutMatch[1].trim();
+          const retryMatch = inner.match(/<camunda:inputParameter name=["']retry["']>([\s\S]*?)<\/camunda:inputParameter>/i);
+          if (retryMatch) retry = retryMatch[1].trim();
+
+          // 解析 Dify 风格变量
+          const inputVariables = [];
+          const outputVariables = [];
+          const inVarRegex = /<camunda:inputParameter name=["']([^"']+)["']>([\s\S]*?)<\/camunda:inputParameter>/gi;
+          let ivm;
+          while ((ivm = inVarRegex.exec(inner)) !== null) {
+            const k = ivm[1];
+            if (!['roleName', 'promptTemplate', 'systemPrompt', 'model', 'timeout', 'retry'].includes(k)) {
+              inputVariables.push({ name: k, expr: ivm[2].trim() });
+            }
+          }
+          const outVarRegex = /<camunda:outputParameter name=["']([^"']+)["']>([\s\S]*?)<\/camunda:outputParameter>/gi;
+          let ovm;
+          while ((ovm = outVarRegex.exec(inner)) !== null) {
+            outputVariables.push({ name: ovm[1], path: ovm[2].trim() });
+          }
+
+          // 提取坐标
+          let bounds = null;
+          const boundsRegex = new RegExp(`<bpmndi:BPMNShape[^>]*bpmnElement=["']${id}["'][^>]*>[\\s\\S]*?<dc:Bounds[^>]*x=["']([0-9.]+)["'][^>]*y=["']([0-9.]+)["'][^>]*width=["']([0-9.]+)["'][^>]*height=["']([0-9.]+)["']`, 'i');
+          const bMatch = xml.match(boundsRegex);
+          if (bMatch) {
+            bounds = {
+              x: parseFloat(bMatch[1]),
+              y: parseFloat(bMatch[2]),
+              width: parseFloat(bMatch[3]),
+              height: parseFloat(bMatch[4]),
+            };
+          }
+
+          nodes.push({ id, type, name, roleName, promptTemplate, systemPrompt, model, timeout, retry, inputVariables, outputVariables, bounds });
+        }
+      }
+      return nodes;
+    }
+
+    function extractFlows(xml) {
+      const flows = [];
+      const regex = /<(?:[a-zA-Z0-9_]+:)?sequenceFlow\b[^>]*sourceRef=["']([^"']+)["'][^>]*targetRef=["']([^"']+)["'][^>]*\/?>/gi;
+      let match;
+      while ((match = regex.exec(xml)) !== null) {
+        flows.push({ sourceRef: match[1], targetRef: match[2] });
+      }
+      return flows;
+    }
+
+    function escapeXml(str) {
+      return String(str || '').replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&apos;'
+      }[s]));
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      loadWorkflow();
+      initPanelResizers();
+
+      // 支持 Ctrl + 滚轮对画布进行无级缩放
+      const canvasEl = document.getElementById('bpmn-canvas');
+      if (canvasEl) {
+        canvasEl.addEventListener('wheel', (e) => {
+          if (e.ctrlKey || e.metaKey) {
+            e.preventDefault();
+            const delta = e.deltaY < 0 ? 0.1 : -0.1;
+            zoomCanvas(delta);
+          }
+        }, { passive: false });
+      }
+    });
+  </script>
+</body>
+</html>
+

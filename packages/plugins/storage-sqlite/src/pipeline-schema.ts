@@ -157,6 +157,8 @@ export class PipelineStore {
     if (!stageCols.some((c) => c.name === 'stage_name')) {
       this.db.raw.exec("ALTER TABLE pipeline_stages ADD COLUMN stage_name TEXT NOT NULL DEFAULT ''");
     }
+
+    // 默认内置标准研发 4 阶段流水线模板初始化 (WBS-02-01-01 / D36)
   }
 
   public create(template: PipelineTemplate): PipelineTemplate {

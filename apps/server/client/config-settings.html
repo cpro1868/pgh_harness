@@ -7,6 +7,8 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/shared.css">
   <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
+  <script src="js/speech.js"></script>
 </head>
 <body class="bg-[#070a12] text-slate-100 font-sans app-shell">
 
@@ -31,6 +33,9 @@
       </a>
       <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+      </a>
+      <a href="config-workflows.html" class="activity-btn" title="BPMN工作流管理">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
       </a>
       <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则 (Workspaces)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
@@ -65,9 +70,14 @@
       </button>
       <button onclick="switchTab('appearance')" id="tab-appearance" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2">
         <span>🎨</span>
-        <span>外观主题与代码字体</span>
+        <span>外观主题与交互</span>
+      </button>
+      <button onclick="switchTab('speech')" id="tab-speech" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2">
+        <span>🔊</span>
+        <span>语音播报与朗读偏好</span>
       </button>
       <div class="px-2 pt-3 pb-1 text-[10px] font-mono text-slate-500 uppercase tracking-wider">底层安全与架构</div>
+
       <button onclick="switchTab('permissions')" id="tab-permissions" class="w-full text-left px-3 py-2 rounded-lg text-slate-300 hover:bg-slate-800/60 flex items-center space-x-2">
         <span>🛡️</span>
         <span>安全权限与沙箱防线</span>
@@ -212,6 +222,68 @@
         </div>
       </section>
 
+      <!-- 板块 2.5: 语音播报与朗读偏好 (对齐 dsh-speak 规范) -->
+      <section id="panel-speech" class="space-y-6 hidden">
+        <div>
+          <h2 class="text-base font-bold text-white">语音播报与朗读偏好 (Speech & Voice)</h2>
+          <p class="text-xs text-slate-400 mt-0.5">为编码工作台提供自动朗读与单消息重播能力，长任务完成即刻知晓。</p>
+        </div>
+
+        <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 space-y-4 shadow-lg">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div>
+              <span class="text-slate-200 font-bold text-xs">🔊 语音播报总开关</span>
+              <p class="text-[10px] text-slate-400">关闭后将一键静音所有自动朗读与提示</p>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input id="speech-master-toggle" type="checkbox" checked class="sr-only peer">
+              <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+
+          <div class="space-y-3">
+            <label class="flex items-center space-x-2 text-slate-200 cursor-pointer">
+              <input id="speech-auto-read" type="checkbox" checked class="rounded bg-slate-900 border-slate-700 text-blue-500">
+              <span>自动朗读最终回复（单轮对话结束后自动读出总结与核心要点）</span>
+            </label>
+            <label class="flex items-center space-x-2 text-slate-200 cursor-pointer">
+              <input id="speech-read-code" type="checkbox" checked class="rounded bg-slate-900 border-slate-700 text-blue-500">
+              <span>朗读行内代码符号与短标识符</span>
+            </label>
+          </div>
+
+          <div class="grid grid-cols-4 gap-4 pt-2 border-t border-slate-800">
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">朗语语速：<span id="speech-rate-val" class="text-blue-400 font-mono">1.0x</span></label>
+              <input id="speech-rate" type="range" min="0.5" max="2.0" step="0.1" value="1.0" class="w-full accent-blue-500" oninput="document.getElementById('speech-rate-val').textContent = this.value + 'x'">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">音量大小：<span id="speech-vol-val" class="text-blue-400 font-mono">100%</span></label>
+              <input id="speech-volume" type="range" min="0.1" max="1.0" step="0.1" value="1.0" class="w-full accent-blue-500" oninput="document.getElementById('speech-vol-val').textContent = Math.round(this.value * 100) + '%'">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">首选发音人 (Voice)：</label>
+              <select id="speech-voice-select" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1 text-slate-200 text-xs">
+                <option value="">自动优先标准普通话 (zh-CN)</option>
+              </select>
+            </div>
+            <div>
+              <label class="block text-slate-300 font-medium mb-1">单次最大字数截断：</label>
+              <input id="speech-max-chars" type="number" value="300" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1 text-blue-300 font-mono text-xs">
+            </div>
+          </div>
+
+          <div class="pt-3 border-t border-slate-800 flex items-center justify-between">
+            <button type="button" onclick="testSpeechSample()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium text-xs">
+              🔈 试听语音效果
+            </button>
+            <button type="button" onclick="saveSpeechSettings()" class="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded font-semibold shadow">
+              💾 保存语音播报设定
+            </button>
+          </div>
+        </div>
+      </section>
+
       <!-- 板块 3: 安全权限与沙箱 -->
       <section id="panel-permissions" class="space-y-6 hidden">
         <div>
@@ -307,7 +379,7 @@
 
   <script>
     function switchTab(tabId) {
-      ['general', 'appearance', 'permissions', 'plugins'].forEach(id => {
+      ['general', 'appearance', 'speech', 'permissions', 'plugins'].forEach(id => {
         const btn = document.getElementById('tab-' + id);
         const panel = document.getElementById('panel-' + id);
         if (id === tabId) {
@@ -318,6 +390,60 @@
           panel.classList.add('hidden');
         }
       });
+    }
+
+    function initSpeechUI() {
+      if (!window.PGHSpeech) return;
+      const s = window.PGHSpeech.getSettings();
+      document.getElementById('speech-master-toggle').checked = !!s.enabled;
+      document.getElementById('speech-auto-read').checked = !!s.autoRead;
+      document.getElementById('speech-read-code').checked = !!s.readInlineCode;
+      document.getElementById('speech-rate').value = s.rate;
+      document.getElementById('speech-rate-val').textContent = s.rate + 'x';
+      document.getElementById('speech-volume').value = s.volume;
+      document.getElementById('speech-vol-val').textContent = Math.round(s.volume * 100) + '%';
+      document.getElementById('speech-max-chars').value = s.maxChars;
+
+      // 动态列出浏览器/系统内置中文音色供选择
+      function populateVoiceList() {
+        const sel = document.getElementById('speech-voice-select');
+        if (!sel || !('speechSynthesis' in window)) return;
+        const voices = window.speechSynthesis.getVoices();
+        sel.innerHTML = '<option value="">自动优先标准普通话 (zh-CN)</option>';
+        voices.filter(v => v.lang.startsWith('zh') || v.lang.startsWith('cmn')).forEach(v => {
+          const isSelected = s.voiceURI === v.voiceURI ? 'selected' : '';
+          const isCantonese = v.lang.includes('HK') || v.lang.includes('MO') || v.name.toLowerCase().includes('cantonese') || v.name.includes('粤');
+          const tag = isCantonese ? ' [粤语]' : ' [普通话]';
+          sel.innerHTML += `<option value="${v.voiceURI}" ${isSelected}>${v.name} (${v.lang})${tag}</option>`;
+        });
+      }
+
+      populateVoiceList();
+      if ('speechSynthesis' in window) {
+        window.speechSynthesis.onvoiceschanged = populateVoiceList;
+      }
+    }
+
+    function saveSpeechSettings() {
+      if (!window.PGHSpeech) return;
+      const voiceURI = document.getElementById('speech-voice-select').value;
+      const patch = {
+        enabled: document.getElementById('speech-master-toggle').checked,
+        autoRead: document.getElementById('speech-auto-read').checked,
+        readInlineCode: document.getElementById('speech-read-code').checked,
+        rate: parseFloat(document.getElementById('speech-rate').value),
+        volume: parseFloat(document.getElementById('speech-volume').value),
+        maxChars: parseInt(document.getElementById('speech-max-chars').value, 10),
+        voiceURI: voiceURI || undefined,
+      };
+      window.PGHSpeech.saveSettings(patch);
+      alert('语音播报偏好已保存！');
+    }
+
+    function testSpeechSample() {
+      if (!window.PGHSpeech) return;
+      saveSpeechSettings();
+      window.PGHSpeech.speak('你好！这里是 Purple Grapes Harness 智能体运行时平台，当前播报语言为标准普通话。', 'sample', true);
     }
 
     async function loadAllSettings() {
@@ -475,6 +601,7 @@
 
     window.addEventListener('DOMContentLoaded', () => {
       loadAllSettings();
+      initSpeechUI();
     });
   </script>
 </body>

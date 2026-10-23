@@ -42,9 +42,18 @@ test('TC-01-02-003: 会话私有 Spill Blobs 隔离存储与删除清理服务',
     assert.ok(result.payload.includes(result.sha256!));
 
     // 物理文件校验
-    const blobFilePath = path.join(tmpBaseDir, 'sessions', sessionId, 'blobs', `${result.sha256}.txt`);
+    const blobDirPath = path.join(tmpBaseDir, 'sessions', sessionId, 'blobs');
+    const blobFilePath = path.join(blobDirPath, `${result.sha256}.txt`);
     assert.equal(fs.existsSync(blobFilePath), true);
     assert.equal(fs.readFileSync(blobFilePath, 'utf8'), bigContent);
+
+    // BL-09 安全校验：POSIX 环境下权限必须满足目录 0700、文件 0600
+    if (process.platform !== 'win32') {
+      const dirStat = fs.statSync(blobDirPath);
+      const fileStat = fs.statSync(blobFilePath);
+      assert.equal((dirStat.mode & 0o777), 0o700, 'Spill 目录权限必须为 0700');
+      assert.equal((fileStat.mode & 0o777), 0o600, 'Spill 文件权限必须为 0600');
+    }
   });
 
   await t.test('删除会话时原子清理该会话的私有 blobs 目录', () => {

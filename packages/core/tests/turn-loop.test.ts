@@ -72,6 +72,32 @@ test('TC-02-01: TurnLoop ReAct 工具循环真实交付', async (t) => {
     const result = await loop.run();
     assert.equal(result.stoppedReason, 'max-steps');
     assert.equal(result.stepsUsed, 3);
+    assert.match(result.finalContent, /3 步/, '提示文案必须反映真实 maxSteps，禁止硬编码 25 步');
+  });
+
+  await t.test('未配置 maxSteps: 禁止任何隐式步数上限，长任务必须跑到自然收敛', async () => {
+    let n = 0;
+    const chat: ChatFn = async () => {
+      n += 1;
+      if (n <= 40) {
+        return { content: '', toolCalls: [{ id: `c${n}`, name: 'bash', args: { command: `echo step-${n}` } }] };
+      }
+      return { content: '四十步后完成', toolCalls: [] };
+    };
+    const loop = new TurnLoop({
+      sessionId: 's',
+      turnId: 't',
+      workspacePath: '/tmp/ws',
+      systemPrompt: 't',
+      history: [],
+      userMessage: 'hi',
+      chat,
+      executeTool: async () => 'ok',
+    });
+    const result = await loop.run();
+    assert.equal(result.stoppedReason, 'completed', '未显式设限时严禁以 max-steps 截断');
+    assert.equal(result.stepsUsed, 41);
+    assert.equal(result.finalContent, '四十步后完成');
   });
 
   await t.test('同参重复 3 次中断防死循环', async () => {

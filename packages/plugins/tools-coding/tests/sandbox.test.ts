@@ -106,12 +106,21 @@ test('TC-01-04-003 & TC-01-04-004: 沙箱 realpath 符号链接防逃逸与 Shel
 
     // 等待孙进程 PID 落盘（最多 10s）
     const deadline = Date.now() + 10000;
-    while (!fs.existsSync(markerPath) && Date.now() < deadline) {
+    let pidText = '';
+    while (Date.now() < deadline) {
+      if (fs.existsSync(markerPath)) {
+        try {
+          pidText = fs.readFileSync(markerPath, 'utf8').trim();
+          if (pidText) break;
+        } catch {
+          // 文件仍被写入方锁住，等待重试
+        }
+      }
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
-    assert.ok(fs.existsSync(markerPath), '未能捕获孙进程 PID，用例无法继续');
+    assert.ok(pidText.length > 0, '未能捕获孙进程 PID，用例无法继续');
 
-    const grandchildPid = Number(fs.readFileSync(markerPath, 'utf8').trim());
+    const grandchildPid = Number(pidText);
     assert.ok(Number.isInteger(grandchildPid) && grandchildPid > 0, '孙进程 PID 必须有效');
     assert.equal(isAlive(grandchildPid), true, '孙进程应处于存活状态');
 

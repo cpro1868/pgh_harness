@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="icon" type="image/svg+xml" href="ico/pgh.svg">
+  <title>BPMN 业务工作流执行中心 - Purple Grapes Harness (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
+</head>
+<body class="bg-[#070a12] text-slate-100 font-sans app-shell">
+
+  <!-- 统一 40px 顶栏 (对齐系统规范) -->
+  <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs z-30">
+    <div class="flex items-center space-x-2.5">
+      <img src="ico/pgh.svg" alt="PGH" class="w-5 h-5 rounded shadow-sm">
+      <span class="text-xs font-semibold px-2 py-0.5 rounded bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-mono">模式C · 运行中心</span>
+      <h1 class="text-xs font-bold text-white">BPMN 业务工作流实例列表 (Workflow Instances)</h1>
+    </div>
+
+    <div class="flex items-center space-x-2.5 text-xs">
+      <a href="config-workflows.html" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center space-x-1">
+        <span>🎨 BPMN 流程资产库</span>
+      </a>
+      <button type="button" onclick="openStartModal()" class="px-3.5 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-semibold flex items-center space-x-1.5 shadow transition">
+        <span>＋ 启动新工作流实例</span>
+      </button>
+    </div>
+  </header>
+
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
+
+    <!-- 48px 一级侧边栏 -->
+    <aside class="activity-bar h-full">
+      <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
+      </a>
+      <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
+      </a>
+      <a href="run-workflow.html" class="activity-btn active" title="BPMN 业务工作流 (Workflow)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+      </a>
+      <a href="config-workflows.html" class="activity-btn" title="BPMN 流程设计">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+      </a>
+      <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+      </a>
+      <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg>
+      </a>
+      <a href="config-providers.html" class="activity-btn" title="模型与Provider资产">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+      </a>
+      <a href="config-pipelines.html" class="activity-btn" title="流水线模板设定">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z"></path></svg>
+      </a>
+      <a href="config-mcp.html" class="activity-btn" title="MCP 外部服务">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 4a2 2 0 114 0v1a1 1 0 001 1h3a1 1 0 011 1v3a1 1 0 01-1 1h-1a2 2 0 100 4h1a1 1 0 011 1v3a1 1 0 01-1 1h-3a1 1 0 01-1-1v-1a2 2 0 10-4 0v1a1 1 0 01-1 1H7a1 1 0 01-1-1v-3a1 1 0 00-1-1H4a2 2 0 110-4h1a1 1 0 001-1V7a1 1 0 011-1h3a1 1 0 001-1V4z"></path></svg>
+      </a>
+      <a href="config-skills.html" class="activity-btn" title="Skills 技能库">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+      </a>
+      <div class="flex-1"></div>
+      <a href="config-settings.html" class="activity-btn" title="系统全局设置 (Settings)">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+      </a>
+    </aside>
+
+    <!-- 2. 主内容区 (对齐原型 run-workflow.html) -->
+    <div class="flex-1 flex flex-col overflow-y-auto">
+      <main class="flex-1 p-6 space-y-6 max-w-[1720px] w-full mx-auto">
+        
+        <!-- 统计指标卡 (原型 1:1 结构) -->
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+            <div class="text-xs text-slate-400">总并发流程实例</div>
+            <div id="metric-total" class="text-2xl font-extrabold text-white font-mono">0 <span class="text-xs text-slate-500 font-normal">个实例</span></div>
+          </div>
+          <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+            <div class="text-xs text-amber-400 font-medium flex items-center">
+              <span class="w-2 h-2 rounded-full bg-amber-400 mr-1.5 animate-pulse"></span>网关评估中
+            </div>
+            <div id="metric-evaluating" class="text-2xl font-extrabold text-amber-300 font-mono">0 <span class="text-xs text-slate-500 font-normal">Evaluating</span></div>
+          </div>
+          <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+            <div class="text-xs text-emerald-400 font-medium flex items-center">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse"></span>Agent 节点执行中
+            </div>
+            <div id="metric-running" class="text-2xl font-extrabold text-emerald-400 font-mono">0 <span class="text-xs text-slate-500 font-normal">Running</span></div>
+          </div>
+          <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
+            <div class="text-xs text-slate-400">已圆满交付/结束</div>
+            <div id="metric-completed" class="text-2xl font-extrabold text-slate-300 font-mono">0 <span class="text-xs text-slate-500 font-normal">Completed</span></div>
+          </div>
+        </div>
+
+        <!-- 全量工作流实例大表格 -->
+        <div class="rounded-xl bg-[#0c1220] border border-slate-800 overflow-hidden shadow-2xl">
+          <div class="p-4 border-b border-slate-800 flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <h2 class="text-sm font-bold text-white">BPMN 业务工作流实例清单 (Instances List)</h2>
+              <span class="text-xs text-slate-500">点击「进入实例监控」穿透进入专属独立 SVG 拓扑与干预对话窗口</span>
+            </div>
+            <div class="flex items-center space-x-2 text-xs font-mono">
+              <span class="text-slate-500">过滤状态:</span>
+              <button type="button" onclick="filterByStatus('all')" class="px-2.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-semibold status-filter active" data-filter="all">全部</button>
+              <button type="button" onclick="filterByStatus('running')" class="px-2.5 py-0.5 rounded text-slate-400 hover:text-white status-filter" data-filter="running">执行中</button>
+              <button type="button" onclick="filterByStatus('completed')" class="px-2.5 py-0.5 rounded text-slate-400 hover:text-white status-filter" data-filter="completed">已完成</button>
+            </div>
+          </div>
+
+          <table class="w-full text-left text-xs font-sans">
+            <thead class="bg-[#090e1a] text-slate-400 uppercase text-[10px] font-mono border-b border-slate-800">
+              <tr>
+                <th class="py-3.5 px-4">实例 ID / 触发说明</th>
+                <th class="py-3.5 px-4">所属 BPMN 流程模型</th>
+                <th class="py-3.5 px-4">绑定工作区</th>
+                <th class="py-3.5 px-4">当前活跃节点</th>
+                <th class="py-3.5 px-4">耗时</th>
+                <th class="py-3.5 px-4">状态</th>
+                <th class="py-3.5 px-4 text-right">操作</th>
+              </tr>
+            </thead>
+            <tbody id="instances-tbody" class="divide-y divide-slate-800/80 text-slate-300">
+              <tr>
+                <td colspan="7" class="py-8 text-center text-slate-500 font-mono">正在载入工作流实例...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </main>
+    </div>
+  </div>
+
+  <!-- 启动新工作流实例模态弹窗 (启动入口向导，原型 1:1) -->
+  <div id="new-workflow-modal" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-[#0e1424] border border-emerald-500/40 rounded-xl max-w-lg w-full p-6 shadow-2xl space-y-4 text-xs">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center">
+          <svg class="w-4 h-4 text-emerald-400 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+          启动新 BPMN 业务工作流实例 (New Workflow Instance)
+        </h3>
+        <button type="button" onclick="closeStartModal()" class="text-slate-400 hover:text-white text-base">&times;</button>
+      </div>
+
+      <div class="space-y-3.5">
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">选择已定义的 BPMN 流程模型 *</label>
+          <select id="modal-workflow-select" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-blue-500">
+            <option value="">载入可用流程模型中...</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">绑定目标工作区目录 (Workspace) *</label>
+          <div class="flex items-center space-x-2">
+            <select id="modal-workspace-select" class="flex-1 bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-white font-mono text-[11px] focus:outline-none focus:border-blue-500">
+              <option value="">选择工作区...</option>
+            </select>
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">初始用户指令 / 业务需求描述 *</label>
+          <input type="text" id="modal-instruction" placeholder="例如：实现用户登录与鉴权模块，并编写完整测试用例" class="w-full bg-[#090d18] border border-slate-700 rounded px-2.5 py-1.5 text-white focus:outline-none focus:border-blue-500">
+        </div>
+
+        <div>
+          <label class="block text-slate-300 font-medium mb-1">初始输入变量字典 (JSON Variables)：</label>
+          <textarea id="modal-variables" rows="3" class="w-full bg-[#090d18] border border-slate-700 rounded p-2 text-emerald-400 font-mono text-[11px] focus:outline-none focus:border-emerald-500 leading-relaxed">{ "feature": "auth-login", "coverageThreshold": 80 }</textarea>
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-slate-800 flex items-center justify-end space-x-2">
+        <button type="button" onclick="closeStartModal()" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs transition">取消</button>
+        <button type="button" onclick="startWorkflowInstance()" class="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-xs shadow transition">
+          🚀 确认启动流程实例
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let instances = [];
+    let workflows = [];
+    let workspaces = [];
+    let currentFilter = 'all';
+
+    async function loadInstances() {
+      try {
+        const res = await fetch('/api/workflow-instances');
+        const json = await res.json();
+        if (json.code === 0) {
+          instances = json.data || [];
+          updateMetrics();
+          renderInstances();
+        }
+      } catch (err) {
+        console.error('加载实例列表失败:', err);
+      }
+    }
+
+    async function loadWorkflowsAndWorkspaces() {
+      try {
+        const [wfRes, wsRes] = await Promise.all([
+          fetch('/api/workflows'),
+          fetch('/api/workspaces'),
+        ]);
+        const wfJson = await wfRes.json();
+        const wsJson = await wsRes.json();
+        if (wfJson.code === 0) workflows = wfJson.data || [];
+        if (wsJson.code === 0) workspaces = wsJson.data || [];
+
+        const wfSelect = document.getElementById('modal-workflow-select');
+        wfSelect.innerHTML = workflows.map(wf => `<option value="${escapeHtml(wf.id)}">${escapeHtml(wf.name)} (${escapeHtml(wf.id)})</option>`).join('');
+
+        const wsSelect = document.getElementById('modal-workspace-select');
+        wsSelect.innerHTML = workspaces.map(ws => `<option value="${escapeHtml(ws.path)}">🔒 ${escapeHtml(ws.name || ws.path)}</option>`).join('');
+      } catch (err) {
+        console.warn('加载流程和工作区数据失败:', err);
+      }
+    }
+
+    function updateMetrics() {
+      const total = instances.length;
+      const running = instances.filter(i => i.status === 'running').length;
+      const completed = instances.filter(i => i.status === 'completed').length;
+      const evaluating = instances.filter(i => i.currentNodeId && i.currentNodeId.toLowerCase().includes('gateway')).length;
+
+      document.getElementById('metric-total').innerHTML = `${total} <span class="text-xs text-slate-500 font-normal">个实例</span>`;
+      document.getElementById('metric-running').innerHTML = `${running} <span class="text-xs text-slate-500 font-normal">Running</span>`;
+      document.getElementById('metric-completed').innerHTML = `${completed} <span class="text-xs text-slate-500 font-normal">Completed</span>`;
+      document.getElementById('metric-evaluating').innerHTML = `${evaluating} <span class="text-xs text-slate-500 font-normal">Evaluating</span>`;
+    }
+
+    function renderInstances() {
+      const tbody = document.getElementById('instances-tbody');
+      let filtered = instances;
+      if (currentFilter !== 'all') {
+        filtered = instances.filter(i => i.status === currentFilter);
+      }
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-slate-500 font-mono">暂无匹配的流程实例，可点击右上角「启动新工作流实例」</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = filtered.map(inst => {
+        const wf = workflows.find(w => w.id === inst.workflowId);
+        const wfName = wf ? wf.name : inst.workflowId;
+        const shortId = inst.id.slice(0, 12);
+        const durationSec = Math.round(((inst.finishedAt || Date.now()) - inst.startedAt) / 1000);
+        const durationStr = durationSec > 60 ? `${Math.floor(durationSec / 60)}m ${durationSec % 60}s` : `${durationSec}s`;
+
+        let statusBadge = '<span class="px-2 py-0.5 rounded bg-blue-950 text-blue-300 border border-blue-800/60 font-mono text-[10px]">执行中</span>';
+        if (inst.status === 'completed') {
+          statusBadge = '<span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800/60 font-mono text-[10px]">已完成</span>';
+        } else if (inst.status === 'failed') {
+          statusBadge = '<span class="px-2 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800/60 font-mono text-[10px]">执行失败</span>';
+        }
+
+        return `
+          <tr class="hover:bg-slate-800/40 transition">
+            <td class="py-3.5 px-4">
+              <div class="font-mono text-emerald-300 font-bold">${escapeHtml(shortId)}</div>
+              <div class="text-white text-xs font-medium mt-0.5 truncate max-w-xs">${escapeHtml(inst.instruction || '标准触发任务')}</div>
+              <div class="text-[10px] text-slate-500 font-mono mt-0.5">${new Date(inst.startedAt).toLocaleTimeString()}</div>
+            </td>
+            <td class="py-3.5 px-4 font-medium text-slate-200">
+              ${escapeHtml(wfName)}
+            </td>
+            <td class="py-3.5 px-4 font-mono text-[11px] text-slate-300 truncate max-w-[180px]">
+              🔒 ${escapeHtml(inst.workspacePath ? inst.workspacePath.split(/[\/\\]/).pop() : '默认工作区')}
+            </td>
+            <td class="py-3.5 px-4">
+              <div class="font-mono text-[11px] text-amber-300 font-semibold">${escapeHtml(inst.currentNodeId || 'End')}</div>
+              <div class="text-[10px] text-slate-500 mt-0.5">已执行 ${inst.completedNodes ? inst.completedNodes.length : 0} 步</div>
+            </td>
+            <td class="py-3.5 px-4 font-mono text-slate-400">
+              ${durationStr}
+            </td>
+            <td class="py-3.5 px-4">
+              ${statusBadge}
+            </td>
+            <td class="py-3.5 px-4 text-right space-x-2">
+              <a href="run-workflow-detail.html?instanceId=${encodeURIComponent(inst.id)}" class="px-3 py-1 rounded bg-emerald-600 hover:bg-emerald-500 text-white font-medium text-[11px] inline-flex items-center space-x-1 shadow transition">
+                <span>进入实例监控 &rarr;</span>
+              </a>
+              <button type="button" onclick="deleteInstance('${escapeHtml(inst.id)}')" class="px-2 py-1 rounded hover:bg-slate-800 text-rose-400 hover:text-rose-300 text-[11px] border border-slate-800 transition">删除</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function filterByStatus(status) {
+      currentFilter = status;
+      document.querySelectorAll('.status-filter').forEach(btn => {
+        if (btn.getAttribute('data-filter') === status) {
+          btn.className = 'px-2.5 py-0.5 rounded bg-slate-800 text-emerald-400 font-semibold status-filter active';
+        } else {
+          btn.className = 'px-2.5 py-0.5 rounded text-slate-400 hover:text-white status-filter';
+        }
+      });
+      renderInstances();
+    }
+
+    function openStartModal() {
+      document.getElementById('new-workflow-modal').classList.remove('hidden');
+    }
+
+    function closeStartModal() {
+      document.getElementById('new-workflow-modal').classList.add('hidden');
+    }
+
+    async function startWorkflowInstance() {
+      const workflowId = document.getElementById('modal-workflow-select').value;
+      const workspacePath = document.getElementById('modal-workspace-select').value;
+      const instruction = document.getElementById('modal-instruction').value.trim();
+      let variables = {};
+      try {
+        variables = JSON.parse(document.getElementById('modal-variables').value.trim() || '{}');
+      } catch (e) {
+        showToast('输入变量必须是合法的 JSON 格式！', 'error');
+        return;
+      }
+
+      if (!workflowId) {
+        showToast('请选择目标 BPMN 流程模型！', 'warning');
+        return;
+      }
+      if (!instruction) {
+        showToast('请输入初始业务指令或需求目标！', 'warning');
+        return;
+      }
+
+      try {
+        const res = await fetch(`/api/workflows/${encodeURIComponent(workflowId)}/run`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            workspacePath,
+            instruction,
+            variables,
+          }),
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data) {
+          showToast('✓ 流程实例已成功启动！正在执行中...', 'success');
+          closeStartModal();
+          await loadInstances();
+          setTimeout(() => {
+            window.location.href = `run-workflow-detail.html?instanceId=${encodeURIComponent(json.data.id || '')}`;
+          }, 800);
+        } else {
+          showToast('启动流程失败: ' + (json.message || '未知错误'), 'error');
+        }
+      } catch (err) {
+        showToast('启动异常: ' + err.message, 'error');
+      }
+    }
+
+    async function deleteInstance(id) {
+      if (!confirm(`确认删除流程实例 ${id}？`)) return;
+      try {
+        const res = await fetch(`/api/workflow-instances/${encodeURIComponent(id)}`, { method: 'DELETE' });
+        const json = await res.json();
+        if (json.code === 0) {
+          showToast('流程实例已成功删除', 'success');
+          await loadInstances();
+        } else {
+          showToast('删除失败: ' + json.message, 'error');
+        }
+      } catch (err) {
+        showToast('删除异常: ' + err.message, 'error');
+      }
+    }
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/[&<>"']/g, s => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+      }[s]));
+    }
+
+    window.addEventListener('DOMContentLoaded', async () => {
+      await loadWorkflowsAndWorkspaces();
+      await loadInstances();
+    });
+  </script>
+</body>
+</html>

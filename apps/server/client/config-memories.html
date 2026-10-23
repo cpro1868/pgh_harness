@@ -7,6 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/shared.css">
   <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
 </head>
 <body class="bg-[#070a12] text-slate-100 font-sans app-shell">
 
@@ -30,7 +31,11 @@
       <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
       </a>
+      <a href="config-workflows.html" class="activity-btn" title="BPMN工作流管理">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+      </a>
       <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则">
+
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
       </a>
       <a href="config-memories.html" class="activity-btn active" title="记忆管理中心">
@@ -57,7 +62,57 @@
     <!-- 主内容区 -->
     <main class="flex-1 p-8 space-y-8 max-w-[1720px] w-full mx-auto overflow-y-auto">
 
+      <!-- 0. 记忆冷启动与状态自检面板 (WBS-Mem-01 / F11.0) -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+          <div class="flex items-center space-x-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-blue-400"></span>
+            <h2 class="text-sm font-bold text-white">记忆运行状态与冷启动自检面板</h2>
+          </div>
+          <span class="text-[10px] text-slate-500 font-mono">排查「为何记忆为空」· 防幻觉污染</span>
+        </div>
+
+        <div class="p-4 rounded-xl bg-slate-900 border border-slate-800 space-y-3">
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800/80">
+              <span class="text-[10px] text-slate-500 font-mono block">全局层记忆状态</span>
+              <div class="flex items-center justify-between mt-1">
+                <span class="font-bold text-slate-200" id="diag-global-path">~/.harness/memory.md</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-400" id="diag-global-status">检测中</span>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800/80">
+              <span class="text-[10px] text-slate-500 font-mono block">反思模型与安全红线</span>
+              <div class="flex items-center justify-between mt-1">
+                <span class="font-bold text-slate-200">主动防污染机制</span>
+                <span class="px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800/60">生效中 (Normal)</span>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-lg bg-slate-950 border border-slate-800/80">
+              <span class="text-[10px] text-slate-500 font-mono block">为什么刚开始记忆为空？</span>
+              <p class="text-[10px] text-slate-400 mt-1 leading-snug">
+                系统坚决杜绝无序堆积。只有会话显式点击「💾」或全量「📥」沉淀，或完成任务触发反思时才会精炼入库。
+              </p>
+            </div>
+          </div>
+
+          <!-- 手动录入单条经验记忆 -->
+          <div class="pt-2 border-t border-slate-800/80 flex items-center gap-2">
+            <select id="quick-entry-ws" class="bg-slate-950 border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 text-xs font-mono max-w-[200px] truncate">
+              <option value="">选择录入工作区...</option>
+            </select>
+            <input type="text" id="quick-entry-content" placeholder="输入一条通用工程规约或避坑经验（如：本项目使用 pnpm，切勿运行 npm install）" class="flex-1 bg-slate-950 border border-slate-700 rounded px-3 py-1.5 text-slate-200 text-xs focus:outline-none focus:border-blue-500">
+            <button type="button" onclick="submitQuickMemoryEntry()" class="px-3 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-medium text-xs whitespace-nowrap shadow-sm transition">
+              ➕ 手动添加记忆
+            </button>
+          </div>
+        </div>
+      </section>
+
       <!-- 模块说明与提取模式切换器 -->
+
       <section class="p-5 rounded-xl bg-gradient-to-r from-blue-950/30 to-purple-950/20 border border-blue-800/40 space-y-4 shadow-lg">
         <div class="space-y-1">
           <h2 class="text-sm font-bold text-white flex items-center">
@@ -363,6 +418,28 @@
         }
 
         container.innerHTML = '';
+        const quickSelect = document.getElementById('quick-entry-ws');
+        if (quickSelect) {
+          quickSelect.innerHTML = workspaces.map(w => `<option value="${escapeHtml(w.path)}">${escapeHtml(w.name || w.path)}</option>`).join('');
+        }
+
+        // 更新全局自检面板状态
+        if (workspaces.length > 0) {
+          const firstMemRes = await fetch(`/api/memory?workspace=${encodeURIComponent(workspaces[0].path)}`);
+          const firstMemJson = await firstMemRes.json();
+          if (firstMemJson.code === 0 && firstMemJson.data) {
+            document.getElementById('diag-global-path').textContent = firstMemJson.data.globalPath || '~/.harness/memory.md';
+            const statusEl = document.getElementById('diag-global-status');
+            if (firstMemJson.data.globalExists) {
+              statusEl.textContent = '已就绪 (Ready)';
+              statusEl.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800/60';
+            } else {
+              statusEl.textContent = '未生成 (冷启动)';
+              statusEl.className = 'px-1.5 py-0.5 rounded text-[10px] font-mono bg-amber-950 text-amber-400 border border-amber-800/60';
+            }
+          }
+        }
+
         for (const ws of workspaces) {
           const memRes = await fetch(`/api/memory?workspace=${encodeURIComponent(ws.path)}`);
           const memJson = await memRes.json();
@@ -712,7 +789,46 @@
       }
     }
 
+    async function submitQuickMemoryEntry() {
+      const wsSelect = document.getElementById('quick-entry-ws');
+      const contentInput = document.getElementById('quick-entry-content');
+      const wsPath = wsSelect ? wsSelect.value : '';
+      const content = contentInput ? contentInput.value.trim() : '';
+
+      if (!wsPath) {
+        alert('请先选择目标工作区！');
+        return;
+      }
+      if (!content) {
+        alert('请输入记忆内容！');
+        return;
+      }
+
+      try {
+        const res = await fetch('/api/memory/entry', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ workspacePath: wsPath, content }),
+        });
+        const json = await res.json();
+        if (json.code === 0) {
+          if (json.data && json.data.isDuplicate) {
+            alert('该条记忆内容已存在（触发 SHA-256 去重拦截）！');
+          } else {
+            alert('记忆条目添加成功！');
+            contentInput.value = '';
+            await loadMemory();
+          }
+        } else {
+          alert('添加失败: ' + json.message);
+        }
+      } catch (err) {
+        alert('请求异常: ' + err.message);
+      }
+    }
+
     window.addEventListener('DOMContentLoaded', loadMemory);
+
   </script>
 </body>
 </html>

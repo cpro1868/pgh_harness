@@ -61,6 +61,31 @@ test('TC-01-01-004 & TC-01-01-005: 两级代理分流、白名单直连与静默
     assert.equal(route3.port, 10808);
   });
 
+  await t.test('同路由 ProxyAgent 必须复用单例（防长运行连接池泄漏）', async () => {
+    const dispatcher = new ProxyDispatcher({
+      globalProxy: {
+        enabled: true,
+        protocol: 'HTTP',
+        host: '127.0.0.1',
+        port: 7890,
+        bypassList: '',
+      },
+    });
+
+    const route = dispatcher.resolveRoute('https://api.example.com/v1', { enabled: true, mode: 'inherit' });
+    assert.equal(route.useProxy, true);
+
+    const first = await dispatcher.getSharedDispatcher(route);
+    const second = await dispatcher.getSharedDispatcher(route);
+    assert.ok(first, '代理路由必须能取到共享 dispatcher');
+    assert.equal(first, second, '同一代理路由的多次取用必须返回同一实例，绝不每次请求新建');
+
+    await dispatcher.getSharedDispatcher(route).then((d) => dispatcher.destroyDispatcher(d));
+    const recreated = await dispatcher.getSharedDispatcher(route);
+    assert.notEqual(recreated, first, 'destroy 后必须重建实例');
+    await dispatcher.destroyAll();
+  });
+
   await t.test('流式静默僵死超时熔断拦截器', async () => {
     const dispatcher = new ProxyDispatcher({
       globalProxy: {

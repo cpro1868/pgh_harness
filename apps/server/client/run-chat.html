@@ -11,6 +11,9 @@
   <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
   <link rel="stylesheet" href="css/shared.css">
   <script src="js/theme.js"></script>
+  <script src="js/toast.js"></script>
+  <script src="js/speech.js"></script>
+
   <style>
     /* Markdown 暗色调精美样式 (对齐 deepseek-harness 高信息密度体验) */
     .prose-dark {
@@ -90,13 +93,35 @@
       <!-- 工作区锁定指示 (对齐 deepseek-harness，支持在顶栏切换工作区，绝不阻塞输入区) -->
       <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 font-mono text-[11px] text-blue-300">
         <span>🔒</span>
-        <select id="topbar-workspace-select" onchange="handleWorkspaceChange(this.value)" class="bg-transparent text-blue-300 border-0 focus:outline-none cursor-pointer">
-          <option value="">正在检测工作区...</option>
+        <select
+          id="topbar-workspace-select"
+          onfocus="handleWorkspaceFocus(this)"
+          onblur="handleWorkspaceBlur(this)"
+          onchange="handleWorkspaceChange(this.value)"
+          class="bg-transparent text-blue-300 border-0 focus:outline-none cursor-pointer max-w-[150px] truncate"
+        >
+          <option value="">检测中...</option>
         </select>
+        <a
+          href="config-workspace.html"
+          title="登记新工作区或管理已有工作区"
+          class="ml-1 px-1.5 py-0.5 rounded bg-blue-600 hover:bg-blue-500 text-white font-sans text-[10px] font-semibold transition flex items-center space-x-0.5 shadow-sm"
+        >
+          <span>➕ 新登记</span>
+        </a>
       </div>
     </div>
 
-    <div class="flex items-center space-x-3 text-[11px]">
+    <div class="flex items-center space-x-2 text-[11px]">
+      <button
+        type="button"
+        id="topbar-snapshot-full-btn"
+        onclick="snapshotFullSession()"
+        title="将当前整个会话的全部对话历史一键沉淀为记忆（智能 SHA-256 去重）"
+        class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
+      >
+        <span>📥</span><span>保存会话</span>
+      </button>
       <div class="flex items-center space-x-1.5 font-mono text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
         <span>Token: <b id="session-tokens" class="text-emerald-400">0</b></span>
         <span>·</span>
@@ -117,31 +142,24 @@
       </select>
       <button
         type="button"
+        id="topbar-speech-mute-btn"
+        onclick="toggleGlobalSpeech()"
+        title="语音播报总开关（点击静音 / 开启）"
+        class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
+      >
+        <span id="speech-icon">🔊</span><span id="speech-text">语音开</span>
+      </button>
+      <button
+        type="button"
         onclick="exportSession()"
         title="导出当前会话全部对话为 Markdown"
         class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
       >
         <span>⬇️</span><span>导出对话</span>
       </button>
-      <button
-        type="button"
-        id="topbar-delete-session-btn"
-        onclick="confirmDeleteActiveSession()"
-        title="删除当前会话及其所有事件"
-        class="hidden px-2 py-0.5 rounded bg-rose-950/60 hover:bg-rose-900/80 text-rose-300 hover:text-white border border-rose-800/60 font-mono text-[10px] flex items-center space-x-1 transition"
-      >
-        <span>🗑️</span><span>删除会话</span>
-      </button>
-      <button
-        type="button"
-        onclick="toggleRightPanel()"
-        title="展开 / 收起右侧面板"
-        class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
-      >
-        <span>📋</span><span>面板</span>
-      </button>
     </div>
   </header>
+
 
   <!-- 主体区域：左侧 48px 一级侧边栏 + 220px 二级会话树 + 主聊天窗口 -->
   <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
@@ -154,7 +172,11 @@
       <a href="run-pipeline.html" class="activity-btn" title="角色流水线 (Pipeline)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2"></path></svg>
       </a>
+      <a href="config-workflows.html" class="activity-btn" title="BPMN工作流管理">
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z"></path></svg>
+      </a>
       <a href="config-workspace.html" class="activity-btn" title="工作区管理与规则 (Workspaces)">
+
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
       </a>
       <a href="config-memories.html" class="activity-btn" title="记忆管理中心">
@@ -393,6 +415,61 @@
     </div>
   </div>
 
+  <!-- 完全授权高危操作二次确认弹窗 (安全工程规范 S5 / 明确阻断误操作) -->
+  <div id="full-auth-modal" class="hidden fixed inset-0 z-[85] bg-black/85 backdrop-blur-sm flex items-center justify-center p-4">
+    <div class="w-full max-w-lg rounded-xl bg-[#0f172a] border border-amber-600/70 shadow-2xl overflow-hidden flex flex-col font-sans text-xs">
+      <div class="px-5 py-3.5 bg-amber-950/40 border-b border-amber-600/40 flex items-center justify-between">
+        <div class="flex items-center space-x-2 text-amber-300 font-bold text-sm">
+          <span>⚡</span>
+          <span>高风险操作确认：启用「完全授权」档位</span>
+        </div>
+        <button type="button" onclick="cancelFullAuthPreset()" class="text-slate-400 hover:text-white text-base leading-none">&times;</button>
+      </div>
+      <div class="p-5 space-y-3.5 text-slate-300">
+        <p class="leading-relaxed">
+          您正在将当前会话的权限提升至 <strong class="text-amber-300 font-mono">完全授权 (full)</strong>。
+        </p>
+        <div class="p-3.5 rounded-lg bg-[#080d1a] border border-amber-800/40 space-y-2 text-[11px] leading-relaxed">
+          <div class="text-amber-200 font-semibold flex items-center space-x-1">
+            <span>⚠️</span>
+            <span>放宽的影响：</span>
+          </div>
+          <ul class="list-disc pl-5 space-y-1 text-slate-300">
+            <li>智能体后续对工作区文件的<strong>创建、修改、覆写与删除</strong>将<strong>不再征求您的人工审批</strong>，直接在后台执行；</li>
+            <li>智能体调用的<strong>常规终端命令（如测试、编译、依赖安装）</strong>将<strong>自动放行执行</strong>。</li>
+          </ul>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-900 border border-slate-800 text-[11px] text-slate-400 space-y-1">
+          <div class="text-slate-300 font-semibold flex items-center space-x-1">
+            <span>🛡️</span>
+            <span>硬性红线防卫仍然生效（安全规范 S5）：</span>
+          </div>
+          <p class="text-[10px] leading-relaxed text-slate-400">
+            即使完全授权，<code class="text-rose-300">git push</code>、关机/重启、磁盘格式化、根路径删除与敏感凭据（.env / *.key / *.pem）读写等硬性红线在任何档位下都<strong>绝对拒绝执行</strong>。
+          </p>
+        </div>
+      </div>
+      <div class="px-5 py-3 bg-[#0a0f1d] border-t border-slate-800 flex items-center justify-end space-x-2">
+        <button
+          type="button"
+          onclick="cancelFullAuthPreset()"
+          class="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition"
+        >
+          取消（保持当前档位）
+        </button>
+        <button
+          type="button"
+          id="full-auth-confirm-btn"
+          onclick="confirmFullAuthPreset()"
+          class="px-4 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-500 text-white font-semibold shadow transition flex items-center space-x-1"
+        >
+          <span>⚡</span>
+          <span>我已知晓风险，确认完全授权</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- 首次启动破冰向导 (WBS-01-08-04 / D57)：冷启动两步打通端到端 -->
   <div id="wizard-modal" class="hidden fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
     <div class="w-full max-w-lg rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl overflow-hidden flex flex-col font-sans text-xs">
@@ -474,12 +551,49 @@
       if (select && select.value !== activePermissionPreset) select.value = activePermissionPreset;
     }
 
+    // 待确认的高风险授权档位暂存（完全授权确认流）
+    let pendingFullAuthChange = false;
+
+    function openFullAuthModal() {
+      pendingFullAuthChange = true;
+      const modal = document.getElementById('full-auth-modal');
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeFullAuthModal() {
+      pendingFullAuthChange = false;
+      const modal = document.getElementById('full-auth-modal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    function cancelFullAuthPreset() {
+      closeFullAuthModal();
+      // 回退下拉框显示为当前有效档位
+      renderPermissionPreset();
+    }
+
+    async function confirmFullAuthPreset() {
+      closeFullAuthModal();
+      await applyPermissionPresetChange('full');
+    }
+
     /**
-     * 切换本会话授权档位：立即落盘并记录审计事件。
-     * 注意「完全授权」只免除人工审批，硬性红线（git push / 关机 / 格式化 / 根路径删除 / 敏感凭据读写）依旧拒绝。
+     * 切换本会话授权档位。
+     * 选择「完全授权」属于高风险操作（免除所有工具的人工审批），必须先弹窗强提示提醒用户并由用户显式确认。
      */
     async function handlePermissionPresetChange(value) {
       const preset = ['readonly', 'edit', 'full'].includes(value) ? value : 'edit';
+      if (preset === 'full' && activePermissionPreset !== 'full') {
+        // 下拉框先回退显示当前档位，待弹窗确认后再正式生效
+        renderPermissionPreset();
+        openFullAuthModal();
+        return;
+      }
+      await applyPermissionPresetChange(preset);
+    }
+
+    /** 正式应用授权档位并落盘（已通过前置确认校验）。 */
+    async function applyPermissionPresetChange(preset) {
       activePermissionPreset = preset;
       renderPermissionPreset();
 
@@ -753,6 +867,8 @@
     }
 
     // 4. 工作区与 Provider 加载初始化
+    let workspaceListCache = [];
+
     async function loadWorkspaces() {
       try {
         const res = await fetch('/api/workspaces');
@@ -761,10 +877,13 @@
         select.innerHTML = '';
 
         if (result.code === 0 && Array.isArray(result.data) && result.data.length > 0) {
+          workspaceListCache = result.data;
           result.data.forEach((ws, idx) => {
             const opt = document.createElement('option');
             opt.value = ws.path;
-            opt.textContent = `${ws.name} (${ws.path})`;
+            opt.dataset.shortName = ws.name || ws.path.split(/[\\/]/).pop() || ws.path;
+            opt.dataset.fullPath = ws.path;
+            opt.textContent = opt.dataset.shortName; // 默认仅显示短名称，不挤占顶栏
             if (idx === 0) {
               opt.selected = true;
               activeWorkspacePath = ws.path;
@@ -775,18 +894,62 @@
           // 兜底当前目录
           const opt = document.createElement('option');
           opt.value = 'G:\\Projects\\Agent\\harness';
-          opt.textContent = '当前 Harness 工程 (G:\\Projects\\Agent\\harness)';
+          opt.dataset.shortName = 'harness';
+          opt.dataset.fullPath = 'G:\\Projects\\Agent\\harness';
+          opt.textContent = 'harness';
           select.appendChild(opt);
           activeWorkspacePath = opt.value;
+          workspaceListCache = [{ name: 'harness', path: opt.value }];
         }
+        select.title = `当前工作区: ${activeWorkspacePath}`;
       } catch (err) {
         console.warn('Load workspaces error:', err);
       }
     }
 
-    function handleWorkspaceChange(val) {
-      if (val) activeWorkspacePath = val;
+    function handleWorkspaceFocus(select) {
+      Array.from(select.options).forEach((opt) => {
+        opt.textContent = `${opt.dataset.shortName || opt.value} (${opt.dataset.fullPath || opt.value})`;
+      });
     }
+
+    function handleWorkspaceBlur(select) {
+      Array.from(select.options).forEach((opt) => {
+        opt.textContent = opt.dataset.shortName || opt.value;
+      });
+    }
+
+    function handleWorkspaceChange(val) {
+      if (val) {
+        activeWorkspacePath = val;
+        const select = document.getElementById('topbar-workspace-select');
+        if (select) select.title = `当前工作区: ${val}`;
+        void loadSkillsToComposer();
+      }
+    }
+
+    /** 同步顶栏工作区下拉框选中项并刷新 Skills 候选。若会话的工作区尚未在列表中，动态补建选项。 */
+    function syncWorkspaceToTopbar(wsPath) {
+      if (!wsPath) return;
+      activeWorkspacePath = wsPath;
+      const select = document.getElementById('topbar-workspace-select');
+      if (!select) return;
+
+      let matched = Array.from(select.options).find((opt) => opt.value === wsPath);
+      if (!matched) {
+        matched = document.createElement('option');
+        matched.value = wsPath;
+        const shortName = wsPath.split(/[\\/]/).pop() || wsPath;
+        matched.dataset.shortName = shortName;
+        matched.dataset.fullPath = wsPath;
+        matched.textContent = shortName;
+        select.appendChild(matched);
+      }
+      select.value = wsPath;
+      select.title = `当前工作区: ${wsPath}`;
+      void loadSkillsToComposer();
+    }
+
 
     async function loadModels() {
       try {
@@ -864,13 +1027,13 @@
               </div>
               <span class="opacity-0 group-hover:opacity-100 text-blue-400 text-sm leading-none">+</span>
             </div>
-            <div class="grid grid-cols-2 gap-1.5 ws-children"></div>
+            <div class="space-y-1 ws-children"></div>
           `;
           const children = groupEl.querySelector('.ws-children');
           if (group.sessions.length === 0) {
-            children.innerHTML = `<div class="col-span-2 py-1 text-[10px] text-slate-600 italic text-center">空 · 点击 + 新建</div>`;
+            children.innerHTML = `<div class="py-1 text-[10px] text-slate-600 italic text-center">空 · 点击 + 新建</div>`;
           } else {
-            group.sessions.forEach(sess => children.appendChild(createSessionBlockElement(sess, hue)));
+            group.sessions.forEach(sess => children.appendChild(createSessionListItemElement(sess, hue)));
           }
           container.appendChild(groupEl);
         }
@@ -880,10 +1043,10 @@
           el.className = 'space-y-1.5 pt-2 border-t border-slate-800/60';
           el.innerHTML = `
             <div class="px-0.5 text-[10px] text-slate-500 font-semibold uppercase tracking-wider">未分组</div>
-            <div class="grid grid-cols-2 gap-1.5 un-children"></div>
+            <div class="space-y-1 un-children"></div>
           `;
           const un = el.querySelector('.un-children');
-          ungrouped.forEach(sess => un.appendChild(createSessionBlockElement(sess, 210)));
+          ungrouped.forEach(sess => un.appendChild(createSessionListItemElement(sess, 210)));
           container.appendChild(el);
         }
       } catch (err) {
@@ -899,65 +1062,121 @@
     }
 
     /**
-     * 会话色块（ChatGPT 风格）：平时只显示紧凑方块，悬停时弹出完整预览卡（包含标题、工作区、最后更新时间、删除按钮）。
+     * ChatGPT 经典垂直列表风格条目：左侧标题与时间，右侧直接展示常驻/悬停操作按钮（重命名、删除）
      */
-    function createSessionBlockElement(sess, hue) {
+    function createSessionListItemElement(sess, hue) {
       const isActive = sess.id === activeSessionId;
       const title = sess.title || '新对话';
-      const timeStr = new Date(sess.updatedAt || sess.createdAt).toLocaleString([], { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
       const wsShort = (sess.workspacePath || '').split(/[\\/]/).pop() || '';
-      // 提取标题前 2 个汉字或首字母缩写作为色块微标
-      const badgeText = title.slice(0, 2);
+      const timeStr = formatDateTime(sess.updatedAt || sess.createdAt);
 
-      const block = document.createElement('div');
-      block.className = `group relative h-11 rounded-lg cursor-pointer flex flex-col items-center justify-center transition-all duration-150 border select-none ${
-        isActive ? 'border-blue-400 ring-2 ring-blue-500/30 shadow-lg scale-[1.02]' : 'border-slate-800/80 hover:border-slate-600 hover:scale-[1.02]'
+      const item = document.createElement('div');
+      item.className = `group session-list-item relative w-full px-2.5 py-2 rounded-lg cursor-pointer flex items-center justify-between transition-all duration-150 border select-none ${
+        isActive
+          ? 'is-active bg-blue-950/40 border-blue-500/80 text-white shadow-sm'
+          : 'bg-[#090d18] border-slate-800/80 hover:border-slate-700 hover:bg-slate-800/50 text-slate-300'
       }`;
-      block.style.background = `linear-gradient(135deg, hsl(${hue}, 40%, ${isActive ? 28 : 18}%), hsl(${hue}, 50%, ${isActive ? 20 : 12}%))`;
 
-      block.innerHTML = `
-        <span class="text-white font-bold text-xs tracking-tight pointer-events-none drop-shadow-sm">${escapeHtml(badgeText)}</span>
-        <span class="text-[9px] text-slate-300/80 font-mono truncate px-1 max-w-[90%] pointer-events-none">${escapeHtml(title.slice(0, 4))}</span>
-
-        <!-- 悬停浮层：外层紧贴色块边缘（带有向右延伸的安全内边距，防鼠标移动瞬间脱焦） -->
-        <div class="session-preview hidden group-hover:block absolute right-[calc(100%-8px)] top-0 z-50 pr-4 pointer-events-auto">
-          <div class="w-56 bg-[#0f172a] border border-slate-700 rounded-lg p-3 shadow-2xl text-left space-y-1.5 backdrop-blur-md">
-            <div class="text-xs text-white font-semibold leading-snug line-clamp-2">${escapeHtml(title)}</div>
-            <div class="flex items-center space-x-1 text-[10px] text-blue-300 font-mono truncate">
-              <span>📁</span><span class="truncate">${escapeHtml(wsShort)}</span>
-            </div>
-            <div class="text-[9px] text-slate-400 font-mono">创建: ${escapeHtml(formatDateTime(sess.createdAt))}</div>
-            <div class="text-[9px] text-slate-400 font-mono">更新: ${escapeHtml(formatDateTime(sess.updatedAt || sess.createdAt))}</div>
-            <div class="pt-1.5 border-t border-slate-800 flex items-center gap-1.5">
-              <button
-                type="button"
-                class="flex-1 px-2 py-1 text-[10px] text-slate-300 hover:text-white hover:bg-slate-700 rounded border border-slate-600 transition text-center flex items-center justify-center space-x-1 cursor-pointer"
-                onclick="renameSession(event, '${sess.id}', '${escapeHtml(title).replace(/'/g, "&#39;")}')"
-              >
-                <span>✏️</span><span>重命名</span>
-              </button>
-              <button
-                type="button"
-                class="flex-1 px-2 py-1 text-[10px] text-rose-300 hover:text-white hover:bg-rose-600 rounded border border-rose-800/80 transition text-center flex items-center justify-center space-x-1 cursor-pointer shadow-sm"
-                onclick="deleteSession(event, '${sess.id}', '${escapeHtml(title).replace(/'/g, "&#39;")}', '${escapeHtml(wsShort).replace(/'/g, "&#39;")}')"
-              >
-                <span>🗑️</span><span>删除</span>
-              </button>
-            </div>
+      item.innerHTML = `
+        <div class="flex items-center space-x-2 min-w-0 flex-1 pr-1">
+          <span class="w-2 h-2 rounded-full flex-shrink-0" style="background:hsl(${hue},70%,55%)"></span>
+          <div class="min-w-0 flex-1">
+            <div class="session-item-title text-xs font-medium truncate leading-tight">${escapeHtml(title)}</div>
+            <div class="text-[9px] text-slate-500 font-mono truncate mt-0.5">${escapeHtml(timeStr)}</div>
           </div>
+        </div>
+
+        <!-- ChatGPT 风格右侧操作按钮：常驻或悬停展现 -->
+        <div class="session-item-actions flex items-center space-x-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button
+            type="button"
+            class="p-1 text-slate-400 hover:text-white hover:bg-slate-700/80 rounded transition"
+            title="重命名会话"
+            onclick="renameSession(event, '${sess.id}', '${escapeHtml(title).replace(/'/g, "&#39;")}')"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path></svg>
+          </button>
+          <button
+            type="button"
+            class="p-1 text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 rounded transition"
+            title="删除会话"
+            onclick="deleteSession(event, '${sess.id}', '${escapeHtml(title).replace(/'/g, "&#39;")}', '${escapeHtml(wsShort).replace(/'/g, "&#39;")}')"
+          >
+            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+          </button>
         </div>
       `;
 
-      // 悬停时给色块加高亮态（浮层延迟关闭，尽量避免误触丢失）
-      block.addEventListener('click', (e) => {
+      item.addEventListener('click', (e) => {
         if (e.target.closest('button')) return;
         switchSession(sess.id);
       });
 
-      return block;
+      return item;
     }
 
-    // 在指定工作区直接新建会话
+
+    function toggleGlobalSpeech() {
+      if (!window.PGHSpeech) return;
+      const current = window.PGHSpeech.getSettings();
+      window.PGHSpeech.saveSettings({ enabled: !current.enabled });
+      updateSpeechButtonUI();
+    }
+
+    function updateSpeechButtonUI() {
+      if (!window.PGHSpeech) return;
+      const current = window.PGHSpeech.getSettings();
+      const icon = document.getElementById('speech-icon');
+      const text = document.getElementById('speech-text');
+      if (icon && text) {
+        if (current.enabled) {
+          icon.textContent = '🔊';
+          text.textContent = '语音开';
+        } else {
+          icon.textContent = '🔇';
+          text.textContent = '已静音';
+        }
+      }
+    }
+
+    async function snapshotFullSession() {
+      if (!activeSessionId) {
+        showErrorBanner('请先打开或新建一个会话，再执行全量保存。');
+        return;
+      }
+      const btn = document.getElementById('topbar-snapshot-full-btn');
+      if (!btn) return;
+      const origHtml = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<span>⏳</span><span>沉淀中...</span>';
+      try {
+        const res = await fetch('/api/memory/snapshot-full', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId: activeSessionId }),
+        });
+        const json = await res.json();
+        if (json.code === 0 && json.data.saved) {
+          btn.innerHTML = '<span>✅</span><span>已保存</span>';
+        } else if (json.code === 0 && json.data.isDuplicate) {
+          btn.innerHTML = '<span>♻️</span><span>已存在</span>';
+        } else if (json.code === 0 && json.data.messageCount === 0) {
+          btn.innerHTML = '<span>ℹ️</span><span>暂无消息</span>';
+        } else {
+          btn.innerHTML = '<span>❌</span><span>失败</span>';
+          showErrorBanner(json.message || '全量沉淀失败');
+        }
+      } catch (err) {
+        btn.innerHTML = '<span>❌</span><span>异常</span>';
+        showErrorBanner('全量沉淀请求异常: ' + err.message);
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.innerHTML = origHtml;
+        }, 2000);
+      }
+    }
+
     function createSessionInWorkspace(encodedPath) {
       const targetPath = decodeURIComponent(encodedPath);
       activeWorkspacePath = targetPath;
@@ -965,6 +1184,7 @@
       if (select) select.value = targetPath;
       createNewSession();
     }
+
 
     async function renameSession(event, sessionId, currentTitle) {
       if (event) event.stopPropagation();
@@ -1076,9 +1296,8 @@
       renderUsageBar(0);
       const titleEl = document.getElementById('active-session-title');
       if (titleEl) titleEl.textContent = '新对话';
-      const delBtn = document.getElementById('topbar-delete-session-btn');
-      if (delBtn) delBtn.classList.add('hidden');
       // 清空右侧轮次大纲
+
       outlineTurns = [];
       renderTurnOutline();
       document.getElementById('chat-empty-state').classList.remove('hidden');
@@ -1090,10 +1309,9 @@
 
     async function switchSession(sessionId) {
       activeSessionId = sessionId;
-      const delBtn = document.getElementById('topbar-delete-session-btn');
-      if (delBtn) delBtn.classList.remove('hidden');
       await loadSessionList();
-      await syncPermissionPresetFromServer(sessionId);
+
+      await syncSessionMetaFromServer(sessionId);
       await syncUsageBaselineFromServer(sessionId);
 
       try {
@@ -1112,17 +1330,22 @@
       }
     }
 
-    /** 从服务端同步指定会话的授权档位（切换会话时保证界面与后端一致）。 */
-    async function syncPermissionPresetFromServer(sessionId) {
+    /** 从服务端同步指定会话的元信息（授权档位 + 绑定工作区），切换会话时保证界面与后端绝对一致。 */
+    async function syncSessionMetaFromServer(sessionId) {
       try {
         const res = await fetch('/api/sessions');
         const body = await res.json();
         const record = (body.data || []).find((item) => item.id === sessionId);
-        if (record && typeof record.preset === 'string' && ['readonly', 'edit', 'full'].includes(record.preset)) {
-          activePermissionPreset = record.preset;
+        if (record) {
+          if (typeof record.preset === 'string' && ['readonly', 'edit', 'full'].includes(record.preset)) {
+            activePermissionPreset = record.preset;
+          }
+          if (typeof record.workspacePath === 'string' && record.workspacePath.trim()) {
+            syncWorkspaceToTopbar(record.workspacePath);
+          }
         }
       } catch {
-        // 同步失败不阻断会话切换，保留当前档位显示
+        // 同步失败不阻断会话切换，保留当前档位与工作区显示
       }
       renderPermissionPreset();
     }
@@ -1582,11 +1805,14 @@
           <div data-role="model-line" class="text-[10px] text-slate-500 font-mono">模型：${escapeHtml(model || '待确定')}</div>
           <div data-role="usage-line" class="text-[10px] text-slate-500 font-mono">本轮消耗：-- （回合结束后统计）</div>
           <div class="flex items-center justify-end space-x-1">
+            <button type="button" data-act="speak" title="朗读 / 重播此条回答" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-blue-400 transition text-[11px]">🔊</button>
+            <button type="button" data-act="snapshot" title="将本轮对话沉淀为记忆（智能 SHA-256 去重，不会重复堆积）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-emerald-400 transition text-[11px]">💾</button>
             <button type="button" data-act="up" title="答得好（点赞）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-emerald-400 transition text-[11px]">👍</button>
             <button type="button" data-act="down" title="有待加强（点踩）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-rose-400 transition text-[11px]">👎</button>
             ${isLast ? '<button type="button" data-act="redo" title="重做本轮（重新请求模型）" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-blue-400 transition text-[11px]">🔄</button>' : ''}
             <button type="button" data-act="export" title="导出本轮对话" class="px-1.5 py-0.5 rounded hover:bg-slate-800 text-slate-500 hover:text-slate-300 transition text-[11px]">⬇️</button>
           </div>
+
         </div>
       `;
 
@@ -1600,7 +1826,54 @@
       const upBtn = el.querySelector('[data-act="up"]');
       const downBtn = el.querySelector('[data-act="down"]');
       const redoBtn = el.querySelector('[data-act="redo"]');
+      const speakBtn = el.querySelector('[data-act="speak"]');
+      const snapshotBtn = el.querySelector('[data-act="snapshot"]');
+      if (speakBtn) {
+        speakBtn.addEventListener('click', () => {
+          if (!window.PGHSpeech) return;
+          const text = contentEl.innerText || contentEl.textContent || '';
+          window.PGHSpeech.speak(text, controller.turnId, true);
+        });
+      }
+      if (snapshotBtn) {
+        snapshotBtn.addEventListener('click', async () => {
+          snapshotBtn.disabled = true;
+          snapshotBtn.textContent = '⏳';
+          try {
+            const text = contentEl.innerText || contentEl.textContent || '';
+            const title = '会话记忆沉淀-' + new Date().toLocaleString('zh-CN');
+            const res = await fetch('/api/memory/snapshot', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                workspacePath: activeWorkspacePath,
+                sessionId: activeSessionId,
+                title,
+                summary: text,
+              }),
+            });
+            const json = await res.json();
+            if (json.code === 0 && json.data.saved) {
+              snapshotBtn.textContent = '✅';
+              snapshotBtn.classList.add('text-emerald-400');
+            } else if (json.code === 0 && json.data.isDuplicate) {
+              snapshotBtn.textContent = '♻️';
+              snapshotBtn.title = '检测到重复记忆，已自动去重跳过';
+            } else {
+              snapshotBtn.textContent = '❌';
+            }
+          } catch (err) {
+            snapshotBtn.textContent = '❌';
+          } finally {
+            setTimeout(() => {
+              snapshotBtn.disabled = false;
+              snapshotBtn.textContent = '💾';
+            }, 1500);
+          }
+        });
+      }
       el.querySelector('[data-role="reasoning-toggle"]').addEventListener('click', () => reasoningBox.classList.toggle('hidden'));
+
 
       const idleBtn = 'px-1.5 py-0.5 rounded hover:bg-slate-800 transition text-[11px] ';
       const controller = {
@@ -2107,10 +2380,9 @@
               card.setMeta({ createdAt: Date.now() });
               if (data.sessionId && !activeSessionId) {
                 activeSessionId = data.sessionId;
-                const delBtn = document.getElementById('topbar-delete-session-btn');
-                if (delBtn) delBtn.classList.remove('hidden');
                 loadSessionList();
               }
+
             } else if (eventType === 'reasoning') {
               card.reasoningBox.classList.remove('hidden');
               card.reasoningContent.textContent += (data.text || '');
@@ -2149,6 +2421,13 @@
                 card.setTurnId(data.turnId);
               }
             } else if (eventType === 'done') {
+              // 自动语音播报最终回复 (对齐 dsh-speak 规范)
+              if (window.PGHSpeech && accumulatedMd) {
+                const s = window.PGHSpeech.getSettings();
+                if (s.enabled && s.autoRead) {
+                  window.PGHSpeech.speak(accumulatedMd, lastTurnId || 'active');
+                }
+              }
               // 本轮真实消耗回填到卡片（服务端 turn/completed 落盘口径一致）
               card.setMeta({
                 inputTokens: Number(data.inputTokens || 0),
@@ -2159,6 +2438,7 @@
               void refreshSessionUsage();
               loadSessionList();
             } else if (eventType === 'error') {
+
               showErrorBanner(data.message || '模型通信故障');
             }
           }

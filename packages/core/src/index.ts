@@ -9,4 +9,6 @@ export * from './line-diff.ts';
 export * from './pipeline/pipeline-runner.ts';
 export * from './pipeline/lock-delegator.ts';
 export * from './pipeline/artifact-manager.ts';
+export * from './workflow/bpmn-parser.ts';
+export * from './workflow/bpmn-engine.ts';
 
