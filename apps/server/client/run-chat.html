@@ -2938,6 +2938,11 @@
 
     // 顶栏初始化：自动保存开关状态回填（localStorage 持久化）
     renderAutoSnapshotState();
+    // 语音开关状态回填：checkbox 勾选态/图标/文字必须反映实际开关状态，
+    // 否则页面加载后（PGHSpeech 默认 enabled=true）checkbox 显示未勾选，误导用户（真机反馈）
+    updateSpeechButtonUI();
+    // speech.js 若晚于本脚本加载（极端时序），DOMContentLoaded 后再兜底刷新一次
+    document.addEventListener('DOMContentLoaded', () => updateSpeechButtonUI());
 
     // 加载当前工作区已启用的 Skills，供输入框快捷下拉选择
     async function loadSkillsToComposer() {

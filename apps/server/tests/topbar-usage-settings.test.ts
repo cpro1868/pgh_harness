@@ -68,6 +68,16 @@ describe('TC-01-08-003: 主会话顶栏布局重构（Token下拉 + 设置菜单
     assert.ok(settingsBlock.includes('toggleAutoSnapshot()'), '自动保存开关必须在设置菜单内');
   });
 
+  it('页面初始化必须回填语音开关状态（checkbox 勾选态反映实际开关）', () => {
+    const script = inlineScripts();
+    // 初始化区必须调用 updateSpeechButtonUI（否则加载后 checkbox 永远未勾选）
+    assert.ok(/renderAutoSnapshotState\(\);[\s\S]*?updateSpeechButtonUI\(\);/.test(script), '初始化时必须调用 updateSpeechButtonUI 回填语音勾选态');
+    // checkbox 勾选态同步必须存在于 updateSpeechButtonUI 内
+    const fn = script.match(/function updateSpeechButtonUI\(\)[\s\S]*?\n {4}\}/)?.[0] ?? '';
+    assert.ok(fn.includes("getElementById('speech-toggle')"), 'updateSpeechButtonUI 必须同步 speech-toggle checkbox');
+    assert.ok(fn.includes('.checked = current.enabled'), 'checkbox 勾选态必须来自实际开关状态');
+  });
+
   it('自动保存状态持久化与回合触发', () => {
     const script = inlineScripts();
     assert.ok(script.includes('pgh_autosnapshot_enabled'), '必须使用 localStorage 键 pgh_autosnapshot_enabled');
