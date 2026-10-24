@@ -1412,10 +1412,68 @@
         renderConversation(result.data);
         renderUsageBar(sumUsageFromEvents(result.data));
         startSessionWatch(sessionId);
+        // 运行态恢复（TC-01-13-003 终章）：服务端回合仍在跑（如刷新前正在与大模型交互），
+        // 前端必须恢复 Abort 按钮与运行态——否则用户没有任何手段停止后台回合
+        void restoreRunningStateFromServer(sessionId);
       } catch (err) {
         console.error('Switch session error:', err);
         showErrorBanner('加载会话历史异常: ' + err.message);
       }
+    }
+
+    /**
+     * 运行态恢复：从服务端会话 state 判断是否有进行中的回合。
+     * running → 恢复 Abort 按钮 + 启动完成轮询（回合结束自动退回发送按钮）。
+     */
+    let runningTurnPoller = null;
+    async function restoreRunningStateFromServer(sessionId) {
+      try {
+        const res = await fetch('/api/sessions');
+        const body = await res.json();
+        const record = (body.data || []).find((item) => item.id === sessionId);
+        const state = record?.state ?? 'idle';
+        // running / waiting_approval / waiting_user_input 都属于"回合进行中"：
+        // 前端必须恢复 Abort 按钮与运行态，否则刷新后无法停止后台回合
+        if (state === 'running' || state === 'waiting_approval' || state === 'waiting_user_input') {
+          setRunningState(true);
+          if (state === 'waiting_approval') showApprovalWaitingBadge();
+          else hideApprovalWaitingBadge();
+          startRunningTurnPoller(sessionId);
+        } else {
+          setRunningState(false);
+          hideApprovalWaitingBadge();
+          stopRunningTurnPoller();
+        }
+      } catch {
+        // 元信息获取失败不阻塞会话切换
+      }
+    }
+
+    /** 运行中回合完成轮询：后台回合结束（idle）后自动退回发送按钮并做一次终局重放。 */
+    const ACTIVE_TURN_STATES = new Set(['running', 'waiting_approval', 'waiting_user_input']);
+    function startRunningTurnPoller(sessionId) {
+      stopRunningTurnPoller();
+      runningTurnPoller = setInterval(async () => {
+        try {
+          const res = await fetch('/api/sessions');
+          const body = await res.json();
+          const record = (body.data || []).find((item) => item.id === sessionId);
+          if (!record || !ACTIVE_TURN_STATES.has(record.state)) {
+            stopRunningTurnPoller();
+            setRunningState(false);
+            // 回合在后台完成了：拉一次终局重放，保证最终回答/用量及时呈现
+            const msgRes = await fetch(`/api/sessions/${sessionId}/messages?after=0`);
+            const msgResult = await msgRes.json();
+            if (msgResult.code === 0 && Array.isArray(msgResult.data)) {
+              renderConversation(msgResult.data);
+              renderUsageBar(sumUsageFromEvents(msgResult.data));
+            }
+          }
+        } catch { /* 轮询失败静默重试 */ }
+      }, 3000);
+    }
+    function stopRunningTurnPoller() {
+      if (runningTurnPoller) { clearInterval(runningTurnPoller); runningTurnPoller = null; }
     }
 
     /** 从服务端同步指定会话的元信息（授权档位 + 绑定工作区），切换会话时保证界面与后端绝对一致。 */

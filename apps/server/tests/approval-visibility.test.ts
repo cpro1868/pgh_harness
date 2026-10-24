@@ -29,8 +29,9 @@ describe('TC-01-13-003: 权限审批挂起醒目化（杜绝"卡在调度中"误
   });
 
   it('长期订阅收到新事件必须触发增量重放渲染（刷新后状态及时刷新）', () => {
-    // openSessionStream 的事件循环内不得只更新 seq——必须有重放渲染调用
-    const streamFn = html.match(/async function openSessionStream\(\)[\s\S]*?\n {4}\}\n/)?.[0] ?? '';
+    // openSessionStream 的事件循环内不得只更新 seq——必须有重放渲染调用（窗口法，避免脆弱的函数体正则）
+    const start = html.indexOf('async function openSessionStream()');
+    const streamFn = html.slice(start, start + 9000);
     assert.ok(streamFn.length > 100, 'openSessionStream 必须存在');
     assert.ok(
       /renderConversation|scheduleLiveReplay|refreshConversation/.test(streamFn),
@@ -39,13 +40,25 @@ describe('TC-01-13-003: 权限审批挂起醒目化（杜绝"卡在调度中"误
   });
 
   it('重放渲染必须联动审批徽标（groupTurns 后徽标与 pending 状态一致）', () => {
-    // renderConversation 内必须同步审批徽标可见性
-    const renderFn = html.match(/function renderConversation\(events\)[\s\S]*?\n {2}\}\n/)?.[0] ?? '';
+    const start = html.indexOf('function renderConversation(events)');
+    const renderFn = html.slice(start, start + 8000);
     assert.ok(renderFn.length > 100, 'renderConversation 必须存在');
     assert.ok(
       renderFn.includes('showApprovalWaitingBadge') || renderFn.includes('hideApprovalWaitingBadge'),
       'renderConversation 必须按 pending 审批状态同步徽标',
     );
+  });
+
+  it('刷新/切会话时必须按服务端 state 恢复运行态 UI（Abort 按钮可用）', () => {
+    // switchSession 必须读取会话 state，running 则 setRunningState(true)
+    const start = html.indexOf('async function switchSession(sessionId)');
+    const fn = html.slice(start, start + 4000);
+    assert.ok(fn.length > 100, 'switchSession 必须存在');
+    assert.ok(/state\s*===?\s*['"]running['"]|setRunningState/.test(fn), 'switchSession 必须按服务端 state 恢复运行态（否则刷新后无法停止后台回合）');
+  });
+
+  it('运行中回合的完成轮询：运行态恢复后必须轮询直至 idle 退回发送按钮', () => {
+    assert.ok(script.includes('startRunningTurnPoller') && script.includes('stopRunningTurnPoller'), '必须存在运行中回合的完成轮询机制');
   });
 
   it('审批卡片渲染时必须自动滚动到可见（scrollMessagesToBottom）', () => {
