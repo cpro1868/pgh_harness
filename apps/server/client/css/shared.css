@@ -260,7 +260,8 @@
 [data-theme='light-clean'] .hover\:bg-slate-800:hover,
 [data-theme='light-clean'] .hover\:bg-slate-800\/40:hover,
 [data-theme='light-clean'] .hover\:bg-slate-800\/50:hover,
-[data-theme='light-clean'] .hover\:bg-slate-800\/60:hover { background-color: #e2e8f0; }
+[data-theme='light-clean'] .hover\:bg-slate-800\/60:hover,
+[data-theme='light-clean'] .hover\:bg-slate-800\/70:hover { background-color: #e2e8f0; }
 [data-theme='light-clean'] .hover\:bg-purple-950:hover,
 [data-theme='light-clean'] .hover\:bg-purple-900\/60:hover,
 [data-theme='light-clean'] .hover\:bg-purple-800:hover { background-color: #ede9fe; }

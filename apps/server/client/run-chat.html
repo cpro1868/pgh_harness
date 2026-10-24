@@ -120,43 +120,84 @@
         title="将当前整个会话的全部对话历史一键沉淀为记忆（智能 SHA-256 去重）"
         class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
       >
-        <span>📥</span><span>保存会话</span>
+        <span>📥</span><span>保存会话</span><span id="autosave-dot" class="hidden w-1.5 h-1.5 rounded-full bg-emerald-400" title="自动保存已开启"></span>
       </button>
-      <div class="flex items-center space-x-1.5 font-mono text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800">
-        <span>Token: <b id="session-tokens" class="text-emerald-400">0</b></span>
-        <span>·</span>
-        <span>费用: <b id="session-cost" class="text-emerald-400">$0.000</b></span>
-        <button
-          type="button"
-          onclick="resetSessionUsage()"
-          title="将当前统计用量清零（记录当前基线，后续只统计新轮次，不删除历史事件）"
-          class="ml-1 px-1.5 py-0.2 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 text-[10px] transition"
+
+      <!-- Token 用量下拉（点开显示总量/费用/清零，点外部收起） -->
+      <details id="usage-dropdown" class="relative">
+        <summary
+          class="cursor-pointer list-none flex items-center space-x-1 font-mono text-slate-400 bg-slate-900/60 px-2 py-0.5 rounded border border-slate-800 hover:border-slate-600 transition"
+          title="点击展开用量详情（总量 / 费用 / 清零）"
         >
-          🔄 清零
-        </button>
-      </div>
-      <!-- 模型选择 -->
-      <select id="topbar-model-select" class="bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500">
+          <span>⚡</span><span>Token: <b id="session-tokens" class="text-emerald-400">0</b></span><span class="text-slate-600">▾</span>
+        </summary>
+        <div class="absolute right-0 top-full mt-1 w-[220px] rounded-lg border border-slate-700 bg-[#0d1424] shadow-xl shadow-black/50 p-3 space-y-2 z-50">
+          <div class="flex items-center justify-between font-mono text-slate-300">
+            <span>总 Token</span><b id="usage-detail-tokens" class="text-emerald-400">0</b>
+          </div>
+          <div class="flex items-center justify-between font-mono text-slate-300">
+            <span>费用</span><b id="usage-detail-cost" class="text-emerald-400">$0.000</b>
+          </div>
+          <button
+            type="button"
+            onclick="resetSessionUsage()"
+            title="将当前统计用量清零（记录当前基线，后续只统计新轮次，不删除历史事件）"
+            class="w-full px-2 py-1 rounded hover:bg-slate-800 text-slate-400 hover:text-amber-300 text-[10px] border border-slate-700 transition"
+          >
+            🔄 清零统计
+          </button>
+        </div>
+      </details>
+
+      <!-- 模型选择（收窄：短名 + 悬停提示 provider） -->
+      <select id="topbar-model-select" class="bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500 max-w-[160px] truncate">
         <option value="deepseek-chat">deepseek-chat</option>
         <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
       </select>
-      <button
-        type="button"
-        id="topbar-speech-mute-btn"
-        onclick="toggleGlobalSpeech()"
-        title="语音播报总开关（点击静音 / 开启）"
-        class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
-      >
-        <span id="speech-icon">🔊</span><span id="speech-text">语音开</span>
-      </button>
-      <button
-        type="button"
-        onclick="exportSession()"
-        title="导出当前会话全部对话为 Markdown"
-        class="px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
-      >
-        <span>⬇️</span><span>导出对话</span>
-      </button>
+
+      <!-- 设置下拉（语音 / 导出 / 自动保存） -->
+      <details id="settings-dropdown" class="relative">
+        <summary
+          class="cursor-pointer list-none px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-mono text-[10px] flex items-center space-x-1 transition"
+          title="语音 / 导出 / 自动保存等设置"
+        >
+          <span>⚙️</span><span>设置</span><span class="text-slate-600">▾</span>
+        </summary>
+        <div class="absolute right-0 top-full mt-1 w-[220px] rounded-lg border border-slate-700 bg-[#0d1424] shadow-xl shadow-black/50 p-2 space-y-1 z-50">
+          <label
+            class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-slate-800/70 cursor-pointer transition"
+            title="语音播报总开关（点击静音 / 开启）"
+          >
+            <span class="text-slate-300 flex items-center space-x-1.5"><span id="speech-icon">🔊</span><span id="speech-text">语音开</span></span>
+            <input
+              id="speech-toggle"
+              type="checkbox"
+              onchange="toggleGlobalSpeech()"
+              class="accent-blue-500 cursor-pointer"
+            />
+          </label>
+          <button
+            type="button"
+            onclick="exportSession()"
+            title="导出当前会话全部对话为 Markdown"
+            class="w-full flex items-center space-x-1.5 px-2 py-1.5 rounded hover:bg-slate-800/70 text-slate-300 text-left transition"
+          >
+            <span>⬇️</span><span>导出对话</span>
+          </button>
+          <label
+            class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-slate-800/70 cursor-pointer transition"
+            title="开启后每个回合结束自动将对话沉淀为记忆（SHA-256 去重，重复内容不重复入库）"
+          >
+            <span class="text-slate-300 flex items-center space-x-1.5"><span>📥</span><span>自动保存会话</span></span>
+            <input
+              id="autosnapshot-toggle"
+              type="checkbox"
+              onchange="toggleAutoSnapshot()"
+              class="accent-emerald-500 cursor-pointer"
+            />
+          </label>
+        </div>
+      </details>
     </div>
   </header>
 
@@ -727,13 +768,16 @@
     /** 当前会话的用量统计基线 seq（清零标记）：只累计 seq 大于它的 turn/completed。 */
     let activeUsageBaseline = 0;
 
-    /** 渲染顶栏 Token 与费用（会话累计口径）。 */
+    /** 渲染顶栏 Token 与费用（会话累计口径）：summary 只显示数字，费用/总量写在下拉面板内。 */
     function renderUsageBar(tokens) {
       const value = Math.max(0, Number(tokens) || 0);
+      const cost = `$${(value * TOKEN_UNIT_PRICE_USD).toFixed(4)}`;
       const tokensEl = document.getElementById('session-tokens');
-      const costEl = document.getElementById('session-cost');
       if (tokensEl) tokensEl.textContent = String(value);
-      if (costEl) costEl.textContent = `$${(value * TOKEN_UNIT_PRICE_USD).toFixed(4)}`;
+      const detailTokensEl = document.getElementById('usage-detail-tokens');
+      if (detailTokensEl) detailTokensEl.textContent = String(value);
+      const detailCostEl = document.getElementById('usage-detail-cost');
+      if (detailCostEl) detailCostEl.textContent = cost;
     }
 
     /** 从服务端同步当前会话的用量统计基线。 */
@@ -965,14 +1009,17 @@
                 const opt = document.createElement('option');
                 opt.value = m.id;
                 opt.dataset.providerId = p.id;
-                opt.textContent = `${m.id} (${p.name})`;
+                // 短名渲染防顶栏过宽：provider 信息放 title 悬停提示
+                opt.textContent = m.id;
+                opt.title = `${m.id} · ${p.name}`;
                 select.appendChild(opt);
               });
             } else {
               const opt = document.createElement('option');
               opt.value = 'deepseek-chat';
               opt.dataset.providerId = p.id;
-              opt.textContent = `deepseek-chat (${p.name})`;
+              opt.textContent = 'deepseek-chat';
+              opt.title = `deepseek-chat · ${p.name}`;
               select.appendChild(opt);
             }
           });
@@ -1137,18 +1184,50 @@
           text.textContent = '已静音';
         }
       }
+      // 设置菜单内的 checkbox 与文字状态保持同步（JSDoc cast，内联脚本保持纯 JS 以兼容测试编译）
+      const toggle = /** @type {HTMLInputElement|null} */ (document.getElementById('speech-toggle'));
+      if (toggle) toggle.checked = current.enabled;
     }
 
-    async function snapshotFullSession() {
+    /** 自动保存会话开关的 localStorage 键（'1' 开 / '0' 关，默认关）。 */
+    const AUTOSNAPSHOT_KEY = 'pgh_autosnapshot_enabled';
+
+    function isAutoSnapshotEnabled() {
+      try { return localStorage.getItem(AUTOSNAPSHOT_KEY) === '1'; } catch { return false; }
+    }
+
+    function renderAutoSnapshotState() {
+      const enabled = isAutoSnapshotEnabled();
+      const toggle = /** @type {HTMLInputElement|null} */ (document.getElementById('autosnapshot-toggle'));
+      if (toggle) toggle.checked = enabled;
+      const dot = document.getElementById('autosave-dot');
+      if (dot) dot.classList.toggle('hidden', !enabled);
+    }
+
+    function toggleAutoSnapshot() {
+      const next = !isAutoSnapshotEnabled();
+      try { localStorage.setItem(AUTOSNAPSHOT_KEY, next ? '1' : '0'); } catch { /* 隐私模式降级为内存态 */ }
+      renderAutoSnapshotState();
+      if (typeof showToast === 'function') {
+        showToast(next ? '已开启自动保存：每回合结束自动沉淀记忆' : '已关闭自动保存', 'info');
+      }
+    }
+
+    /**
+     * 执行全量沉淀（手动按钮与自动保存共用）。
+     * silent=true（自动触发）时不驱动按钮 loading/结果动画，失败仍显式告警，绝不静默吞错。
+     */
+    async function performSnapshotFull(options = {}) {
       if (!activeSessionId) {
-        showErrorBanner('请先打开或新建一个会话，再执行全量保存。');
+        if (!options.silent) showErrorBanner('请先打开或新建一个会话，再执行全量保存。');
         return;
       }
       const btn = document.getElementById('topbar-snapshot-full-btn');
-      if (!btn) return;
-      const origHtml = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<span>⏳</span><span>沉淀中...</span>';
+      const origHtml = btn ? btn.innerHTML : '';
+      if (!options.silent && btn) {
+        btn.disabled = true;
+        btn.innerHTML = '<span>⏳</span><span>沉淀中...</span>';
+      }
       try {
         const res = await fetch('/api/memory/snapshot-full', {
           method: 'POST',
@@ -1157,24 +1236,30 @@
         });
         const json = await res.json();
         if (json.code === 0 && json.data.saved) {
-          btn.innerHTML = '<span>✅</span><span>已保存</span>';
+          if (!options.silent && btn) btn.innerHTML = '<span>✅</span><span>已保存</span>';
+          else console.info('[PGH] 自动保存：本次回合对话已沉淀为记忆');
         } else if (json.code === 0 && json.data.isDuplicate) {
-          btn.innerHTML = '<span>♻️</span><span>已存在</span>';
+          if (!options.silent && btn) btn.innerHTML = '<span>♻️</span><span>已存在</span>';
         } else if (json.code === 0 && json.data.messageCount === 0) {
-          btn.innerHTML = '<span>ℹ️</span><span>暂无消息</span>';
+          if (!options.silent && btn) btn.innerHTML = '<span>ℹ️</span><span>暂无消息</span>';
         } else {
-          btn.innerHTML = '<span>❌</span><span>失败</span>';
+          if (!options.silent && btn) btn.innerHTML = '<span>❌</span><span>失败</span>';
           showErrorBanner(json.message || '全量沉淀失败');
         }
       } catch (err) {
-        btn.innerHTML = '<span>❌</span><span>异常</span>';
+        if (!options.silent && btn) btn.innerHTML = '<span>❌</span><span>异常</span>';
         showErrorBanner('全量沉淀请求异常: ' + err.message);
       } finally {
-        setTimeout(() => {
-          btn.disabled = false;
-          btn.innerHTML = origHtml;
-        }, 2000);
+        if (!options.silent) {
+          setTimeout(() => {
+            if (btn) { btn.disabled = false; btn.innerHTML = origHtml; }
+          }, 2000);
+        }
       }
+    }
+
+    async function snapshotFullSession() {
+      await performSnapshotFull({ silent: false });
     }
 
     function createSessionInWorkspace(encodedPath) {
@@ -2437,6 +2522,10 @@
               // 顶栏改为「会话累计」而非「最后一轮」，避免历史数据被覆盖丢失
               void refreshSessionUsage();
               loadSessionList();
+              // 自动保存：回合结束后自动沉淀记忆（SHA-256 去重，重复内容不重复入库）
+              if (isAutoSnapshotEnabled() && activeSessionId) {
+                void performSnapshotFull({ silent: true });
+              }
             } else if (eventType === 'error') {
 
               showErrorBanner(data.message || '模型通信故障');
@@ -2825,6 +2914,31 @@
       // 切回前台时，默认定位到最新的一条对话
       scrollMessagesToBottom(true);
     });
+
+    // ---------- 顶栏下拉：点击外部收起 + 两个下拉互斥（TC-01-08-003） ----------
+    document.addEventListener('click', (ev) => {
+      const target = ev.target;
+      for (const id of ['usage-dropdown', 'settings-dropdown']) {
+        const details = document.getElementById(id);
+        if (!details || !details.open) continue;
+        if (!details.contains(target)) details.removeAttribute('open');
+      }
+    });
+    for (const id of ['usage-dropdown', 'settings-dropdown']) {
+      const details = document.getElementById(id);
+      if (!details) continue;
+      details.addEventListener('toggle', () => {
+        if (!details.open) return;
+        for (const otherId of ['usage-dropdown', 'settings-dropdown']) {
+          if (otherId === id) continue;
+          const other = document.getElementById(otherId);
+          if (other && other.open) other.removeAttribute('open');
+        }
+      });
+    }
+
+    // 顶栏初始化：自动保存开关状态回填（localStorage 持久化）
+    renderAutoSnapshotState();
 
     // 加载当前工作区已启用的 Skills，供输入框快捷下拉选择
     async function loadSkillsToComposer() {

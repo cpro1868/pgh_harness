@@ -19,7 +19,7 @@ interface StubElement {
   dataset: Record<string, string>;
   options: StubElement[];
   children: StubElement[];
-  classList: { add: (...cls: string[]) => void; remove: (...cls: string[]) => void; contains: (cls: string) => boolean };
+  classList: { add: (...cls: string[]) => void; remove: (...cls: string[]) => void; contains: (cls: string) => boolean; toggle: (cls: string, force?: boolean) => boolean };
   appendChild: (child: StubElement) => void;
   querySelector: (sel: string) => StubElement;
   addEventListener: (type: string, fn: () => void) => void;
@@ -67,6 +67,11 @@ function makeElement(): StubElement {
       add: (...cls: string[]) => cls.forEach((c) => classes.add(c)),
       remove: (...cls: string[]) => cls.forEach((c) => classes.delete(c)),
       contains: (cls: string) => classes.has(cls),
+      toggle: (cls: string, force?: boolean) => {
+        const shouldHave = force === undefined ? !classes.has(cls) : force;
+        if (shouldHave) classes.add(cls); else classes.delete(cls);
+        return shouldHave;
+      },
     },
     appendChild: (child: StubElement) => { el.options!.push(child); el.children!.push(child); },
     querySelector: () => makeElement(),
