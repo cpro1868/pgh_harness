@@ -44,6 +44,23 @@ describe('TC-01-08-003: 主会话顶栏布局重构（Token下拉 + 设置菜单
     assert.ok(script.includes('opt.title ='), 'option 必须带 title 悬停提示 provider');
   });
 
+  it('模型下拉位于左侧组（紧跟工作区之后），右侧组不再拥挤', () => {
+    const header = html.match(/<header[\s\S]*?<\/header>/)?.[0] ?? '';
+    const modelIdx = header.indexOf('id="topbar-model-select"');
+    const workspaceIdx = header.indexOf('id="topbar-workspace-select"');
+    const rightGroupIdx = header.indexOf('id="topbar-snapshot-full-btn"');
+    assert.ok(modelIdx > workspaceIdx, '模型下拉必须紧跟工作区之后（左侧组）');
+    assert.ok(modelIdx < rightGroupIdx, '模型下拉必须在右侧功能组之前');
+    // 右侧组（保存会话到 settings-dropdown 之间）不得再出现模型 select
+    const rightGroup = header.slice(rightGroupIdx, header.indexOf('id="settings-dropdown"'));
+    assert.ok(!rightGroup.includes('topbar-model-select'), '右侧组不得再包含模型下拉');
+  });
+
+  it('顶栏标题为 PG Harness（节省空间）', () => {
+    assert.ok(html.includes('>PG Harness</span>'), '顶栏标题必须为 PG Harness');
+    assert.ok(!html.includes('>Purple Grapes Harness</span>'), '不得再用全称标题');
+  });
+
   it('设置下拉收纳语音/导出/自动保存三项', () => {
     const settingsBlock = html.match(/<details id="settings-dropdown"[\s\S]*?<\/details>/)?.[0] ?? '';
     assert.ok(settingsBlock.includes('toggleGlobalSpeech()'), '语音开关必须在设置菜单内');

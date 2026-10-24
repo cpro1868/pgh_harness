@@ -87,8 +87,8 @@
   <!-- 统一 40px 顶栏 -->
   <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs select-none">
     <div class="flex items-center space-x-2.5">
-      <img src="ico/pgh.svg" alt="Purple Grapes Harness" class="w-6 h-6 rounded shadow-sm">
-      <span class="font-bold text-white tracking-wide text-xs">Purple Grapes Harness</span>
+      <img src="ico/pgh.svg" alt="PG Harness" class="w-6 h-6 rounded shadow-sm">
+      <span class="font-bold text-white tracking-wide text-xs">PG Harness</span>
       <span class="text-slate-600">/</span>
       <!-- 工作区锁定指示 (对齐 deepseek-harness，支持在顶栏切换工作区，绝不阻塞输入区) -->
       <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 font-mono text-[11px] text-blue-300">
@@ -110,6 +110,11 @@
           <span>➕ 新登记</span>
         </a>
       </div>
+      <!-- 模型选择（紧跟工作区之后；收窄：短名 + 悬停提示 provider） -->
+      <select id="topbar-model-select" title="选择本轮对话使用的模型" class="bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500 max-w-[160px] truncate">
+        <option value="deepseek-chat">deepseek-chat</option>
+        <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
+      </select>
     </div>
 
     <div class="flex items-center space-x-2 text-[11px]">
@@ -148,12 +153,6 @@
           </button>
         </div>
       </details>
-
-      <!-- 模型选择（收窄：短名 + 悬停提示 provider） -->
-      <select id="topbar-model-select" class="bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500 max-w-[160px] truncate">
-        <option value="deepseek-chat">deepseek-chat</option>
-        <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
-      </select>
 
       <!-- 设置下拉（语音 / 导出 / 自动保存） -->
       <details id="settings-dropdown" class="relative">
