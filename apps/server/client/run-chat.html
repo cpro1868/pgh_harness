@@ -1737,6 +1737,13 @@
       // 右侧轮次大纲与当前会话保持一致
       outlineTurns = turns;
       renderTurnOutline();
+
+      // 审批徽标与 pending 状态联动（TC-01-13-003）：刷新/重放后徽标必须与真实待裁决数一致
+      const pendingApprovals = turns.reduce((sum, turn) => {
+        return sum + turn.approvals.filter((a) => !turn.decisions.some((d) => d.requestID === a.requestID)).length;
+      }, 0);
+      if (pendingApprovals > 0) showApprovalWaitingBadge();
+      else hideApprovalWaitingBadge();
     }
 
     /**
@@ -2919,7 +2926,20 @@
               streamWatch.lastSeq = Math.max(streamWatch.lastSeq, data.seq);
               lastKnownSeq = Math.max(lastKnownSeq, data.seq);
             }
-            if (eventType === 'stream-ready') streamWatch.lastHeartbeatAt = Date.now();
+            if (eventType === 'stream-ready') {
+              streamWatch.lastHeartbeatAt = Date.now();
+              continue;
+            }
+            // 关键事件到达即触发增量重放（TC-01-13-003 修正）：
+            // 刷新页面后 chat/send 流已断，回合后续产出（审批请求/裁决/工具结果/最终回答）
+            // 全靠长期订阅送达——此前只追 seq 不渲染，导致 UI 状态与信息"永远不及时"。
+            const REPLAY_TYPES = new Set([
+              'approval/requested', 'approval/resolved', 'question/requested', 'question_answered',
+              'tool/call', 'tool/result', 'message/assistant', 'turn/completed', 'todo/update',
+            ]);
+            if (REPLAY_TYPES.has(String(data.type ?? ''))) {
+              void scheduleLiveReplay();
+            }
           }
         }
         if (!streamWatch.closed) scheduleStreamReconnect();
@@ -2927,6 +2947,28 @@
         if (err.name === 'AbortError') return;
         if (!streamWatch.closed) scheduleStreamReconnect();
       }
+    }
+
+    /** 增量重放去抖：600ms 内的多条事件合并为一次全量重放（以服务端事件为唯一事实来源）。 */
+    let liveReplayTimer = null;
+    function scheduleLiveReplay() {
+      if (liveReplayTimer) return;
+      liveReplayTimer = setTimeout(() => {
+        liveReplayTimer = null;
+        if (streamWatch.closed || !activeSessionId) return;
+        void (async () => {
+          try {
+            const res = await fetch(`/api/sessions/${activeSessionId}/messages?after=0`);
+            const result = await res.json();
+            if (result.code === 0 && Array.isArray(result.data)) {
+              renderConversation(result.data);
+              renderUsageBar(sumUsageFromEvents(result.data));
+            }
+          } catch (err) {
+            console.warn('[PGH] live replay failed:', err.message);
+          }
+        })();
+      }, 600);
     }
 
     // 息屏/休眠后切回前台：立即重连并拉齐（不等 30s 看门狗），并保证滚动贴合最新消息

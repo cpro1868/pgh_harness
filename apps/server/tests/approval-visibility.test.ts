@@ -28,6 +28,26 @@ describe('TC-01-13-003: 权限审批挂起醒目化（杜绝"卡在调度中"误
     assert.ok(resolvedCount >= 2, `审批解决路径必须移除徽标，实测 ${resolvedCount} 处`);
   });
 
+  it('长期订阅收到新事件必须触发增量重放渲染（刷新后状态及时刷新）', () => {
+    // openSessionStream 的事件循环内不得只更新 seq——必须有重放渲染调用
+    const streamFn = html.match(/async function openSessionStream\(\)[\s\S]*?\n {4}\}\n/)?.[0] ?? '';
+    assert.ok(streamFn.length > 100, 'openSessionStream 必须存在');
+    assert.ok(
+      /renderConversation|scheduleLiveReplay|refreshConversation/.test(streamFn),
+      '长期订阅事件循环必须触发增量重放渲染（否则刷新后新事件 UI 全部丢失）',
+    );
+  });
+
+  it('重放渲染必须联动审批徽标（groupTurns 后徽标与 pending 状态一致）', () => {
+    // renderConversation 内必须同步审批徽标可见性
+    const renderFn = html.match(/function renderConversation\(events\)[\s\S]*?\n {2}\}\n/)?.[0] ?? '';
+    assert.ok(renderFn.length > 100, 'renderConversation 必须存在');
+    assert.ok(
+      renderFn.includes('showApprovalWaitingBadge') || renderFn.includes('hideApprovalWaitingBadge'),
+      'renderConversation 必须按 pending 审批状态同步徽标',
+    );
+  });
+
   it('审批卡片渲染时必须自动滚动到可见（scrollMessagesToBottom）', () => {
     // 分支调用 setWaitingApproval(card)，滚动逻辑在该函数体内
     const fn = html.match(/function setWaitingApproval\(card\)[\s\S]*?\n {4}\}/)?.[0] ?? '';
@@ -46,3 +66,5 @@ describe('TC-01-13-003: 权限审批挂起醒目化（杜绝"卡在调度中"误
     assert.ok(src.includes('ApprovalBroker'), '服务端必须挂载 ApprovalBroker');
   });
 });
+
+
