@@ -115,6 +115,10 @@
         <option value="deepseek-chat">deepseek-chat</option>
         <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
       </select>
+      <!-- 审批等待徽标：权限裁决挂起时高亮闪烁，杜绝"卡在调度中"误判 -->
+      <span id="approval-waiting-badge" class="hidden items-center space-x-1 px-2 py-0.5 rounded bg-amber-600/90 text-white font-mono text-[10px] font-bold animate-pulse shadow">
+        ⏸ 等待授权
+      </span>
     </div>
 
     <div class="flex items-center space-x-2 text-[11px]">
@@ -1592,6 +1596,8 @@
           turn.approvals.push(ev.payload || {});
         } else if (ev.type === 'approval/resolved') {
           turn.decisions.push(ev.payload || {});
+          // 重放路径收到裁决（含超时拒绝）：徽标必须移除（TC-01-13-003）
+          hideApprovalWaitingBadge();
         } else if (ev.type === 'message/assistant') {
           turn.assistant = String((ev.payload || {}).content || '');
           if ((ev.payload || {}).model) turn.model = String(ev.payload.model);
@@ -2487,8 +2493,9 @@
               scrollMessagesToBottom();
             } else if (eventType === 'approval-request') {
               card.toolsEl.appendChild(createApprovalCard(data, null));
-              scrollMessagesToBottom();
-            } else if (eventType === 'tool-result') {
+              // 审批挂起醒目化：替换"正在调度"脉冲 + 顶栏闪烁徽标 + 强制滚动到审批卡
+              setWaitingApproval(card);
+            } else if (eventType === 'approval-resolved') {
               const line = document.createElement('div');
               line.className = `text-[11px] font-mono rounded px-2.5 py-1 my-0.5 ${data.isError ? 'text-rose-300 bg-rose-950/20 border border-rose-900/30' : 'text-emerald-300/90 bg-emerald-950/20 border border-emerald-900/30'}`;
               line.textContent = `📥 工具输出 (${String(data.output || '').length} 字符)${data.isError ? ' [报错]' : ''}`;
@@ -2540,6 +2547,8 @@
         }
       } finally {
         setRunningState(false);
+        // 回合结束（无论 done/error/abort）必然移除审批等待徽标
+        hideApprovalWaitingBadge();
         // 回合结束回到空闲态，恢复长期订阅以承接后台/跨标签的新事件
         if (activeSessionId) startSessionWatch(activeSessionId);
         // 回合已落盘，刷新右侧大纲（以服务端事实为准）
@@ -2549,6 +2558,22 @@
 
     function contentStartedReset(card) {
       card.contentEl.className = 'prose-dark leading-relaxed font-sans';
+    }
+
+    /** 审批挂起醒目化：替换"正在调度"脉冲为等待授权态 + 顶栏闪烁徽标（TC-01-13-003）。 */
+    function showApprovalWaitingBadge() {
+      const badge = document.getElementById('approval-waiting-badge');
+      if (badge) { badge.classList.remove('hidden'); badge.classList.add('flex'); }
+    }
+    function hideApprovalWaitingBadge() {
+      const badge = document.getElementById('approval-waiting-badge');
+      if (badge) { badge.classList.add('hidden'); badge.classList.remove('flex'); }
+    }
+    function setWaitingApproval(card) {
+      card.contentEl.className = 'prose-dark leading-relaxed font-sans';
+      card.contentEl.innerHTML = '<span class="text-amber-300 font-mono font-bold animate-pulse">⏸ 等待你的授权裁决…（下方琥珀色卡片，5 分钟未裁决将按拒绝处理）</span>';
+      showApprovalWaitingBadge();
+      scrollMessagesToBottom(true);
     }
     // 7. 键盘事件监听 (Enter 立即发送，Shift+Enter 自由换行)
     function setupKeyboardListener() {

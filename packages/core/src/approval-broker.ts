@@ -9,7 +9,10 @@ export class ApprovalDeniedError extends Error {
 
 export class ApprovalTimeoutError extends Error {
   constructor(timeoutMs: number) {
-    super(`[Approval] 审批超过 ${Math.round(timeoutMs / 60000)} 分钟未响应，已按 fail-closed 原则拒绝执行`);
+    super(
+      `[Approval] 审批超过 ${Math.round(timeoutMs / 60000)} 分钟未响应，已按 fail-closed 原则拒绝执行。` +
+      `改道指引：请勿反复重试同类需要授权的操作；请改用只读方式（read_file/glob/grep）继续推进任务，或用 ask_user 向用户说明该操作的必要性并请用户切换授权档位后重试。`,
+    );
     this.name = 'ApprovalTimeoutError';
   }
 }

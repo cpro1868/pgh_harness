@@ -3647,6 +3647,8 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
     onDelta?: (kind: 'reasoning' | 'content', text: string) => void,
   ): Promise<ChatTurnResult> {
     const endpoint = `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`;
+    const __t0 = Date.now();
+    console.log(`[Harness][perf] LLM call: msgs=${messages.length} histChars=${messages.reduce((s, m) => s + (m.content || '').length, 0)} toolMsgs=${messages.filter((m) => m.role === 'tool').length}`);
     const llmRes = await this.proxyDispatcher.fetchWithProxy(
       endpoint,
       {
@@ -3770,6 +3772,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
         return { id: c.id || `call_${i}`, name: c.name.trim(), args };
       });
 
+    console.log(`[Harness][perf] LLM done: ${Date.now() - __t0}ms | in=${inputTokens} out=${outputTokens} | contentChars=${content.length} reasoningChars=${reasoning.length}`);
     return { content, reasoning, toolCalls: parsedCalls, inputTokens, outputTokens };
   }
 

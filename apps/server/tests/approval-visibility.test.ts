@@ -1,0 +1,48 @@
+import { describe, it } from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const html = fs.readFileSync(path.resolve(here, '../client/run-chat.html'), 'utf8');
+const script = [...html.matchAll(/<script(?![^>]*src=)[^>]*>([\s\S]*?)<\/script>/g)].map((m) => m[1]).join('\n');
+
+describe('TC-01-13-003: 权限审批挂起醒目化（杜绝"卡在调度中"误判）', () => {
+  it('收到 approval-request 时：调度 pulse 必须被替换为等待授权状态', () => {
+    // approval-request 分支内必须调用 setWaitingApproval（替换"正在调度"脉冲文案）
+    const branch = html.match(/eventType === 'approval-request'[\s\S]{0,400}/)?.[0] ?? '';
+    assert.ok(branch.includes('setWaitingApproval'), 'approval-request 分支必须调用 setWaitingApproval 更新卡片状态');
+    assert.ok(typeof html.match(/function setWaitingApproval/)?.[0] === 'string', '必须定义 setWaitingApproval');
+  });
+
+  it('顶栏必须有审批等待徽标（闪烁），审批解决后移除', () => {
+    assert.ok(html.includes('id="approval-waiting-badge"'), '顶栏必须存在 approval-waiting-badge 徽标元素');
+    assert.ok(script.includes('showApprovalWaitingBadge'), '必须定义 showApprovalWaitingBadge');
+    assert.ok(script.includes('hideApprovalWaitingBadge'), '必须定义 hideApprovalWaitingBadge');
+  });
+
+  it('审批解决（resolved/超时）后徽标必须移除', () => {
+    // 回合 finally + 重放 approval/resolved 两条路径都要 hide
+    const resolvedCount = (script.match(/hideApprovalWaitingBadge\(\)/g) ?? []).length;
+    assert.ok(resolvedCount >= 2, `审批解决路径必须移除徽标，实测 ${resolvedCount} 处`);
+  });
+
+  it('审批卡片渲染时必须自动滚动到可见（scrollMessagesToBottom）', () => {
+    // 分支调用 setWaitingApproval(card)，滚动逻辑在该函数体内
+    const fn = html.match(/function setWaitingApproval\(card\)[\s\S]*?\n {4}\}/)?.[0] ?? '';
+    assert.ok(fn.includes('scrollMessagesToBottom(true)'), 'setWaitingApproval 必须强制滚动到审批卡可见');
+  });
+
+  it('审批超时拒绝的结果必须附带改道指引（勿反复撞墙）', () => {
+    const src = fs.readFileSync(path.resolve(here, '../src/index.ts'), 'utf8');
+    // 超时文案在 packages/core/src/approval-broker.ts，此处断言服务端引用链与指引文案存在
+    const broker = fs.readFileSync(path.resolve(here, '../../../packages/core/src/approval-broker.ts'), 'utf8');
+    assert.ok(broker.includes('审批超过'), '审批超时文案必须存在');
+    assert.ok(broker.includes('改道指引'), '超时拒绝必须附带改道指引');
+    assert.ok(broker.includes('请改用只读方式'), '指引必须建议改用只读方式');
+    assert.ok(broker.includes('ask_user'), '指引必须建议 ask_user 询问用户');
+    // 服务端确实挂载了 ApprovalBroker（超时拒绝生效路径）
+    assert.ok(src.includes('ApprovalBroker'), '服务端必须挂载 ApprovalBroker');
+  });
+});

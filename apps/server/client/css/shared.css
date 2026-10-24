@@ -201,6 +201,7 @@
 [data-theme='light-clean'] .bg-emerald-500\/20 { background-color: #ecfdf5; }
 [data-theme='light-clean'] .bg-rose-500\/20 { background-color: #fff1f2; }
 [data-theme='light-clean'] .bg-amber-500\/20 { background-color: #fffbeb; }
+[data-theme='light-clean'] .bg-amber-600\/90 { background-color: #f59e0b; }
 [data-theme='light-clean'] .bg-purple-500\/20 { background-color: #f5f3ff; }
 
 /* 深色 chip / 面板底色翻转为浅色 tint（文字加深后不得暗上加暗） */
