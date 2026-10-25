@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-Strict-blue?logo=typescript)](https://www.typescriptlang.org/)
 [![Architecture](https://img.shields.io/badge/Architecture-Event%20Sourcing-orange)]()
 [![Zero Native](https://img.shields.io/badge/Dependencies-Zero%20Native%20Addons-success)]()
-[![Tests](https://img.shields.io/badge/Tests-282%20Passed-emerald)]()
+[![Tests](https://img.shields.io/badge/Tests-379%20Passed-emerald)]()
 [![Theme](https://img.shields.io/badge/Themes-4%20Themes-violet)]()
 [![Quality Gate](https://img.shields.io/badge/Quality%20Gate-lint%20%2B%20typecheck%20%2B%20test-success)]()
 [![License](https://img.shields.io/badge/License-MIT-purple.svg)]()
@@ -172,9 +172,9 @@ graph LR
 
 ---
 
-### 三、 流程图工作流功能（BPMN 2.0 图形编排 · 暂未实现 / 规划中）
+### 三、 流程图工作流功能（BPMN 2.0 图形编排 · ✅ 已交付）
 
-> 💡 **状态说明**：该模块已完成前期的业务规格定义与原型交互设计，核心运行时引擎处于规划与研发路线图中，计划作为后续重点能力推出。
+> 💡 **状态说明**：该模块已全链路交付——可视化设计器、BPMN 2.0 引擎（排他/并行网关、有限循环、人工审查门、断点续接）、真实项目端到端验收（approve/reject 双分支 + AND 并行 + 回边循环 ×2）均已通过，执行审计字段（模型/步数/工具调用）齐备。
 
 1. **企业级标准建模兼容**：
    - 原生支持标准 BPMN 2.0 XML 模型的导入、解析与持久化存储；
@@ -380,7 +380,7 @@ chmod +x scripts/*.sh
 # 全量质量门禁自检（包含 ESLint 检查、严格类型检查与全量测试套件）
 pnpm check
 
-# 运行全量 22 个原生测试套件 (282 个测试断言)
+# 运行全量 43 个原生测试套件 (379 个测试断言)
 pnpm test
 ```
 
@@ -401,3 +401,4 @@ pnpm test
 ## 📄 开源许可证
 
 本项目基于 [MIT License](./LICENSE) 协议开源。
+
