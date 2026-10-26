@@ -194,7 +194,9 @@
 [data-theme='light-clean'] .text-amber-400,
 [data-theme='light-clean'] .text-amber-500,
 [data-theme='light-clean'] .hover\:text-amber-300:hover { color: #b45309; }
-[data-theme='light-clean'] .text-sky-300 { color: #0369a1; }
+[data-theme='light-clean'] .text-sky-300,
+[data-theme='light-clean'] .text-sky-400 { color: #0369a1; }
+[data-theme='light-clean'] .text-violet-400 { color: #7e22ce; }
 
 [data-theme='light-clean'] .bg-\[\#0d1424\] { background-color: var(--bg-card); }
 [data-theme='light-clean'] .bg-blue-500\/20 { background-color: #eff6ff; }

@@ -3648,7 +3648,8 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
   ): Promise<ChatTurnResult> {
     const endpoint = `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`;
     const __t0 = Date.now();
-    console.log(`[Harness][perf] LLM call: msgs=${messages.length} histChars=${messages.reduce((s, m) => s + (m.content || '').length, 0)} toolMsgs=${messages.filter((m) => m.role === 'tool').length}`);
+    let cachedTokens = 0;
+    let reasoningTokens = 0;
     const llmRes = await this.proxyDispatcher.fetchWithProxy(
       endpoint,
       {
@@ -3725,7 +3726,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
           if (dataStr === '[DONE]') continue;
           let chunk: {
             choices?: Array<{ delta?: { content?: string; reasoning_content?: string; tool_calls?: Array<{ index?: number; id?: string; function?: { name?: string; arguments?: string } }> }; finish_reason?: string }>;
-            usage?: { prompt_tokens?: number; completion_tokens?: number };
+            usage?: { prompt_tokens?: number; completion_tokens?: number; prompt_tokens_details?: { cached_tokens?: number }; completion_tokens_details?: { reasoning_tokens?: number } };
           };
           try {
             chunk = JSON.parse(dataStr);
@@ -3735,6 +3736,9 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
           if (chunk.usage) {
             inputTokens = chunk.usage.prompt_tokens ?? inputTokens;
             outputTokens = chunk.usage.completion_tokens ?? outputTokens;
+            // 缓存命中与推理 token 采集（对齐 DSH 统计：缓存命中率 / 推理占比）
+            cachedTokens = chunk.usage.prompt_tokens_details?.cached_tokens ?? cachedTokens;
+            reasoningTokens = chunk.usage.completion_tokens_details?.reasoning_tokens ?? reasoningTokens;
           }
           const delta = chunk.choices?.[0]?.delta;
           if (!delta) continue;
@@ -3772,8 +3776,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
         return { id: c.id || `call_${i}`, name: c.name.trim(), args };
       });
 
-    console.log(`[Harness][perf] LLM done: ${Date.now() - __t0}ms | in=${inputTokens} out=${outputTokens} | contentChars=${content.length} reasoningChars=${reasoning.length}`);
-    return { content, reasoning, toolCalls: parsedCalls, inputTokens, outputTokens };
+    return { content, reasoning, toolCalls: parsedCalls, inputTokens, outputTokens, cachedTokens, reasoningTokens, durationMs: Date.now() - __t0 };
   }
 
   private async handleModelsDetect(

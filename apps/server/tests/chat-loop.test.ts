@@ -180,10 +180,15 @@ test('TC-02-02: 对话闭环集成 (会话落盘 + ReAct 工具循环 + SSE 事�
     // 验证 turn/completed 事件持久化了 inputTokens、outputTokens 与 totalTokens
     const completedEv = body.data.find((e) => e.type === 'turn/completed');
     assert.ok(completedEv, '必须包含 turn/completed 事件');
-    const p = completedEv!.payload as { inputTokens?: number; outputTokens?: number; totalTokens?: number };
+    const p = completedEv!.payload as { inputTokens?: number; outputTokens?: number; totalTokens?: number; durationMs?: number; cachedTokens?: number; reasoningTokens?: number };
     assert.equal(typeof p.inputTokens, 'number', 'turn/completed 必须持久化 inputTokens');
     assert.equal(typeof p.outputTokens, 'number', 'turn/completed 必须持久化 outputTokens');
     assert.equal(typeof p.totalTokens, 'number', 'turn/completed 必须持久化 totalTokens');
+    // 用量统计扩展（对齐 DSH：tok/s 与缓存命中率的数据基础）
+    assert.equal(typeof p.durationMs, 'number', 'turn/completed 必须持久化回合耗时 durationMs');
+    assert.ok(p.durationMs! >= 0, 'durationMs 不得为负');
+    if (p.cachedTokens !== undefined) assert.ok(p.cachedTokens >= 0, 'cachedTokens 不得为负');
+    if (p.reasoningTokens !== undefined) assert.ok(p.reasoningTokens >= 0, 'reasoningTokens 不得为负');
   });
 
   await t.test('断线续传: stream?after=0&follow=0 可一次性重放历史事件', async () => {

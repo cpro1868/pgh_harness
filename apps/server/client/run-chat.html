@@ -140,9 +140,21 @@
         >
           <span>⚡</span><span>Token: <b id="session-tokens" class="text-emerald-400">0</b></span><span class="text-slate-600">▾</span>
         </summary>
-        <div class="absolute right-0 top-full mt-1 w-[220px] rounded-lg border border-slate-700 bg-[#0d1424] shadow-xl shadow-black/50 p-3 space-y-2 z-50">
+        <div class="absolute right-0 top-full mt-1 w-[240px] rounded-lg border border-slate-700 bg-[#0d1424] shadow-xl shadow-black/50 p-3 space-y-2 z-50">
+          <div class="flex items-center justify-between font-mono text-slate-300">
+            <span>轮数 / 步数</span><b id="usage-detail-turns" class="text-sky-400">0 / 0</b>
+          </div>
           <div class="flex items-center justify-between font-mono text-slate-300">
             <span>总 Token</span><b id="usage-detail-tokens" class="text-emerald-400">0</b>
+          </div>
+          <div class="flex items-center justify-between font-mono text-slate-300">
+            <span>速度 (tok/s)</span><b id="usage-detail-tps" class="text-emerald-400">—</b>
+          </div>
+          <div class="flex items-center justify-between font-mono text-slate-300">
+            <span>缓存命中率</span><b id="usage-detail-cache" class="text-emerald-400">—</b>
+          </div>
+          <div class="flex items-center justify-between font-mono text-slate-300">
+            <span>推理 Token</span><b id="usage-detail-reasoning" class="text-violet-400">—</b>
           </div>
           <div class="flex items-center justify-between font-mono text-slate-300">
             <span>费用</span><b id="usage-detail-cost" class="text-emerald-400">$0.000</b>
@@ -771,7 +783,7 @@
     /** 当前会话的用量统计基线 seq（清零标记）：只累计 seq 大于它的 turn/completed。 */
     let activeUsageBaseline = 0;
 
-    /** 渲染顶栏 Token 与费用（会话累计口径）：summary 只显示数字，费用/总量写在下拉面板内。 */
+    /** 渲染顶栏 Token 与用量下拉（会话累计口径）：轮数/步数/tok·s/缓存命中率/推理 Token/费用。 */
     function renderUsageBar(tokens) {
       const value = Math.max(0, Number(tokens) || 0);
       const cost = `$${(value * TOKEN_UNIT_PRICE_USD).toFixed(4)}`;
@@ -781,6 +793,56 @@
       if (detailTokensEl) detailTokensEl.textContent = String(value);
       const detailCostEl = document.getElementById('usage-detail-cost');
       if (detailCostEl) detailCostEl.textContent = cost;
+    }
+
+    /**
+     * 用量统计扩展渲染（对齐 DSH：轮数/步数/tok·s/缓存命中率/推理 Token）。
+     * 从事件流聚合 turn/completed；旧轮次缺扩展字段时按缺省处理（不参与分母）。
+     */
+    function renderUsageStats(events) {
+      let turns = 0, steps = 0, cached = 0, reasoning = 0, llmMs = 0;
+      for (const ev of events || []) {
+        if (ev.type !== 'turn/completed') continue;
+        if (typeof ev.seq === 'number' && ev.seq <= activeUsageBaseline) continue;
+        const p = ev.payload || {};
+        turns += 1;
+        steps += Number(p.stepsUsed || 0);
+        cached += Number(p.cachedTokens || 0);
+        reasoning += Number(p.reasoningTokens || 0);
+        llmMs += Number(p.llmDurationMs || 0);
+      }
+      const turnsEl = document.getElementById('usage-detail-turns');
+      if (turnsEl) turnsEl.textContent = `${turns} / ${steps}`;
+      const tpsEl = document.getElementById('usage-detail-tps');
+      if (tpsEl) {
+        const outTokens = computeOutputTokens(events);
+        tpsEl.textContent = (llmMs > 0 && outTokens > 0) ? `${Math.round(outTokens / (llmMs / 1000))} tok/s` : '—';
+      }
+      const cacheEl = document.getElementById('usage-detail-cache');
+      if (cacheEl) {
+        // 命中率 = cached / prompt 总量；prompt ≈ total - output 近似不可靠，改用「有缓存数据的轮次占比」语义不精确，
+        // 直接用 cachedTokens / inputTokens（后端 usage.prompt_tokens）更准——这里从事件里聚合 inputTokens
+        let input = 0;
+        for (const ev of events || []) {
+          if (ev.type !== 'turn/completed') continue;
+          if (typeof ev.seq === 'number' && ev.seq <= activeUsageBaseline) continue;
+          input += Number((ev.payload || {}).inputTokens || 0);
+        }
+        cacheEl.textContent = input > 0 && cached > 0 ? `${Math.round((cached / input) * 100)}%` : '—';
+      }
+      const reasonEl = document.getElementById('usage-detail-reasoning');
+      if (reasonEl) reasonEl.textContent = reasoning > 0 ? String(reasoning) : '—';
+    }
+
+    /** 从事件聚合 outputTokens（tok/s 分子）。 */
+    function computeOutputTokens(events) {
+      let out = 0;
+      for (const ev of events || []) {
+        if (ev.type !== 'turn/completed') continue;
+        if (typeof ev.seq === 'number' && ev.seq <= activeUsageBaseline) continue;
+        out += Number((ev.payload || {}).outputTokens || 0);
+      }
+      return out;
     }
 
     /** 从服务端同步当前会话的用量统计基线。 */
@@ -817,6 +879,7 @@
         const result = await res.json();
         if (result.code === 0 && Array.isArray(result.data)) {
           renderUsageBar(sumUsageFromEvents(result.data));
+        renderUsageStats(result.data);
         }
       } catch {
         // 刷新失败保留上次显示，不阻断主流程
@@ -1411,6 +1474,7 @@
         }
         renderConversation(result.data);
         renderUsageBar(sumUsageFromEvents(result.data));
+        renderUsageStats(result.data);
         startSessionWatch(sessionId);
         // 运行态恢复（TC-01-13-003 终章）：服务端回合仍在跑（如刷新前正在与大模型交互），
         // 前端必须恢复 Abort 按钮与运行态——否则用户没有任何手段停止后台回合
@@ -1467,6 +1531,7 @@
             if (msgResult.code === 0 && Array.isArray(msgResult.data)) {
               renderConversation(msgResult.data);
               renderUsageBar(sumUsageFromEvents(msgResult.data));
+              renderUsageStats(msgResult.data);
             }
           }
         } catch { /* 轮询失败静默重试 */ }
@@ -3021,6 +3086,7 @@
             if (result.code === 0 && Array.isArray(result.data)) {
               renderConversation(result.data);
               renderUsageBar(sumUsageFromEvents(result.data));
+        renderUsageStats(result.data);
             }
           } catch (err) {
             console.warn('[PGH] live replay failed:', err.message);
@@ -3132,3 +3198,5 @@
   </script>
 </body>
 </html>
+
+

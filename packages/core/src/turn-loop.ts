@@ -14,6 +14,12 @@ export interface ChatTurnResult {
   toolCalls: ToolCallRequest[];
   inputTokens?: number;
   outputTokens?: number;
+  /** 缓存命中的 prompt token 数（usage.prompt_tokens_details.cached_tokens，上游支持时才有值） */
+  cachedTokens?: number;
+  /** 推理消耗 token 数（usage.completion_tokens_details.reasoning_tokens） */
+  reasoningTokens?: number;
+  /** 本次 LLM 调用耗时（毫秒），用于 tok/s 统计 */
+  durationMs?: number;
 }
 
 export type ChatFn = (messages: MessageItem[], tools: unknown[], onDelta?: (kind: 'reasoning' | 'content', text: string) => void) => Promise<ChatTurnResult>;
@@ -101,6 +107,10 @@ export class TurnLoop {
     let stepsUsed = 0;
     let inputTokens = 0;
     let outputTokens = 0;
+    let cachedTokens = 0;
+    let reasoningTokens = 0;
+    let llmDurationMs = 0;
+    const turnStartedAt = Date.now();
     let lastToolSignature: string | null = null;
     let repeatCount = 0;
     let finalContent = '';
@@ -132,6 +142,9 @@ export class TurnLoop {
       });
       inputTokens += turn.inputTokens ?? 0;
       outputTokens += turn.outputTokens ?? 0;
+      cachedTokens += turn.cachedTokens ?? 0;
+      reasoningTokens += turn.reasoningTokens ?? 0;
+      llmDurationMs += turn.durationMs ?? 0;
 
       if (turn.reasoning) {
         append('stream/chunk', { turnId: this.options.turnId, type: 'reasoning', chunk: turn.reasoning });
@@ -151,6 +164,10 @@ export class TurnLoop {
           inputTokens,
           outputTokens,
           totalTokens: inputTokens + outputTokens,
+          cachedTokens,
+          reasoningTokens,
+          llmDurationMs,
+          durationMs: Date.now() - turnStartedAt,
         });
         emit('turn-end', { stoppedReason: 'completed' });
         return { finalContent, stepsUsed, stoppedReason: 'completed', inputTokens, outputTokens };
@@ -189,6 +206,10 @@ export class TurnLoop {
             inputTokens,
             outputTokens,
             totalTokens: inputTokens + outputTokens,
+            cachedTokens,
+            reasoningTokens,
+            llmDurationMs,
+            durationMs: Date.now() - turnStartedAt,
           });
           emit('turn-end', { stoppedReason: 'repeat-loop' });
           return { finalContent, stepsUsed, stoppedReason: 'repeat-loop', inputTokens, outputTokens };
@@ -242,6 +263,10 @@ export class TurnLoop {
       inputTokens,
       outputTokens,
       totalTokens: inputTokens + outputTokens,
+      cachedTokens,
+      reasoningTokens,
+      llmDurationMs,
+      durationMs: Date.now() - turnStartedAt,
     });
     emit('turn-end', { stoppedReason: 'max-steps' });
     return { finalContent, stepsUsed, stoppedReason: 'max-steps', inputTokens, outputTokens };

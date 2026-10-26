@@ -61,6 +61,18 @@ describe('TC-01-08-003: 主会话顶栏布局重构（Token下拉 + 设置菜单
     assert.ok(!html.includes('>Purple Grapes Harness</span>'), '不得再用全称标题');
   });
 
+  it('Token 下拉面板含 DSH 对齐统计七项（轮数步数/tok·s/缓存命中/推理）', () => {
+    const usageBlock = html.match(/<details id="usage-dropdown"[\s\S]*?<\/details>/)?.[0] ?? '';
+    assert.ok(usageBlock.includes('id="usage-detail-turns"'), '面板必须含轮数/步数');
+    assert.ok(usageBlock.includes('id="usage-detail-tps"'), '面板必须含 tok/s');
+    assert.ok(usageBlock.includes('id="usage-detail-cache"'), '面板必须含缓存命中率');
+    assert.ok(usageBlock.includes('id="usage-detail-reasoning"'), '面板必须含推理 Token');
+    const script = inlineScripts();
+    assert.ok(script.includes('renderUsageStats'), '必须定义 renderUsageStats 聚合渲染');
+    assert.ok(script.includes('cachedTokens'), '统计必须聚合 cachedTokens');
+    assert.ok(script.includes('llmDurationMs'), 'tok/s 必须基于 llmDurationMs');
+  });
+
   it('设置下拉收纳语音/导出/自动保存三项', () => {
     const settingsBlock = html.match(/<details id="settings-dropdown"[\s\S]*?<\/details>/)?.[0] ?? '';
     assert.ok(settingsBlock.includes('toggleGlobalSpeech()'), '语音开关必须在设置菜单内');
