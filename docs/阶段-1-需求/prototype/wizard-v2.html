@@ -86,6 +86,11 @@
       <!-- ════════ 屏 1：接入模型 ════════ -->
       <div id="screen-1" class="wizard-screen flex-col p-6 space-y-4">
         <div class="text-lg font-bold text-white">第一步 · 接入模型</div>
+        <!-- 引导模式专属：已有配置徽标 + 快捷保留按钮 -->
+        <div id="guided-provider-existing" class="hidden flex items-center justify-between p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-800/50">
+          <span class="text-[11px] text-emerald-400 font-mono">✅ 已有 Provider：<b id="guided-provider-current">（演示）OpenDesign · 11 models</b></span>
+          <button onclick="keepExisting('provider')" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] whitespace-nowrap">保留现有配置，下一步 →</button>
+        </div>
         <div class="p-4 rounded-xl bg-[#090d16] border border-slate-800 space-y-3">
           <div>
             <label class="text-slate-400 text-[11px] block mb-1">Provider 名称</label>
@@ -119,6 +124,11 @@
       <!-- ════════ 屏 2：选择工作区 ════════ -->
       <div id="screen-2" class="wizard-screen flex-col p-6 space-y-4">
         <div class="text-lg font-bold text-white">第二步 · 选择工作区</div>
+        <!-- 引导模式专属：已有配置徽标 + 快捷保留按钮 -->
+        <div id="guided-ws-existing" class="hidden flex items-center justify-between p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-800/50">
+          <span class="text-[11px] text-emerald-400 font-mono">✅ 已有工作区：<b id="guided-ws-current">（演示）G:\Projects\Agent\harness</b></span>
+          <button onclick="keepExisting('ws')" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] whitespace-nowrap">保留现有配置，下一步 →</button>
+        </div>
         <div class="p-4 rounded-xl bg-[#090d16] border border-slate-800 space-y-3">
           <label class="text-slate-400 text-[11px] block">本地项目绝对路径</label>
           <div class="flex items-center space-x-2">
@@ -171,20 +181,49 @@
 
       <!-- ── 底部状态条 ── -->
       <div class="px-6 py-3 bg-[#0b1120] border-t border-slate-800 flex items-center justify-between">
-        <span class="text-[10px] text-slate-600">每一步自动保存 · 刷新可从断点继续</span>
+        <span class="text-[10px] text-slate-600">每一步自动保存 · 刷新可从断点继续 · 体验双模式：<button onclick="startWizard('first-run')" class="underline hover:text-slate-400">首启</button> / <button onclick="startWizard('guided')" class="underline hover:text-emerald-400">引导（已有配置）</button></span>
         <span id="wizard-status" class="text-[10px] text-amber-400 font-mono"></span>
       </div>
     </div>
   </div>
 
   <script>
-    // ═══ 原型状态机（模拟 wizardProgress 落盘/恢复） ═══
+    // ═══ 原型状态机（模拟 wizardProgress 落盘/恢复 + 双模式） ═══
     let currentStep = 0;
+    let wizardMode = 'first-run'; // 'first-run' | 'guided'
     const saved = JSON.parse(localStorage.getItem('pgh_wizard_v2_progress') || '{"step":0,"providerSaved":false,"wsSaved":false}');
     let providerSaved = saved.providerSaved || false;
     let wsSaved = saved.wsSaved || false;
 
     const LABELS = ['欢迎', '接入模型', '选择工作区', '完成'];
+
+    /**
+     * 双模式入口（对齐 spec §4.1）：
+     * first-run —— 完整四屏（欢迎屏起）；guided —— 跳过屏 0，显示「已有配置」快捷保留条，预填现有值。
+     * 通过 URL 参数体验：wizard-v2.html?mode=guided
+     */
+    function startWizard(mode) {
+      wizardMode = mode;
+      document.getElementById('screen-0').style.display = (mode === 'guided') ? 'none' : '';
+      document.getElementById('guided-provider-existing').classList.toggle('hidden', mode !== 'guided');
+      document.getElementById('guided-ws-existing').classList.toggle('hidden', mode !== 'guided');
+      // 引导模式预填“当前实际配置”（原型演示值）
+      if (mode === 'guided') {
+        document.getElementById('guided-provider-current').textContent = '（演示）OpenDesign · 11 models';
+        document.getElementById('guided-ws-current').textContent = '（演示）G:\\Projects\\Agent\\harness';
+        document.getElementById('w2-provider-name').value = 'OpenDesign';
+        document.getElementById('w2-provider-baseurl').value = 'https://amr-link.open-design.ai/v1';
+        document.getElementById('btn-save-provider').disabled = false;
+        document.getElementById('btn-save-ws').disabled = false;
+      }
+      goStep(mode === 'guided' ? 1 : 0);
+    }
+
+    /** 引导模式：保留现有配置，直接跳下一步（不修改任何已存项） */
+    function keepExisting(kind) {
+      if (kind === 'provider') { providerSaved = true; setStatus('✅ 保留现有 Provider（未修改）'); goStep(2); }
+      else { wsSaved = true; setStatus('✅ 保留现有工作区（未修改）'); goStep(3); }
+    }
 
     function goStep(n) {
       currentStep = n;
@@ -267,8 +306,12 @@
       setTimeout(() => { if (el.textContent === msg) el.textContent = ''; }, 2500);
     }
 
-    // ── 恢复断点（模拟刷新续走） ──
-    if (saved.step > 0 && saved.step <= 3) {
+    // ── 入口分发：URL ?mode=guided 优先，其次恢复断点 ──
+    const urlMode = new URLSearchParams(location.search).get('mode');
+    if (urlMode === 'guided') {
+      startWizard('guided');
+      setStatus('引导模式：已预填当前配置，可保留或修改');
+    } else if (saved.step > 0 && saved.step <= 3) {
       goStep(saved.step);
       setStatus('已从上次进度恢复（步骤 ' + (saved.step + 1) + '）');
     }
