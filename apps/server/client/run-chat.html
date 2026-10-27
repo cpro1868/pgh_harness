@@ -80,7 +80,19 @@
     .prose-dark tr:nth-child(even) {
       background: rgba(15, 23, 42, 0.4);
     }
-  </style>
+  
+    /* ═══ 向导 v2（TC-01-08-005） ═══ */
+    .wizard-screen { display: none; }
+    .wizard-screen.active { display: flex; }
+    .wizard-dot { width: 10px; height: 10px; border-radius: 9999px; border: 1.5px solid #475569; transition: all .2s; }
+    .wizard-dot.done { background: #059669; border-color: #059669; }
+    .wizard-dot.current { background: #2563eb; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.25); }
+    .value-card { transition: transform .15s, border-color .15s; }
+    .value-card:hover { transform: translateY(-2px); border-color: #334155; }
+    .info-strip { border-left: 3px solid #3b82f6; }
+    .path-valid { border-color: #059669 !important; }
+    .path-invalid { border-color: #e11d48 !important; }
+</style>
 </head>
 <body class="bg-[#070a12] text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
 
@@ -198,6 +210,14 @@
             class="w-full flex items-center space-x-1.5 px-2 py-1.5 rounded hover:bg-slate-800/70 text-slate-300 text-left transition"
           >
             <span>⬇️</span><span>导出对话</span>
+          </button>
+          <button
+            type="button"
+            onclick="startWizard('guided')"
+            title="重新走一遍配置引导（预填现有配置，可改可跳过，不会删除任何已有配置）"
+            class="w-full flex items-center space-x-1.5 px-2 py-1.5 rounded hover:bg-slate-800/70 text-slate-300 text-left transition"
+          >
+            <span>🧭</span><span>运行向导</span>
           </button>
           <label
             class="flex items-center justify-between px-2 py-1.5 rounded hover:bg-slate-800/70 cursor-pointer transition"
@@ -527,66 +547,162 @@
   </div>
 
   <!-- 首次启动破冰向导 (WBS-01-08-04 / D57)：冷启动两步打通端到端 -->
-  <div id="wizard-modal" class="hidden fixed inset-0 z-[70] bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-    <div class="w-full max-w-lg rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl overflow-hidden flex flex-col font-sans text-xs">
-      <div class="px-5 py-3.5 bg-[#131d38] border-b border-slate-800 flex items-center justify-between">
-        <div class="flex items-center space-x-2">
-          <span class="text-base">🚀</span>
-          <div>
-            <div class="text-sm font-bold text-white">一分钟破冰向导</div>
-            <div class="text-[10px] text-slate-400">接入首个模型 + 选择首个本地项目目录</div>
+  <div id="wizard-v2" class="hidden fixed inset-0 z-[80] bg-[#070a12]/95 backdrop-blur-md flex items-center justify-center p-4 overflow-auto">
+    <div class="w-full max-w-2xl rounded-2xl bg-[#0f172a] border border-slate-700 shadow-2xl overflow-hidden my-8">
+
+      <!-- ── 卡片头：品牌 + 进度点 ── -->
+      <div class="px-6 pt-5 pb-4 bg-[#131d38] border-b border-slate-800">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2.5">
+            <img src="ico/pgh.svg" alt="PG Harness" class="w-7 h-7 rounded shadow">
+            <span class="font-bold text-white text-sm tracking-wide">PG Harness · 首次配置向导</span>
           </div>
+          <button onclick="skipWizard()" class="text-[11px] text-slate-500 hover:text-slate-300 underline">跳过，稍后配置</button>
         </div>
-        <span id="wizard-step-badge" class="text-[10px] font-mono text-blue-300 bg-blue-950/60 border border-blue-800/50 px-2 py-0.5 rounded">步骤 1 / 2</span>
+        <div class="flex items-center justify-center space-x-3 mt-4">
+          <span id="wizard-dot-0" class="wizard-dot current" title="欢迎"></span>
+          <span class="w-8 h-px bg-slate-700"></span>
+          <span id="wizard-dot-1" class="wizard-dot" title="接入模型"></span>
+          <span class="w-8 h-px bg-slate-700"></span>
+          <span id="wizard-dot-2" class="wizard-dot" title="选择工作区"></span>
+          <span class="w-8 h-px bg-slate-700"></span>
+          <span id="wizard-dot-3" class="wizard-dot" title="完成"></span>
+        </div>
+        <div class="text-center text-[10px] text-slate-500 mt-1.5 font-mono" id="wizard-progress-label">欢迎</div>
       </div>
 
-      <!-- 步骤 1：接入首个模型 -->
-      <div id="wizard-step-1" class="p-5 space-y-3">
-        <div class="p-3 rounded-lg bg-[#090d16] border border-slate-800 space-y-2.5">
+<div id="wizard-screen-0" class="wizard-screen flex-col p-6 space-y-5">
+        <div class="text-center space-y-2 pt-2">
+          <div class="text-2xl font-bold text-white">欢迎使用 PG Harness</div>
+          <div class="text-slate-400 text-xs">你的自主编码智能体运行时平台 · 零 Native 依赖 · 可审计 · 沙箱红线</div>
+        </div>
+        <div class="grid grid-cols-3 gap-3">
+          <div class="value-card p-4 rounded-xl bg-[#090d16] border border-slate-800 text-center space-y-2">
+            <div class="text-2xl">🔌</div>
+            <div class="text-xs font-bold text-white">零依赖接入</div>
+            <div class="text-[10px] text-slate-500 leading-relaxed">任意 OpenAI 兼容端点，填 Key 即用，无需编译环境</div>
+          </div>
+          <div class="value-card p-4 rounded-xl bg-[#090d16] border border-slate-800 text-center space-y-2">
+            <div class="text-2xl">🧠</div>
+            <div class="text-xs font-bold text-white">自主 ReAct 循环</div>
+            <div class="text-[10px] text-slate-500 leading-relaxed">读码 → 判断 → 修改 → 测试 → 提交，全流程可审计回放</div>
+          </div>
+          <div class="value-card p-4 rounded-xl bg-[#090d16] border border-slate-800 text-center space-y-2">
+            <div class="text-2xl">🔒</div>
+            <div class="text-xs font-bold text-white">沙箱红线</div>
+            <div class="text-[10px] text-slate-500 leading-relaxed">权限三档自由切换，硬性红线（推送/关机/格式化）永不放行</div>
+          </div>
+        </div>
+        <div class="info-strip pl-3 py-2 bg-[#090d16] rounded-r text-[11px] text-slate-400 leading-relaxed">
+          接下来只需两步：<b class="text-slate-200">接入一个模型</b> + <b class="text-slate-200">选择一个本地项目目录</b>，约一分钟。
+          每一步都会自动保存，中途刷新页面可从断点继续。
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <span></span>
+          <button onclick="goWizardStep(1)" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition">开始配置 →</button>
+        </div>
+      </div>
+
+<div id="wizard-screen-1" class="wizard-screen flex-col p-6 space-y-4">
+        <div class="text-lg font-bold text-white">第一步 · 接入模型</div>
+        <!-- 引导模式专属：已有配置徽标 + 快捷保留按钮 -->
+        <div id="guided-provider-existing" class="hidden flex items-center justify-between p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-800/50">
+          <span class="text-[11px] text-emerald-400 font-mono">✅ 已有 Provider：<b id="guided-provider-current">（演示）OpenDesign · 11 models</b></span>
+          <button onclick="keepExisting('provider')" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] whitespace-nowrap">保留现有配置，下一步 →</button>
+        </div>
+        <div class="p-4 rounded-xl bg-[#090d16] border border-slate-800 space-y-3">
           <div>
-            <label class="text-slate-400 block mb-1">Provider 名称：</label>
-            <input id="wizard-provider-name" type="text" value="DeepSeek" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 focus:outline-none focus:border-blue-500">
+            <label class="text-slate-400 text-[11px] block mb-1">Provider 名称</label>
+            <input id="wizard-provider-name" type="text" value="DeepSeek" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-slate-200 text-xs focus:outline-none focus:border-blue-500">
           </div>
           <div>
-            <label class="text-slate-400 block mb-1">Base URL：</label>
-            <input id="wizard-provider-baseurl" type="text" value="https://api.deepseek.com/v1" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+            <label class="text-slate-400 text-[11px] block mb-1">Base URL（OpenAI 兼容端点）</label>
+            <input id="wizard-provider-baseurl" type="text" value="https://api.deepseek.com/v1" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500">
           </div>
           <div>
-            <label class="text-slate-400 block mb-1">API Key：</label>
-            <input id="wizard-provider-key" type="password" placeholder="sk-..." class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
+            <label class="text-slate-400 text-[11px] block mb-1">API Key</label>
+            <input id="wizard-provider-key" type="password" placeholder="sk-..." class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500">
           </div>
           <div class="flex items-center space-x-2">
-            <button type="button" onclick="wizardProbeModels()" id="wizard-probe-btn" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 whitespace-nowrap">探测可用模型</button>
-            <select id="wizard-model-select" class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-2 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
-              <option value="">（可选）探测后选择模型</option>
+            <button type="button" onclick="wizardProbeModels()" id="wizard-probe-btn" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs whitespace-nowrap">🔍 探测可用模型</button>
+            <select id="wizard-model-select" disabled class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-slate-200 font-mono text-xs disabled:opacity-50">
+              <option value="">（先探测，再选择默认模型）</option>
             </select>
           </div>
+          <div id="probe-result" class="hidden text-[11px] font-mono"></div>
         </div>
-        <button type="button" onclick="wizardSaveProvider()" class="w-full py-2 rounded bg-blue-600 hover:bg-blue-500 text-white font-semibold">保存模型并继续 →</button>
+        <div class="info-strip pl-3 py-2 bg-[#090d16] rounded-r text-[11px] text-slate-400 leading-relaxed">
+          ℹ️ 为什么需要：没有模型，Agent 无法思考。<b class="text-slate-300">API Key 使用 AES-256-GCM 加密存储在本机，明文永不出机、不入日志。</b>
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <button onclick="goWizardStep(0)" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs">← 上一步</button>
+          <button onclick="wizardSaveProvider()" id="btn-save-provider" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition disabled:opacity-50" disabled>保存并继续 →</button>
+        </div>
       </div>
 
-      <!-- 步骤 2：选择首个项目目录 -->
-      <div id="wizard-step-2" class="p-5 space-y-3 hidden">
-        <div class="p-3 rounded-lg bg-[#090d16] border border-slate-800 space-y-2">
-          <label class="text-slate-400 block">本地项目绝对路径：</label>
+<div id="wizard-screen-2" class="wizard-screen flex-col p-6 space-y-4">
+        <div class="text-lg font-bold text-white">第二步 · 选择工作区</div>
+        <!-- 引导模式专属：已有配置徽标 + 快捷保留按钮 -->
+        <div id="guided-ws-existing" class="hidden flex items-center justify-between p-2.5 rounded-lg bg-emerald-950/30 border border-emerald-800/50">
+          <span class="text-[11px] text-emerald-400 font-mono">✅ 已有工作区：<b id="guided-ws-current">（演示）G:\Projects\Agent\harness</b></span>
+          <button onclick="keepExisting('ws')" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-[11px] whitespace-nowrap">保留现有配置，下一步 →</button>
+        </div>
+        <div class="p-4 rounded-xl bg-[#090d16] border border-slate-800 space-y-3">
+          <label class="text-slate-400 text-[11px] block">本地项目绝对路径</label>
           <div class="flex items-center space-x-2">
-            <input id="wizard-ws-path" type="text" placeholder="例如：G:\Projects\my-app" class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-slate-200 font-mono focus:outline-none focus:border-blue-500">
-            <button type="button" onclick="wizardBrowseFolder()" id="wizard-browse-btn" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 whitespace-nowrap">浏览目录…</button>
+            <input id="wizard-ws-path" type="text" placeholder="例如：G:\Projects\my-app"
+                   oninput="wizardValidatePathLive()"
+                   class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500">
+            <button type="button" onclick="wizardBrowseFolder()" id="wizard-browse-btn" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 text-xs whitespace-nowrap">📁 浏览…</button>
           </div>
-          <span class="text-[10px] text-slate-500 block">也可稍后在「工作区治理中心」用应用内目录浏览器登记更多项目。</span>
+          <div id="ws-validate" class="text-[11px] font-mono hidden"></div>
         </div>
-        <div class="flex items-center space-x-2">
-          <button type="button" onclick="wizardGoStep(1)" class="px-3 py-2 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700">← 上一步</button>
-          <button type="button" onclick="wizardFinish()" class="flex-1 py-2 rounded bg-emerald-700 hover:bg-emerald-600 text-white font-semibold">完成破冰，进入工作台</button>
+        <div class="info-strip pl-3 py-2 bg-[#090d16] rounded-r text-[11px] text-slate-400 leading-relaxed">
+          ℹ️ 为什么需要：Agent 的一切读写都<b class="text-slate-300">物理锁定在此目录内</b>，越界访问会被沙箱拦截。之后可随时在「工作区管理」添加更多项目。
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <button onclick="goWizardStep(1)" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs">← 上一步</button>
+          <button onclick="wizardFinish()" id="btn-save-ws" class="px-6 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow transition disabled:opacity-50" disabled>保存并继续 →</button>
         </div>
       </div>
 
-      <div class="px-5 py-3 bg-[#0b1120] border-t border-slate-800 flex items-center justify-between">
-        <button type="button" onclick="skipWizard()" class="text-[10px] text-slate-500 hover:text-slate-300 underline">跳过向导，稍后配置</button>
+<div id="wizard-screen-3" class="wizard-screen flex-col p-6 space-y-5">
+        <div class="text-center pt-2 space-y-1">
+          <div class="text-3xl step-check">🎉</div>
+          <div class="text-lg font-bold text-white">配置完成，准备就绪</div>
+        </div>
+        <div class="space-y-2">
+          <div class="flex items-center justify-between p-3 rounded-lg bg-[#090d16] border border-emerald-900/50">
+            <span class="text-xs text-slate-300">✅ 模型</span>
+            <span class="text-xs font-mono text-emerald-400" id="wizard-done-model">deepseek-chat（DeepSeek）</span>
+          </div>
+          <div class="flex items-center justify-between p-3 rounded-lg bg-[#090d16] border border-emerald-900/50">
+            <span class="text-xs text-slate-300">✅ 工作区</span>
+            <span class="text-xs font-mono text-emerald-400" id="wizard-done-ws">G:\Projects\my-app</span>
+          </div>
+        </div>
+        <div class="p-4 rounded-xl bg-[#090d16] border border-slate-800 space-y-2">
+          <div class="text-[11px] font-bold text-slate-300 mb-1">📍 接下来你可以：</div>
+          <div class="text-[11px] text-slate-400 space-y-1.5 leading-relaxed">
+            <div>💬 在对话里直接下指令——建议从「<span class="text-slate-200">阅读项目结构并总结</span>」开始，验证模型连通</div>
+            <div>🔌 加更多模型：左侧导航 → <span class="text-slate-200">Provider 资产池</span></div>
+            <div>📁 加更多工作区：左侧导航 → <span class="text-slate-200">工作区管理</span>（支持应用内目录浏览器）</div>
+            <div>🛡️ 权限三档随时可调：对话框右上角下拉（只读 / 标准 / 完全授权）</div>
+          </div>
+        </div>
+        <div class="flex items-center justify-between pt-1">
+          <button onclick="goWizardStep(2)" class="px-4 py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs">← 上一步</button>
+          <button onclick="wizardFinish()" class="px-6 py-2 rounded-lg bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold shadow transition">🚀 进入工作台</button>
+        </div>
+      </div>
+
+      <div class="px-6 py-3 bg-[#0b1120] border-t border-slate-800 flex items-center justify-between">
+        <span class="text-[10px] text-slate-600">每一步自动保存 · 刷新可从断点继续</span>
         <span id="wizard-status" class="text-[10px] text-amber-400 font-mono"></span>
       </div>
     </div>
   </div>
+
 
   <script>
     let activeSessionId = null;
