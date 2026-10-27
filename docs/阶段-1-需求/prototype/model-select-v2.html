@@ -119,7 +119,7 @@
       document.getElementById('ms-panel').classList.toggle('hidden');
       if (!document.getElementById('ms-panel').classList.contains('hidden')) renderPanel();
     }
-    document.addEventListener('click', (e) => {
+    document.addEventListener('mousedown', (e) => {
       if (!document.getElementById('w2-model-select').contains(e.target)) {
         document.getElementById('ms-panel').classList.add('hidden');
       }
