@@ -36,9 +36,9 @@ describe('TC-01-08-003: 主会话顶栏布局重构（Token下拉 + 设置菜单
   });
 
   it('模型下拉收窄：max-width 约束 + 短名渲染 + provider 悬停提示', () => {
-    const selectTag = html.match(/<select id="topbar-model-select"[^>]*>/)?.[0] ?? '';
-    assert.ok(selectTag.includes('max-w-[160px]'), '模型 select 必须收窄到 160px');
-    assert.ok(selectTag.includes('truncate'), '超长模型名必须 CSS 截断');
+    // v2：原生 select 隐藏为状态存储，收窄约束转移至自定义触发钮（160px）
+    assert.ok(html.includes('id="ms-trigger"') && /w-\[160px\]/.test(html.slice(html.indexOf('id="ms-trigger"') - 100, html.indexOf('id="ms-trigger"') + 300)), '触发钮必须收窄到 160px');
+    assert.ok(html.includes('truncate') && html.includes('id="ms-current"'), '超长模型名必须 CSS 截断（ms-current）');
     const script = inlineScripts();
     assert.ok(!/opt\.textContent = `\$\{m\.id\} \(\$\{p\.name\}\)`/.test(script), 'option 文字不得再拼接 provider 后缀');
     assert.ok(script.includes('opt.title ='), 'option 必须带 title 悬停提示 provider');

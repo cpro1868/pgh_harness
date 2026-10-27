@@ -92,6 +92,16 @@
     .info-strip { border-left: 3px solid #3b82f6; }
     .path-valid { border-color: #059669 !important; }
     .path-invalid { border-color: #e11d48 !important; }
+    /* ═══ 模型选择器 v2（TC-01-08-006） ═══ */
+    .ms-panel { animation: ms-pop .12s ease; }
+    @keyframes ms-pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .ms-group-header { transition: background .12s; }
+    .ms-group-header:hover { background: rgba(59,130,246,.12); }
+    .ms-group-arrow { transition: transform .15s; display: inline-block; }
+    .ms-group.open .ms-group-arrow { transform: rotate(90deg); }
+    .ms-model-row { transition: background .1s; }
+    .ms-model-row:hover { background: rgba(59,130,246,.18); }
+    .ms-model-row.selected { background: rgba(37,99,235,.3); }
 </style>
 </head>
 <body class="bg-[#070a12] text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
@@ -122,11 +132,20 @@
           <span>➕ 新登记</span>
         </a>
       </div>
-      <!-- 模型选择（紧跟工作区之后；收窄：短名 + 悬停提示 provider） -->
-      <select id="topbar-model-select" title="选择本轮对话使用的模型" class="bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs focus:outline-none focus:border-blue-500 max-w-[160px] truncate">
+      <!-- 模型选择器 v2：隐藏原生 select 作状态存储（兼容既有 6 处引用），自定义分组折叠下拉为视觉层 -->
+      <select id="topbar-model-select" class="hidden" onchange="syncModelPanelFromSelect()">
         <option value="deepseek-chat">deepseek-chat</option>
         <option value="deepseek-reasoner">deepseek-reasoner (R1)</option>
       </select>
+      <div id="model-select-v2" class="relative">
+        <button id="ms-trigger" type="button" onclick="toggleModelPanel(event)"
+                title="选择本轮对话使用的模型"
+                class="flex items-center justify-between w-[160px] bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs hover:border-blue-500 transition">
+          <span id="ms-current" class="truncate">deepseek-chat</span>
+          <span class="text-slate-600 ml-1">▾</span>
+        </button>
+        <div id="ms-panel" class="ms-panel hidden absolute left-0 top-full mt-1 w-[280px] max-h-[420px] overflow-y-auto rounded-lg border border-slate-700 bg-[#0d1424] shadow-xl shadow-black/60 z-50"></div>
+      </div>
       <!-- 审批等待徽标：权限裁决挂起时高亮闪烁，杜绝"卡在调度中"误判 -->
       <span id="approval-waiting-badge" class="hidden items-center space-x-1 px-2 py-0.5 rounded bg-amber-600/90 text-white font-mono text-[10px] font-bold animate-pulse shadow">
         ⏸ 等待授权
@@ -1209,6 +1228,7 @@
             }
           });
         }
+        syncModelPanelFromSelect();
       } catch (err) {
         console.warn('Load models error:', err);
       }
@@ -1894,6 +1914,7 @@
             select.value = lastTurn.model;
           }
         }
+        syncModelPanelFromSelect(); // 回填后同步分组面板（触发钮文字/当前组徽标）
       }
 
       for (const turn of turns) {
@@ -3025,6 +3046,107 @@
       const el = document.getElementById('wizard-status');
       if (el) el.textContent = text;
     }
+
+    // ═══ 模型选择器 v2：Provider 分组折叠下拉（TC-01-08-006） ═══
+    const openModelGroups = new Set(); // 展开状态记忆（provider id）
+    let modelPanelRendered = false;
+
+    /** 从隐藏原生 select 读取当前值，渲染分组面板 + 同步触发钮文字。 */
+    function syncModelPanelFromSelect() {
+      const select = document.getElementById('topbar-model-select');
+      if (!select) return;
+      // 触发钮显示当前选中模型
+      const current = document.getElementById('ms-current');
+      if (current) current.textContent = select.value || 'deepseek-chat';
+      // 按原生 option 的 dataset.providerId 分组
+      const groups = new Map();
+      [...select.options].forEach((opt) => {
+        const pid = opt.dataset.providerId || 'default';
+        if (!groups.has(pid)) groups.set(pid, { name: (opt.title || '').split(' · ').pop() || pid, models: [] });
+        groups.get(pid).models.push({ id: opt.value, title: opt.title || opt.value });
+      });
+      // 当前选中模型所在组默认展开
+      const selectedOpt = select.selectedOptions[0];
+      if (selectedOpt) openModelGroups.add(selectedOpt.dataset.providerId || 'default');
+      renderModelPanel(groups);
+    }
+
+    function renderModelPanel(groups) {
+      const panel = document.getElementById('ms-panel');
+      if (!panel) return;
+      const select = document.getElementById('topbar-model-select');
+      panel.innerHTML = [...groups.entries()].map(([pid, g]) => {
+        const open = openModelGroups.has(pid);
+        const hasCurrent = [...select.options].some((o) => o.value === select.value && (o.dataset.providerId || 'default') === pid);
+        const rows = open ? g.models.map((m) => {
+          const selected = select.value === m.id;
+          return `<div class="ms-model-row ${selected ? 'selected' : ''} pl-8 pr-3 py-1.5 cursor-pointer flex items-center justify-between" onclick="event.stopPropagation(); pickModel('${pid}', '${m.id}')">
+            <span class="font-mono text-[11px] ${selected ? 'text-blue-300 font-bold' : 'text-slate-300'}">${m.id}</span>
+            ${selected ? '<span class="text-blue-400 text-[10px]">✓</span>' : ''}
+          </div>`;
+        }).join('') : '';
+        return `
+          <div class="ms-group ${open ? 'open' : ''} border-b border-slate-800/60 last:border-b-0">
+            <div class="ms-group-header flex items-center justify-between px-3 py-2 cursor-pointer select-none" onclick="event.stopPropagation(); toggleModelGroup('${pid}')">
+              <div class="flex items-center space-x-2 min-w-0">
+                <span class="ms-group-arrow text-slate-500 text-[10px] ${open ? 'rotate-90' : ''}">▶</span>
+                <span class="text-[11px] font-bold ${hasCurrent ? 'text-blue-300' : 'text-slate-300'} truncate">${g.name}</span>
+                ${hasCurrent ? '<span class="text-[9px] px-1 rounded bg-blue-950/60 text-blue-300 font-mono">当前</span>' : ''}
+              </div>
+              <span class="text-[10px] text-slate-600 font-mono">${g.models.length}</span>
+            </div>
+            ${rows}
+          </div>`;
+      }).join('');
+    }
+
+    function toggleModelGroup(pid) {
+      if (openModelGroups.has(pid)) openModelGroups.delete(pid);
+      else openModelGroups.add(pid);
+      // 重建前重算分组（从原生 select 读取，保持单一事实来源）
+      const select = document.getElementById('topbar-model-select');
+      const groups = new Map();
+      [...select.options].forEach((opt) => {
+        const gid = opt.dataset.providerId || 'default';
+        if (!groups.has(gid)) groups.set(gid, { name: (opt.title || '').split(' · ').pop() || gid, models: [] });
+        groups.get(gid).models.push({ id: opt.value });
+      });
+      renderModelPanel(groups);
+    }
+
+    function toggleModelPanel(ev) {
+      ev.stopPropagation();
+      const panel = document.getElementById('ms-panel');
+      panel.classList.toggle('hidden');
+      if (!panel.classList.contains('hidden')) syncModelPanelFromSelect();
+    }
+
+    /** 选中模型：同步隐藏原生 select（value + dataset.providerId 语义供既有 6 处引用），收起面板。 */
+    function pickModel(pid, mid) {
+      const select = document.getElementById('topbar-model-select');
+      const opt = [...select.options].find((o) => o.value === mid && (o.dataset.providerId || 'default') === pid);
+      if (opt) {
+        select.value = mid;
+        // dataset.providerId 挂到 select 自身（供 runStream 的 selectedOptions 语义兼容读取）
+        delete select.dataset.providerId;
+        select.dataset.providerId = pid;
+      }
+      // 触发钮显示新模型
+      const current = document.getElementById('ms-current');
+      if (current) current.textContent = mid;
+      // 选中后收起面板，记忆该组展开
+      openModelGroups.clear();
+      openModelGroups.add(pid);
+      document.getElementById('ms-panel').classList.add('hidden');
+    }
+
+    // 外部点击关闭（mousedown 判定：分组展开重建 DOM 后 click 的 contains 会误判，mousedown 在重建前完成）
+    document.addEventListener('mousedown', (e) => {
+      const container = document.getElementById('model-select-v2');
+      if (container && !container.contains(e.target)) {
+        document.getElementById('ms-panel').classList.add('hidden');
+      }
+    });
 
     // ═══ 向导 v2 双模式状态机（TC-01-08-005） ═══
     let wizardMode = 'first-run';
