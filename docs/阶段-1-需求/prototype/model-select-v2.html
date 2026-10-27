@@ -108,7 +108,7 @@
       const p = PROVIDERS.find(x => x.id === pid);
       document.getElementById('ms-current').textContent = mid;
       document.getElementById('ms-selected-label').textContent = mid + ' · ' + p.name;
-      // 选中后收起面板（记忆该组展开）
+      // 选中模型后收起面板（组保持展开状态，下次打开仍在该组）
       openGroups.clear(); openGroups.add(pid);
       document.getElementById('ms-panel').classList.add('hidden');
       renderPanel();
