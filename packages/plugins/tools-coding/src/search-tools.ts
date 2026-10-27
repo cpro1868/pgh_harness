@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { WORKSPACE_SKIP_DIRS } from '../../../core/src/workspace-skip.ts';
 
 export interface SearchHit {
   file: string;
@@ -38,7 +39,8 @@ function globToRegExp(pattern: string): RegExp {
 
 export class SearchTools {
   public readonly workspacePath: string;
-  private static readonly SKIP_DIRS = new Set(['node_modules', '.git', 'dist', 'build', '.next', 'coverage']);
+  // 统一屏蔽清单（workspace-skip.ts 单一来源）+ 隐藏目录兜底
+  private static readonly SKIP_DIRS = WORKSPACE_SKIP_DIRS;
 
   constructor(workspacePath: string) {
     this.workspacePath = path.resolve(workspacePath);
@@ -57,7 +59,7 @@ export class SearchTools {
       }
       for (const entry of entries) {
         if (results.length >= limit) return;
-        if (entry.isDirectory() && SearchTools.SKIP_DIRS.has(entry.name)) continue;
+        if (entry.isDirectory() && (SearchTools.SKIP_DIRS.has(entry.name) || entry.name.startsWith('.'))) continue;
         const full = path.join(dir, entry.name);
         const rel = path.relative(this.workspacePath, full).replace(/\\/g, '/');
         if (entry.isDirectory()) {
@@ -84,7 +86,7 @@ export class SearchTools {
       }
       for (const entry of entries) {
         if (hits.length >= limit) return;
-        if (entry.isDirectory() && SearchTools.SKIP_DIRS.has(entry.name)) continue;
+        if (entry.isDirectory() && (SearchTools.SKIP_DIRS.has(entry.name) || entry.name.startsWith('.'))) continue;
         const full = path.join(dir, entry.name);
         if (entry.isDirectory()) {
           walk(full);
@@ -111,3 +113,4 @@ export class SearchTools {
     return hits;
   }
 }
+

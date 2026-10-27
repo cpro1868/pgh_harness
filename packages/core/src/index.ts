@@ -1,4 +1,5 @@
 export * from './git-rollback.ts';
+export * from './workspace-skip.ts';
 export * from './context-governor.ts';
 export * from './turn-loop.ts';
 export * from './workspace-lock.ts';

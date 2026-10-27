@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { WORKSPACE_SKIP_DIRS } from './workspace-skip.ts';
 
 export interface TurnCheckpoint {
   turnId: string;
@@ -25,12 +26,9 @@ export class GitRollbackManager {
   /**
    * 快照范围与 Agent 工具语义对齐：跳过隐藏目录（.obsidian/.smart-env 等工具缓存）
    * 与依赖目录。这些目录体积占比常超 95%（实测 180MB+），且 Agent 不会触碰、撤销无需恢复。
-   * 同时跳过快照本会膨胀内存的二进制产物目录（dist/build 等）。
+   * 清单来自 workspace-skip.ts 统一共享（SearchTools / files 端点同源）。
    */
-  private static readonly SKIP_DIRS = new Set([
-    '.git', 'node_modules', 'dist', 'build', '.next', 'coverage',
-    '.obsidian', '.smart-env', '.smart-composer', '.aionrs', '.trash',
-  ]);
+  private static readonly SKIP_DIRS = WORKSPACE_SKIP_DIRS;
 
   private scanWorkspaceRelativeFiles(): string[] {
     const list: string[] = [];

@@ -16,7 +16,7 @@ import { retryWithBackoff } from './security/retry.ts';
 import { resolveMasterKey } from './security/master-key.ts';
 import { sanitizeProxyConfig } from './security/proxy-config.ts';
 import type { ProviderProxyOption } from './network/proxy-dispatcher.ts';
-import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff, PipelineRunner, LockDelegator, ArtifactManager, parseBpmnXml, BpmnWorkflowEngine } from '../../../packages/core/src/index.ts';
+import { TurnLoop, ContextGovernor, GitRollbackManager, WorkspaceWriteLock, QuestionBroker, ApprovalBroker, PermissionGate, computeLineDiff, PipelineRunner, LockDelegator, ArtifactManager, parseBpmnXml, BpmnWorkflowEngine, WORKSPACE_SKIP_DIRS } from '../../../packages/core/src/index.ts';
 import type { ChatTurnResult, MessageItem, QuestionPrompt, PermissionPreset, PermissionRule, ToolExecutionResult, PipelineExecutionOutcome, GateDecision, StageArtifactSnapshot, StageRunResult, BpmnNode, NodeExecutionResult } from '../../../packages/core/src/index.ts';
 import { FileTools, ShellExecutor, SearchTools } from '../../../packages/plugins/tools-coding/src/index.ts';
 import {
@@ -927,6 +927,41 @@ export class HarnessServer {
         this.json(res, { code: 0, data: listing });
       } catch (err) {
         this.json(res, { code: 500, message: `列出目录失败: ${(err as Error).message}` });
+      }
+      return;
+    }
+
+    // 工作区文件列表（输入建议 @ 引用用）：仅工作区内、跳过统一屏蔽清单与隐藏目录
+    if (method === 'GET' && url.pathname === '/api/workspace/files') {
+      const wsPath = url.searchParams.get('workspace') || '';
+      const prefix = (url.searchParams.get('prefix') || '').toLowerCase();
+      const limit = Math.min(Number(url.searchParams.get('limit') || 50), 200);
+      const resolvedWs = path.resolve(wsPath);
+      if (!wsPath || !fs.existsSync(resolvedWs) || !fs.statSync(resolvedWs).isDirectory()) {
+        this.json(res, { code: 400, message: '工作区路径无效' });
+        return;
+      }
+      try {
+        const results: string[] = [];
+        const walk = (dir: string, rel: string): void => {
+          if (results.length >= limit) return;
+          let entries: fs.Dirent[];
+          try { entries = fs.readdirSync(dir, { withFileTypes: true }); } catch { return; }
+          for (const entry of entries) {
+            if (results.length >= limit) return;
+            const childRel = rel ? `${rel}/${entry.name}` : entry.name;
+            if (entry.isDirectory()) {
+              if (WORKSPACE_SKIP_DIRS.has(entry.name) || entry.name.startsWith('.')) continue;
+              walk(path.join(dir, entry.name), childRel);
+            } else {
+              if (!prefix || childRel.toLowerCase().includes(prefix)) results.push(childRel);
+            }
+          }
+        };
+        walk(resolvedWs, '');
+        this.json(res, { code: 0, data: results });
+      } catch (err) {
+        this.json(res, { code: 500, message: `列出工作区文件失败: ${(err as Error).message}` });
       }
       return;
     }

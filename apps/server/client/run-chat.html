@@ -315,11 +315,14 @@
           </div>
 
           <!-- 输入主卡片容器 -->
-          <div class="border border-slate-700/80 rounded-xl bg-[#080d1a] p-3 focus-within:border-blue-500 transition shadow-inner">
+          <div class="relative border border-slate-700/80 rounded-xl bg-[#080d1a] p-3 focus-within:border-blue-500 transition shadow-inner">
+            <!-- 输入建议浮动菜单（/ 命令 · Skills · @ 文件引用） -->
+            <div id="composer-suggest" class="hidden absolute bottom-full left-0 right-0 mb-2 rounded-lg border border-slate-700 bg-[#0d1424] shadow-xl shadow-black/60 max-h-64 overflow-y-auto z-40"></div>
             <textarea
               id="composer-textarea"
               placeholder="输入任务指令... (按 Enter 直接发送，Shift+Enter 换行)"
               rows="2"
+              oninput="handleComposerInput()"
               class="w-full bg-transparent border-0 resize-none text-xs text-white placeholder-slate-500 focus:outline-none leading-relaxed"
             ></textarea>
 
@@ -2825,6 +2828,14 @@
     function setupKeyboardListener() {
       const textarea = document.getElementById('composer-textarea');
       textarea.addEventListener('keydown', (e) => {
+        // 输入建议菜单打开时按键优先级高于发送（TC-01-03-010）
+        if (suggestState.open) {
+          if (e.key === 'ArrowDown') { e.preventDefault(); moveSuggestHighlight(1); return; }
+          if (e.key === 'ArrowUp') { e.preventDefault(); moveSuggestHighlight(-1); return; }
+          if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); pickSuggest(); return; }
+          if (e.key === 'Tab') { e.preventDefault(); pickSuggest(); return; }
+          if (e.key === 'Escape') { e.preventDefault(); closeComposerSuggest(); return; }
+        }
         if (e.key === 'Enter' && !e.shiftKey) {
           e.preventDefault();
           if (!isRunning) {
@@ -2832,6 +2843,119 @@
           }
         }
       });
+    }
+
+    // ═══ 输入建议：/ 命令 · Skills 子候选 · @ 文件引用（TC-01-03-010） ═══
+    const suggestState = { open: false, items: [], highlight: 0, trigger: '', filter: '', atIdx: -1, fileTimer: null, fileSeq: 0, shownCount: 0 };
+
+    function handleComposerInput() {
+      window.__hciCalls = (window.__hciCalls || 0) + 1;
+      window.__hciLast = document.getElementById('composer-textarea').value.slice(0, 12);
+      const textarea = document.getElementById('composer-textarea');
+      const value = textarea.value;
+      const cursor = textarea.selectionStart ?? value.length;
+      const before = value.slice(0, cursor);
+
+      // 触发 1：行首 '/' → 斜杠命令 + Skills 子候选
+      if (/^\s*\//.test(before)) {
+        const filter = before.replace(/^\s*\//, '').trimStart().toLowerCase();
+        openSuggest('/', filter);
+        return;
+      }
+      // 触发 2：行内 '@' → 文件引用（取光标前最近 @ 到光标为过滤词）
+      const atIdx = before.lastIndexOf('@');
+      if (atIdx >= 0 && !/\s/.test(before.slice(atIdx + 1))) {
+        const filter = before.slice(atIdx + 1).toLowerCase();
+        openSuggest('@', filter, atIdx);
+        return;
+      }
+      closeComposerSuggest();
+    }
+
+    function openSuggest(trigger, filter, atIdx) {
+      suggestState.trigger = trigger;
+      suggestState.filter = filter;
+      suggestState.atIdx = atIdx ?? -1;
+
+      if (trigger === '/') {
+        const items = [{ icon: '⚡', name: '/skill', label: '调用技能', desc: '执行 /skill <name> 注入技能正文' }];
+        for (const s of (window.__enabledSkillsCache || [])) {
+          items.push({ icon: '🧩', name: '/skill ' + s.name, label: s.name, desc: (s.description || '').slice(0, 60) });
+        }
+        renderSuggestItems(items.filter((it) => it.name.toLowerCase().includes(filter)));
+      } else if (trigger === '@') {
+        // 文件候选异步拉取（400ms 去抖）；快照调用时的 trigger/filter，回调时若已切换触发态则丢弃过期结果
+        clearTimeout(suggestState.fileTimer);
+        const wsSnapshot = activeWorkspacePath;
+        const seqSnapshot = ++suggestState.fileSeq;
+        suggestState.fileTimer = setTimeout(async () => {
+          if (!wsSnapshot || suggestState.trigger !== '@' || suggestState.fileSeq !== seqSnapshot) return;
+          try {
+            const res = await fetch(`/api/workspace/files?workspace=${encodeURIComponent(wsSnapshot)}&prefix=${encodeURIComponent(filter)}&limit=50`);
+            const body = await res.json();
+            if (body.code !== 0 || suggestState.trigger !== '@' || suggestState.fileSeq !== seqSnapshot) return;
+            const items = (body.data || []).map((f) => ({ icon: '📄', name: '@' + f, label: f.split('/').pop(), desc: f }));
+            renderSuggestItems(items);
+          } catch { /* 拉取失败静默 */ }
+        }, 400);
+        return; // 异步渲染，先不置 open
+      }
+      suggestState.open = suggestState.items.length > 0;
+      document.getElementById('composer-suggest').classList.toggle('hidden', !suggestState.open);
+    }
+
+    function renderSuggestItems(items) {
+      suggestState.items = items;
+      suggestState.highlight = 0;
+      suggestState.open = items.length > 0;
+      const box = document.getElementById('composer-suggest');
+      box.classList.toggle('hidden', !suggestState.open);
+      if (!items.length) { box.innerHTML = ''; return; }
+      box.innerHTML = items.slice(0, 8).map((it, idx) => `
+        <div class="suggest-item px-3 py-2 cursor-pointer flex items-start space-x-2 ${idx === 0 ? 'bg-blue-950/40' : 'hover:bg-slate-800/60'}" data-idx="${idx}" onclick="pickSuggest(${idx})">
+          <span class="text-sm">${it.icon}</span>
+          <div class="min-w-0">
+            <div class="text-xs font-mono text-slate-200 truncate">${escapeHtml(it.name)}</div>
+            <div class="text-[10px] text-slate-500 truncate">${escapeHtml(it.desc || '')}</div>
+          </div>
+        </div>
+      `).join('');
+      suggestState.shownCount = Math.min(items.length, 8);
+    }
+
+    function moveSuggestHighlight(delta) {
+      if (!suggestState.open || !suggestState.shownCount) return;
+      suggestState.highlight = (suggestState.highlight + delta + suggestState.shownCount) % suggestState.shownCount;
+      const box = document.getElementById('composer-suggest');
+      [...box.querySelectorAll('.suggest-item')].forEach((el, i) => {
+        el.classList.toggle('bg-blue-950/40', i === suggestState.highlight);
+        el.classList.toggle('hover:bg-slate-800/60', i !== suggestState.highlight);
+      });
+    }
+
+    function pickSuggest(idx) {
+      const item = suggestState.items[idx ?? suggestState.highlight];
+      if (!item) return;
+      const textarea = document.getElementById('composer-textarea');
+      if (suggestState.trigger === '/') {
+        textarea.value = item.name + ' ';
+      } else if (suggestState.trigger === '@') {
+        // 替换光标前 @filter 段为 @path
+        const cursor = textarea.selectionStart ?? textarea.value.length;
+        const before = textarea.value.slice(0, cursor);
+        const atIdx = before.lastIndexOf('@');
+        textarea.value = textarea.value.slice(0, atIdx) + item.name + ' ' + textarea.value.slice(cursor);
+      }
+      closeComposerSuggest();
+      textarea.focus();
+      const caret = textarea.value.length;
+      textarea.setSelectionRange(caret, caret);
+    }
+
+    function closeComposerSuggest() {
+      suggestState.open = false;
+      suggestState.items = [];
+      document.getElementById('composer-suggest').classList.add('hidden');
     }
 
     // 8. 单回合 Git 原子撤销 (Revert Turn)
@@ -3363,6 +3487,7 @@
         if (json.code === 0 && Array.isArray(json.data)) {
           select.innerHTML = '<option value="">🧩 快捷使用 Skill...</option>';
           const enabledSkills = json.data.filter((s) => s.enabled !== false);
+          window.__enabledSkillsCache = enabledSkills; // 输入建议子候选缓存（TC-01-03-010）
           if (enabledSkills.length === 0) {
             const opt = document.createElement('option');
             opt.value = '';
