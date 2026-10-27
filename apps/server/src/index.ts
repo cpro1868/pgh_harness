@@ -3130,6 +3130,20 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
       this.turnAborts.set(activeSession.id, aborter);
       this.sessionStates.set(activeSession.id, 'running');
 
+      // 客户端断开检测（TC-00-99-003）：刷新/关标签后，回合若继续跑会泄漏
+      // res 心跳 interval + socket + 审批 broker + GitRollbackManager 快照（数十 MB），
+      // 长回合反复刷新 = 资源慢性耗尽（"使用中莫名其妙无法使用"的真根因）。
+      // 注意必须挂 res.on('close')：req 的 close 在 body 读完即触发（回合开始时就发生过），
+      // res 的 close 才代表客户端连接真正断开。断开 = 用户放弃本回合，与主动 Abort 同语义。
+      res.on('close', () => {
+        if (!res.writableEnded && !aborter.signal.aborted) {
+          console.log(`[Harness] client disconnected mid-turn, aborting ${turnId}`);
+          aborter.abort();
+          this.sessionStates.set(activeSession.id, 'idle');
+          this.turnAborts.delete(activeSession.id);
+        }
+      });
+
       // 回合检查点：隔离用户手写未提交修改，供 Revert Turn 原子撤销
       const rollback = new GitRollbackManager(wsPath);
       rollback.createTurnCheckpoint(turnId);
@@ -3350,7 +3364,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
             try {
               console.log(`[Harness] Dispatching real LLM call via Provider "${activeProvider.name}" (model=${model}, endpoint=${activeProvider.baseUrl})`);
               return await retryWithBackoff(
-                () => this.streamChatCompletion(activeProvider, realKey, model, messages, onDelta),
+                () => this.streamChatCompletion(activeProvider, realKey, model, messages, onDelta, aborter.signal),
                 { onRetry: (attempt, err) => console.warn(`[Harness] LLM 瞬态错误自动重试 (${attempt}/3):`, err instanceof Error ? err.message.slice(0, 120) : err) },
               );
             } catch (err) {
@@ -3682,6 +3696,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
     model: string,
     messages: MessageItem[],
     onDelta?: (kind: 'reasoning' | 'content', text: string) => void,
+    signal?: AbortSignal,
   ): Promise<ChatTurnResult> {
     const endpoint = `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`;
     const __t0 = Date.now();
@@ -3691,6 +3706,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
       endpoint,
       {
         method: 'POST',
+        signal,
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${apiKey}`,

@@ -32,24 +32,34 @@ export interface RetryOptions {
   maxDelayMs?: number;
   /** 每次重试前回调（attempt 从 1 开始） */
   onRetry?: (attempt: number, err: unknown) => void;
+  /** 中止信号：abort 后立即上抛，不再重试/等待（回合被用户或断连中止时使用） */
+  signal?: AbortSignal;
 }
 
 export async function retryWithBackoff<T>(fn: () => Promise<T>, options: RetryOptions = {}): Promise<T> {
   const retries = options.retries ?? 3;
   const initialDelayMs = options.initialDelayMs ?? 500;
   const maxDelayMs = options.maxDelayMs ?? 8000;
+  const throwIfAborted = (): void => {
+    if (options.signal?.aborted) {
+      throw new Error('[Abort] 回合已被中止（客户端断开或用户 Abort），停止重试');
+    }
+  };
 
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
+    throwIfAborted();
     if (attempt > 0) {
       const delay = Math.min(initialDelayMs * 2 ** (attempt - 1), maxDelayMs);
       await new Promise((r) => setTimeout(r, delay));
+      throwIfAborted();
       options.onRetry?.(attempt, lastErr);
     }
     try {
       return await fn();
     } catch (err) {
       lastErr = err;
+      throwIfAborted();
       if (!isRetryableLLMError(err)) throw err;
     }
   }
