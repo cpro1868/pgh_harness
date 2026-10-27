@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>模型选择器 v2（Provider 分组折叠）- 原型 (PGH)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { font-family: ui-sans-serif, system-ui; }
+    .ms-panel { animation: ms-pop .12s ease; }
+    @keyframes ms-pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .ms-group-header { transition: background .12s; }
+    .ms-group-header:hover { background: rgba(59,130,246,.12); }
+    .ms-group-arrow { transition: transform .15s; }
+    .ms-group.open .ms-group-arrow { transform: rotate(90deg); }
+    .ms-model-row { transition: background .1s; }
+    .ms-model-row:hover { background: rgba(59,130,246,.18); }
+    .ms-model-row.selected { background: rgba(37,99,235,.3); }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 p-8">
+
+  <h1 class="text-sm font-bold text-white mb-1">模型选择器 v2 原型 · Provider 分组折叠</h1>
+  <p class="text-[11px] text-slate-500 mb-5">模拟顶栏真实尺寸（160px 收窄）。点击分组展开/收起该 Provider 的模型；点击模型即选中。选中值显示在顶栏按钮上，分组记忆展开状态。</p>
+
+  <!-- ═══ 模拟顶栏：模型选择器（160px 收窄版） ═══ -->
+  <div class="flex items-center space-x-2.5 mb-8">
+    <img src="../../ico/pgh.svg" alt="" class="w-6 h-6 rounded" onerror="this.style.display='none'">
+    <span class="font-bold text-white text-xs">PG Harness</span>
+    <span class="text-slate-600">/</span>
+    <div class="flex items-center space-x-1.5 px-2 py-0.5 rounded bg-slate-800/80 border border-slate-700/60 font-mono text-[11px] text-blue-300">
+      <span>🔒</span><span>工作区▾</span>
+    </div>
+    <div id="w2-model-select" class="relative">
+      <!-- 触发按钮（同宽 160px，显示当前选中模型） -->
+      <button id="ms-trigger" onclick="toggleMsPanel(event)"
+              class="flex items-center justify-between w-[160px] bg-[#080d1a] border border-slate-700 rounded px-2 py-0.5 text-slate-200 font-mono text-xs hover:border-blue-500 transition">
+        <span id="ms-current" class="truncate">deepseek-chat</span>
+        <span class="text-slate-600 ml-1">▾</span>
+      </button>
+      <!-- 下拉面板（分组折叠） -->
+      <div id="ms-panel" class="ms-panel hidden absolute left-0 top-full mt-1 w-[280px] max-h-[420px] overflow-y-auto rounded-lg border border-slate-700 bg-[#0d1424] shadow-xl shadow-black/60 z-50">
+        <!-- 组：由 JS 渲染 -->
+      </div>
+    </div>
+    <div class="text-[10px] text-slate-600 font-mono">← 当前选中：<b id="ms-selected-label" class="text-slate-400">deepseek-chat</b></div>
+  </div>
+
+  <!-- 模拟数据（对齐用户真实 Provider 规模） -->
+  <script>
+    const PROVIDERS = [
+      { id: 'p1', name: 'OpenDesign', baseUrl: 'https://amr-link.open-design.ai/v1', models: [
+        { id: 'deepseek-v4.1-flash' }, { id: 'glm-5.3-flash' }, { id: 'kimi-k2.7-code' }, { id: 'gpt-6-luna' }, { id: 'claude-4.5-sonnet' },
+      ]},
+      { id: 'p2', name: 'Longgai', baseUrl: 'https://longgai.ai/v1', models: [
+        { id: 'longgai-pro' }, { id: 'longgai-mini' }, { id: 'longgai-coder' }, { id: 'longgai-vision' },
+      ]},
+      { id: 'p3', name: 'GLM', baseUrl: 'https://vectide.cn/v1', models: [
+        { id: 'glm-5' }, { id: 'glm-5.1' }, { id: 'glm-5.2' }, { id: 'glm-5.3' },
+      ]},
+      { id: 'p4', name: 'deepseek', baseUrl: 'https://api.deepseek.com/v1', models: [
+        { id: 'deepseek-chat' }, { id: 'deepseek-reasoner' },
+      ]},
+    ];
+
+    let currentModel = 'deepseek-chat';
+    let currentProviderId = 'p4';
+    // 展开状态记忆：默认展开"当前选中模型所在组"
+    const openGroups = new Set(['p4']);
+
+    function renderPanel() {
+      const panel = document.getElementById('ms-panel');
+      panel.innerHTML = PROVIDERS.map(p => {
+        const open = openGroups.has(p.id);
+        const modelCount = p.models.length;
+        const hasCurrent = p.models.some(m => m.id === currentModel && p.id === currentProviderId);
+        const rows = open ? p.models.map(m => {
+          const selected = m.id === currentModel && p.id === currentProviderId;
+          return `<div class="ms-model-row ${selected ? 'selected' : ''} pl-8 pr-3 py-1.5 cursor-pointer flex items-center justify-between" onclick="pickModel('${p.id}', '${m.id}')">
+            <span class="font-mono text-[11px] ${selected ? 'text-blue-300 font-bold' : 'text-slate-300'}">${m.id}</span>
+            ${selected ? '<span class="text-blue-400 text-[10px]">✓</span>' : ''}
+          </div>`;
+        }).join('') : '';
+        return `
+          <div class="ms-group ${open ? 'open' : ''} border-b border-slate-800/60 last:border-b-0">
+            <div class="ms-group-header flex items-center justify-between px-3 py-2 cursor-pointer select-none" onclick="toggleGroup('${p.id}')">
+              <div class="flex items-center space-x-2 min-w-0">
+                <span class="ms-group-arrow text-slate-500 text-[10px] ${open ? 'rotate-90' : ''}">▶</span>
+                <span class="text-[11px] font-bold ${hasCurrent ? 'text-blue-300' : 'text-slate-300'} truncate">${p.name}</span>
+                ${hasCurrent ? '<span class="text-[9px] px-1 rounded bg-blue-950/60 text-blue-300 font-mono">当前</span>' : ''}
+              </div>
+              <span class="text-[10px] text-slate-600 font-mono">${modelCount}</span>
+            </div>
+            ${rows}
+          </div>`;
+      }).join('');
+    }
+
+    function toggleGroup(pid) {
+      if (openGroups.has(pid)) openGroups.delete(pid);
+      else openGroups.add(pid);
+      renderPanel();
+    }
+
+    function pickModel(pid, mid) {
+      currentModel = mid;
+      currentProviderId = pid;
+      const p = PROVIDERS.find(x => x.id === pid);
+      document.getElementById('ms-current').textContent = mid;
+      document.getElementById('ms-selected-label').textContent = mid + ' · ' + p.name;
+      // 选中后收起面板（记忆该组展开）
+      openGroups.clear(); openGroups.add(pid);
+      document.getElementById('ms-panel').classList.add('hidden');
+      renderPanel();
+    }
+
+    function toggleMsPanel(ev) {
+      ev.stopPropagation();
+      document.getElementById('ms-panel').classList.toggle('hidden');
+      if (!document.getElementById('ms-panel').classList.contains('hidden')) renderPanel();
+    }
+    document.addEventListener('click', (e) => {
+      if (!document.getElementById('w2-model-select').contains(e.target)) {
+        document.getElementById('ms-panel').classList.add('hidden');
+      }
+    });
+
+    renderPanel();
+  </script>
+</body>
+</html>
