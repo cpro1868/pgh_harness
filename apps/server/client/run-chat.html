@@ -2902,21 +2902,116 @@
       if (el) el.textContent = text;
     }
 
+    // ═══ 向导 v2 双模式状态机（TC-01-08-005） ═══
+    let wizardMode = 'first-run';
+    let wizardStep = 0;
+
+    function saveWizardProgress() {
+      fetch('/api/settings/section', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          section: 'wizardProgress',
+          data: { mode: wizardMode, step: wizardStep, providerSaved: wizardMode === 'guided', workspaceSaved: false },
+        }),
+      }).catch(() => undefined); // 进度落盘失败不阻塞向导
+    }
+
+    function goWizardStep(n) {
+      wizardStep = n;
+      for (let i = 0; i <= 3; i++) {
+        const screen = document.getElementById('wizard-screen-' + i);
+        if (screen) screen.classList.toggle('active', i === n);
+        const dot = document.getElementById('wizard-dot-' + i);
+        if (dot) {
+          dot.classList.toggle('current', i === n);
+          dot.classList.toggle('done', i < n);
+        }
+      }
+      const label = document.getElementById('wizard-progress-label');
+      if (label) label.textContent = ['欢迎', '接入模型', '选择工作区', '完成'][n];
+      saveWizardProgress();
+      if (n === 3) wizardRenderDone();
+    }
+
+    /**
+     * 双模式入口（spec §4.1）：
+     * first-run —— 完整四屏（欢迎屏起），needsWizard 自动触发；
+     * guided —— 跳过屏 0，预填当前实际配置，显示「已有配置」快捷保留条，不改 wizardCompleted。
+     */
+    function startWizard(mode) {
+      wizardMode = mode;
+      const screen0 = document.getElementById('wizard-screen-0');
+      if (screen0) screen0.style.display = mode === 'guided' ? 'none' : '';
+      document.getElementById('guided-provider-existing').classList.toggle('hidden', mode !== 'guided');
+      document.getElementById('guided-ws-existing').classList.toggle('hidden', mode !== 'guided');
+      if (mode === 'guided') {
+        // 预填当前实际配置
+        const providers = window.__providersCache || [];
+        const p = providers[0];
+        if (p) {
+          document.getElementById('wizard-provider-name').value = p.name || '';
+          document.getElementById('wizard-provider-baseurl').value = p.baseUrl || '';
+          const current = document.getElementById('guided-provider-current');
+          if (current) current.textContent = `${p.name} · ${(p.models || []).length} models`;
+        }
+        if (activeWorkspacePath) {
+          document.getElementById('wizard-ws-path').value = activeWorkspacePath;
+          const wsCur = document.getElementById('guided-ws-current');
+          if (wsCur) wsCur.textContent = activeWorkspacePath;
+        }
+        goWizardStep(1);
+      } else {
+        goWizardStep(0);
+      }
+      document.getElementById('wizard-v2').classList.remove('hidden');
+    }
+
+    /** 引导模式：保留现有配置直接跳下一步（不修改任何已存项） */
+    function keepExisting(kind) {
+      if (kind === 'provider') { wizardStatus('✅ 保留现有 Provider'); goWizardStep(2); }
+      else { wizardStatus('✅ 保留现有工作区'); goWizardStep(3); }
+    }
+
+    function wizardRenderDone() {
+      const model = document.getElementById('wizard-model-select').value || 'deepseek-chat';
+      const provider = document.getElementById('wizard-provider-name').value || 'Provider';
+      const doneModel = document.getElementById('wizard-done-model');
+      if (doneModel) doneModel.textContent = model + '（' + provider + '）';
+      const doneWs = document.getElementById('wizard-done-ws');
+      if (doneWs) doneWs.textContent = document.getElementById('wizard-ws-path').value || activeWorkspacePath || '(未填写)';
+    }
+
+    /** 屏 2 路径实时校验（前端格式校验；存在性强校验由 wizardFinish 登记 API 兜底） */
+    function wizardValidatePathLive() {
+      const input = document.getElementById('wizard-ws-path');
+      const tip = document.getElementById('ws-validate');
+      if (!input || !tip) return false;
+      const v = input.value.trim();
+      tip.classList.remove('hidden');
+      if (!v) { tip.textContent = '等待输入…'; tip.className = 'text-[11px] font-mono text-slate-500'; return false; }
+      const ok = /^[a-zA-Z]:\\.+/.test(v) || v.startsWith('/');
+      tip.textContent = ok ? '✅ 路径格式正确（保存时将做存在性强校验）' : '❌ 请输入绝对路径（如 G:\\Projects\\my-app）';
+      tip.className = 'text-[11px] font-mono ' + (ok ? 'text-emerald-400' : 'text-rose-400');
+      return ok;
+    }
+
     function wizardGoStep(step) {
-      document.getElementById('wizard-step-1').classList.toggle('hidden', step !== 1);
-      document.getElementById('wizard-step-2').classList.toggle('hidden', step !== 2);
-      document.getElementById('wizard-step-badge').textContent = `步骤 ${step} / 2`;
+      goWizardStep(step);
       wizardStatus('');
     }
 
-    /** 冷启动检测：任一侧（模型 / 工作区）缺失且未显式跳过时弹出向导。 */
+    /** 冷启动检测：任一侧（模型 / 工作区）缺失且未显式跳过时弹出向导（首启模式，断点续走）。 */
     async function checkBootstrap() {
       try {
         const res = await fetch('/api/bootstrap/status');
         const result = await res.json();
         if (result.code === 0 && result.data && result.data.needsWizard) {
-          document.getElementById('wizard-modal').classList.remove('hidden');
-          wizardGoStep(1);
+          startWizard('first-run');
+          const progress = result.data.wizardProgress;
+          if (progress && typeof progress.step === 'number' && progress.step > 0 && progress.step <= 3) {
+            goWizardStep(progress.step); // 断点续走：刷新后从上次停留屏继续
+          }
         }
       } catch (err) {
         console.warn('Bootstrap status failed:', err);
@@ -2991,7 +3086,7 @@
           return;
         }
         await loadModels();
-        wizardGoStep(2);
+        goWizardStep(2);
       } catch (err) {
         wizardStatus('保存异常: ' + err.message);
       }
@@ -3026,6 +3121,12 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ section: 'wizardCompleted', data: true }),
         });
+        // 清空进度断点（老键语义兼容：完成后向导不再自动弹出）
+        await fetch('/api/settings/section', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ section: 'wizardProgress', data: null }),
+        });
       } catch {
         // 标记失败不阻断主流程
       }
@@ -3048,7 +3149,7 @@
           return;
         }
         await markWizardDone();
-        document.getElementById('wizard-modal').classList.add('hidden');
+        document.getElementById('wizard-v2').classList.add('hidden');
         await loadWorkspaces();
         await loadModels();
         await loadSessionList();
@@ -3059,7 +3160,7 @@
 
     async function skipWizard() {
       await markWizardDone();
-      document.getElementById('wizard-modal').classList.add('hidden');
+      document.getElementById('wizard-v2').classList.add('hidden');
     }
 
     // ============ SSE 长期订阅与半开断链重连 (D69 / TC-01-08-002) ============
