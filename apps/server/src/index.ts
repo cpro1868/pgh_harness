@@ -632,6 +632,8 @@ export class HarnessServer {
           wizardCompleted,
           // 任一侧缺失即继续引导；已显式标记完成则不再打扰
           needsWizard: !wizardCompleted && (!hasProvider || !hasWorkspace),
+          // 向导进度断点（v2 双模式：刷新后从上次停留屏续走；未开始为 null）
+          wizardProgress: this.settingsStore.get<object>('system.wizardProgress') ?? null,
         },
       });
       return;

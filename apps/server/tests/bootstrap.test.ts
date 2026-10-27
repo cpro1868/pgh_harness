@@ -12,6 +12,7 @@ interface BootstrapStatus {
     hasWorkspace: boolean;
     wizardCompleted: boolean;
     needsWizard: boolean;
+    wizardProgress: object | null;
   };
 }
 
@@ -44,6 +45,12 @@ test('TC-01-08-005: 首次启动破冰向导冷启动检测与完成标记（WBS
     assert.equal(status.hasWorkspace, false);
     assert.equal(status.wizardCompleted, false);
     assert.equal(status.needsWizard, true, '冷启动必须触发破冰向导');
+  });
+
+  await t.test('checkBootstrap 响应附带 wizardProgress（未开始时为 null，向导断点续走用）', async () => {
+    const status = await readStatus();
+    assert.ok('wizardProgress' in status, '响应必须包含 wizardProgress 字段');
+    assert.equal(status.wizardProgress, null, '未开始向导时为 null');
   });
 
   await t.test('完成标记可持久化，标记后不再打扰', async () => {
