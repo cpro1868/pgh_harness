@@ -1,7 +1,6 @@
 {
   "name": "@kalar4512/pg-harness",
   "version": "0.4.0",
-  "private": true,
   "description": "PG Harness - autonomous coding agent runtime platform (zero native deps, event-sourced auditable, sandbox red-lines)",
   "bin": {
     "pgh": "./bin/pgh-publish.js",
