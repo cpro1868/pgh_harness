@@ -1,15 +1,14 @@
 {
-  "name": "harness-monorepo",
-  "version": "0.2.0",
+  "name": "@kalar4512/pg-harness",
+  "version": "0.4.0",
   "private": true,
-  "description": "Pluggable Coding Agent Harness with Web Console (Node 22+ Zero-Native)",
+  "description": "PG Harness - autonomous coding agent runtime platform (zero native deps, event-sourced auditable, sandbox red-lines)",
   "bin": {
-    "pgh": "./bin/pgh.js",
-    "pg-harness": "./bin/pgh.js"
+    "pgh": "./bin/pgh-publish.js",
+    "pg-harness": "./bin/pgh-publish.js"
   },
   "engines": {
-    "node": ">=22.0.0",
-    "pnpm": ">=9.0.0"
+    "node": ">=22.7.0"
   },
   "scripts": {
     "dev": "node --experimental-strip-types apps/server/src/index.ts",
@@ -30,5 +29,32 @@
     "typescript": "^5.6.0",
     "typescript-eslint": "^8.71.0"
   },
-  "packageManager": "pnpm@10.29.3+sha512.498e1fb4cca5aa06c1dcf2611e6fafc50972ffe7189998c409e90de74566444298ffe43e6cd2acdc775ba1aa7cc5e092a8b7054c811ba8c5770f84693d33d2dc"
+  "packageManager": "pnpm@10.29.3+sha512.498e1fb4cca5aa06c1dcf2611e6fafc50972ffe7189998c409e90de74566444298ffe43e6cd2acdc775ba1aa7cc5e092a8b7054c811ba8c5770f84693d33d2dc",
+  "files": [
+    "dist-publish",
+    "apps/server/client",
+    "bin/pgh-publish.js",
+    "README.md",
+    "docs/项目启动文档.md"
+  ],
+  "keywords": [
+    "ai",
+    "agent",
+    "coding-agent",
+    "llm",
+    "harness",
+    "bpmn",
+    "react-loop",
+    "autonomous"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/cpro1868/pgh_harness.git"
+  },
+  "homepage": "https://github.com/cpro1868/pgh_harness#readme",
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.com/"
+  }
 }

@@ -1,0 +1,33 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": false,
+    "outDir": "dist-publish",
+    "declaration": true,
+    "declarationMap": false,
+    "sourceMap": false,
+    "composite": false,
+    "rewriteRelativeImportExtensions": true,
+    "verbatimModuleSyntax": false,
+    "paths": {
+      "@harness/protocol": [
+        "./packages/protocol/src/index.ts"
+      ]
+    },
+    "baseUrl": ".",
+    "strictPropertyInitialization": false
+  },
+  "include": [
+    "packages/core/src/**/*.ts",
+    "packages/protocol/src/**/*.ts",
+    "packages/kernel/src/**/*.ts",
+    "packages/plugins/storage-sqlite/src/**/*.ts",
+    "packages/plugins/provider-openai/src/**/*.ts",
+    "packages/plugins/provider-anthropic/src/**/*.ts",
+    "packages/plugins/tools-coding/src/**/*.ts",
+    "packages/plugins/tools-mcp/src/**/*.ts",
+    "packages/plugins/skills/src/**/*.ts",
+    "packages/plugins/memory/src/**/*.ts",
+    "apps/server/src/**/*.ts"
+  ]
+}
