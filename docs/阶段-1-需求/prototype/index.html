@@ -145,6 +145,55 @@
 
       <div class="grid grid-cols-1 md:grid-cols-3 gap-5 font-sans">
         
+        <!-- ═══ v2.0 企业级原型区块（MOD-13~16） ═══ -->
+        <div class="col-span-full flex items-center space-x-3 mb-2 mt-6">
+          <div class="flex-1 border-t border-violet-800/50"></div>
+          <span class="text-[10px] font-mono text-violet-300 bg-violet-950/50 px-3 py-1 rounded-full border border-violet-800/50">v2.0 企业级平台原型（MOD-13 ~ MOD-16）</span>
+          <div class="flex-1 border-t border-violet-800/50"></div>
+        </div>
+
+        <!-- 用户管理 -->
+        <a href="config-users.html" class="p-5 rounded-xl bg-[#0f1523] border border-violet-800/40 hover:border-violet-500 transition group shadow-lg flex flex-col justify-between">
+          <div><div class="flex items-center justify-between mb-3"><span class="p-2 rounded-lg bg-violet-500/10 text-violet-400 text-lg">👥</span><span class="text-[10px] px-2 py-0.5 rounded bg-violet-950 text-violet-300 font-mono">MOD-13</span></div><h3 class="text-sm font-bold text-white group-hover:text-violet-400 mb-1">用户管理</h3><p class="text-xs text-slate-400 line-clamp-3 mb-4">多用户注册、RBAC 角色分配（admin/lead/member）、账号状态管控与权限矩阵。</p></div>
+          <span class="text-xs text-violet-400 font-semibold flex items-center">查看原型 &rarr;</span>
+        </a>
+
+        <!-- SSO -->
+        <a href="config-sso.html" class="p-5 rounded-xl bg-[#0f1523] border border-violet-800/40 hover:border-violet-500 transition group shadow-lg flex flex-col justify-between">
+          <div><div class="flex items-center justify-between mb-3"><span class="p-2 rounded-lg bg-violet-500/10 text-violet-400 text-lg">🔑</span><span class="text-[10px] px-2 py-0.5 rounded bg-violet-950 text-violet-300 font-mono">MOD-13</span></div><h3 class="text-sm font-bold text-white group-hover:text-violet-400 mb-1">SSO 身份对接</h3><p class="text-xs text-slate-400 line-clamp-3 mb-4">OIDC/LDAP/飞书/钉钉适配器，员工使用企业账号一键登录。</p></div>
+          <span class="text-xs text-violet-400 font-semibold flex items-center">查看原型 &rarr;</span>
+        </a>
+
+        <!-- 审计日志 -->
+        <a href="config-audit.html" class="p-5 rounded-xl bg-[#0f1523] border border-violet-800/40 hover:border-violet-500 transition group shadow-lg flex flex-col justify-between">
+          <div><div class="flex items-center justify-between mb-3"><span class="p-2 rounded-lg bg-violet-500/10 text-violet-400 text-lg">📋</span><span class="text-[10px] px-2 py-0.5 rounded bg-violet-950 text-violet-300 font-mono">MOD-13</span></div><h3 class="text-sm font-bold text-white group-hover:text-violet-400 mb-1">审计日志</h3><p class="text-xs text-slate-400 line-clamp-3 mb-4">全平台操作审计追溯（登录/审批/推送/构建），支持检索与 CSV 导出。</p></div>
+          <span class="text-xs text-violet-400 font-semibold flex items-center">查看原型 &rarr;</span>
+        </a>
+
+        <!-- Git 集成 -->
+        <a href="config-git.html" class="p-5 rounded-xl bg-[#0f1523] border border-violet-800/40 hover:border-violet-500 transition group shadow-lg flex flex-col justify-between">
+          <div><div class="flex items-center justify-between mb-3"><span class="p-2 rounded-lg bg-violet-500/10 text-violet-400 text-lg">🔀</span><span class="text-[10px] px-2 py-0.5 rounded bg-violet-950 text-violet-300 font-mono">MOD-14</span></div><h3 class="text-sm font-bold text-white group-hover:text-violet-400 mb-1">Git 仓库集成</h3><p class="text-xs text-slate-400 line-clamp-3 mb-4">Git 平台连接、仓库绑定、分支管理与 Push Approval Gate 推送审批闸门。</p></div>
+          <span class="text-xs text-violet-400 font-semibold flex items-center">查看原型 &rarr;</span>
+        </a>
+
+        <!-- Jenkins -->
+        <a href="config-jenkins.html" class="p-5 rounded-xl bg-[#0f1523] border border-violet-800/40 hover:border-violet-500 transition group shadow-lg flex flex-col justify-between">
+          <div><div class="flex items-center justify-between mb-3"><span class="p-2 rounded-lg bg-violet-500/10 text-violet-400 text-lg">⚙️</span><span class="text-[10px] px-2 py-0.5 rounded bg-violet-950 text-violet-300 font-mono">MOD-15</span></div><h3 class="text-sm font-bold text-white group-hover:text-violet-400 mb-1">Jenkins CI/CD</h3><p class="text-xs text-slate-400 line-clamp-3 mb-4">Jenkins 连接管理、任务绑定、构建触发与状态实时展示。</p></div>
+          <span class="text-xs text-violet-400 font-semibold flex items-center">查看原型 &rarr;</span>
+        </a>
+
+        <!-- CI 闭环 -->
+        <a href="run-ci-loop.html" class="p-5 rounded-xl bg-[#0f1523] border border-violet-800/40 hover:border-violet-500 transition group shadow-lg flex flex-col justify-between">
+          <div><div class="flex items-center justify-between mb-3"><span class="p-2 rounded-lg bg-violet-500/10 text-violet-400 text-lg">🔄</span><span class="text-[10px] px-2 py-0.5 rounded bg-violet-950 text-violet-300 font-mono">MOD-15</span></div><h3 class="text-sm font-bold text-white group-hover:text-violet-400 mb-1">CI 闭环追踪</h3><p class="text-xs text-slate-400 line-clamp-3 mb-4">修复→推送→构建→失败回灌→再修复 端到端闭环轨迹可视化（旗舰场景）。</p></div>
+          <span class="text-xs text-violet-400 font-semibold flex items-center">查看原型 &rarr;</span>
+        </a>
+
+        <!-- 登录页 -->
+        <a href="login.html" class="p-5 rounded-xl bg-[#0f1523] border border-violet-800/40 hover:border-violet-500 transition group shadow-lg flex flex-col justify-between">
+          <div><div class="flex items-center justify-between mb-3"><span class="p-2 rounded-lg bg-violet-500/10 text-violet-400 text-lg">🔐</span><span class="text-[10px] px-2 py-0.5 rounded bg-violet-950 text-violet-300 font-mono">MOD-13</span></div><h3 class="text-sm font-bold text-white group-hover:text-violet-400 mb-1">企业登录页</h3><p class="text-xs text-slate-400 line-clamp-3 mb-4">品牌化登录页：本地密码登录 + 企业 SSO / 飞书扫码入口。</p></div>
+          <span class="text-xs text-violet-400 font-semibold flex items-center">查看原型 &rarr;</span>
+        </a>
+
         <!-- 模型选择器 v2 原型卡 -->
         <a href="model-select-v2.html" class="p-5 rounded-xl bg-[#0f1523] border-2 border-violet-500/40 hover:border-violet-400 transition group shadow-lg flex flex-col justify-between">
           <div>
