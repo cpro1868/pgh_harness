@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRD 确认 - PG Harness Enterprise</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .prd-content h1 { font-size: 1.2rem; font-weight: 700; color: #fff; margin: 1rem 0 .5rem; }
+    .prd-content h2 { font-size: 1rem; font-weight: 700; color: #e2e8f0; margin: .8rem 0 .4rem; }
+    .prd-content p { font-size: .75rem; color: #94a3b8; line-height: 1.6; margin: .4rem 0; }
+    .prd-content ul { list-style: disc; padding-left: 1.2rem; margin: .4rem 0; }
+    .prd-content li { font-size: .75rem; color: #94a3b8; line-height: 1.5; }
+    .prd-content table { width: 100%; border-collapse: collapse; margin: .5rem 0; }
+    .prd-content th { font-size: .65rem; color: #64748b; text-align: left; padding: .4rem; border-bottom: 1px solid #334155; }
+    .prd-content td { font-size: .7rem; color: #94a3b8; padding: .4rem; border-bottom: 1px solid #1e293b; }
+    [contenteditable]:focus { outline: 1.5px solid #3b82f6; border-radius: 4px; }
+    .edit-mode { border: 1px dashed #3b82f6; border-radius: 8px; padding: 1rem; }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex flex-col">
+
+  <!-- 顶栏 -->
+  <div class="h-11 border-b border-slate-800 flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0">
+    <div class="flex items-center space-x-2">
+      <span class="text-sm font-bold text-white">🧭 PRD 确认 · 在线支付校验模块</span>
+      <span class="text-[9px] px-1.5 py-0.5 rounded bg-violet-950/60 text-violet-300 font-mono">v2.0 MOD-17</span>
+    </div>
+    <div class="flex items-center space-x-2">
+      <button onclick="toggleEdit()" id="btn-edit" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-[11px]">✏️ 编辑模式</button>
+      <button onclick="alert('原型：write_file 落盘 docs/PRD.md 到工作区')" class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold">💾 确认并落盘</button>
+    </div>
+  </div>
+
+  <!-- 主体：PRD 可编辑预览 + 右侧流转 -->
+  <div class="flex-1 flex overflow-hidden">
+    <!-- PRD 预览 -->
+    <div class="flex-1 overflow-y-auto p-6">
+      <div id="prd-body" class="prd-content max-w-3xl mx-auto bg-[#0f1523] border border-slate-800 rounded-xl p-6" contenteditable="false">
+
+        <h1>PRD：在线支付校验模块</h1>
+        <p>版本：v0.1（Agent 自动生成） · 状态：待确认 · 来源：需求探索会话 req_...</p>
+
+        <h2>1. 背景与目标</h2>
+        <p>为中小团队（5-20 人）提供轻量级支付校验能力，支持 card / paypal / bank_transfer 三种支付方式的合法性校验与差异化手续费计算，以 Node.js 模块形式交付，零外部依赖。</p>
+
+        <h2>2. 目标用户</h2>
+        <ul>
+          <li>中小团队后端开发者（5-20 人规模），需要快速集成支付校验能力</li>
+          <li>SaaS 平台开发者，需要灵活的支付方式扩展</li>
+        </ul>
+
+        <h2>3. 功能需求</h2>
+        <table>
+          <tr><th>功能</th><th>描述</th><th>优先级</th></tr>
+          <tr><td>支付方式校验</td><td>支持 card / paypal / bank_transfer 三种方式的合法性校验（白名单机制）</td><td>P0</td></tr>
+          <tr><td>手续费计算</td><td>按支付方式差异化计算手续费（card 2.9%，其余 0%）</td><td>P0</td></tr>
+          <tr><td>金额边界处理</td><td>NaN / Infinity / 负数 / 超上限拒绝</td><td>P0</td></tr>
+          <tr><td>错误码体系</td><td>统一错误码返回（invalid_method / unsupported_method / invalid_amount）</td><td>P1</td></tr>
+        </table>
+
+        <h2>4. 非功能需求</h2>
+        <ul>
+          <li>零外部依赖（纯 Node.js 标准库）</li>
+          <li>单元测试覆盖率 ≥ 90%</li>
+          <li>单次校验响应 &lt; 1ms（纯计算，无 IO）</li>
+        </ul>
+
+        <h2>5. 验收标准</h2>
+        <ul>
+          <li>所有 P0 功能有对应单元测试且全部通过</li>
+          <li>边界用例覆盖：空值 / NaN / 负数 / 超大金额 / 非法字符串 / 原型链属性名</li>
+          <li>Agent 产出文档（REVIEW.md / FIX-REPORT.md）完整</li>
+        </ul>
+
+        <h2>6. 选定方案</h2>
+        <p><b>方案 A · 策略模式</b>：每种支付方式独立策略类，手续费按基点（bp）计算，内部金额以分（cents）为单位避免浮点精度问题。FEE_RULES 使用 Object.freeze 冻结防运行时篡改。</p>
+
+        <h2>7. 里程碑</h2>
+        <table>
+          <tr><th>阶段</th><th>交付物</th></tr>
+          <tr><td>M1</td><td>核心校验逻辑 + 单元测试</td></tr>
+          <tr><td>M2</td><td>手续费计算 + 边界用例补全</td></tr>
+          <tr><td>M3</td><td>文档完善（REVIEW/FIX-REPORT/ACCEPTANCE）</td></tr>
+        </table>
+      </div>
+    </div>
+
+    <!-- 右侧流转面板 -->
+    <aside class="w-72 border-l border-slate-800 bg-[#0a0f1d] p-4 space-y-3 overflow-y-auto shrink-0">
+      <div class="text-[10px] font-mono text-slate-500 uppercase">确认与流转</div>
+
+      <div class="p-3 rounded-lg bg-[#0f1523] border border-slate-800 space-y-1.5">
+        <div class="text-[10px] text-slate-400">✅ PRD 落盘位置</div>
+        <div class="text-[11px] font-mono text-emerald-400 truncate">docs/PRD.md</div>
+      </div>
+
+      <div class="text-[10px] font-mono text-slate-500 uppercase pt-2">完成后可流转到</div>
+      <div class="space-y-2">
+        <button onclick="alert('原型：基于 PRD 功能清单自动创建 Pipeline 模板（拆分阶段）并跳转 run-pipeline-create.html')" class="w-full p-3 rounded-lg bg-[#0f1523] border border-slate-700 hover:border-blue-500 transition text-left">
+          <div class="text-xs font-bold text-slate-200">→ 创建流水线模板</div>
+          <div class="text-[10px] text-slate-500">基于 PRD 功能清单自动拆分阶段</div>
+        </button>
+        <button onclick="alert('原型：跳转主会话，携带 PRD 上下文开始实施')" class="w-full p-3 rounded-lg bg-[#0f1523] border border-slate-700 hover:border-blue-500 transition text-left">
+          <div class="text-xs font-bold text-slate-200">→ 开始会话实施</div>
+          <div class="text-[10px] text-slate-500">携带 PRD 上下文进入对话工作台</div>
+        </button>
+        <button onclick="alert('原型：基于 PRD 生成 BPMN 工作流（预留）')" class="w-full p-3 rounded-lg bg-[#0f1523] border border-slate-700 hover:border-slate-500 transition text-left opacity-50">
+          <div class="text-xs font-bold text-slate-400">→ 生成 BPMN 工作流</div>
+          <div class="text-[10px] text-slate-600">预留 · 后续交付</div>
+        </button>
+      </div>
+
+      <div class="text-[10px] text-slate-600 pt-3 border-t border-slate-800 leading-relaxed">
+        💡 PRD 落盘后自动进入工作区，Agent 后续回合可引用它作为上下文，确保实施与需求对齐。
+      </div>
+    </aside>
+  </div>
+
+  <script>
+    function toggleEdit() {
+      const body = document.getElementById('prd-body');
+      const btn = document.getElementById('btn-edit');
+      const editing = body.getAttribute('contenteditable') === 'true';
+      if (editing) {
+        body.setAttribute('contenteditable', 'false');
+        body.classList.remove('edit-mode');
+        btn.textContent = '✏️ 编辑模式';
+        btn.className = btn.className.replace('bg-blue-600 text-white', 'bg-slate-800 text-slate-300');
+      } else {
+        body.setAttribute('contenteditable', 'true');
+        body.classList.add('edit-mode');
+        btn.textContent = '✅ 完成编辑';
+        btn.className = btn.className.replace('bg-slate-800 text-slate-300', 'bg-blue-600 text-white');
+        body.focus();
+      }
+    }
+  </script>
+</body>
+</html>
