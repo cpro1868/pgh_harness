@@ -3,252 +3,206 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>需求探索工作台 - PG Harness Enterprise</title>
+  <title>PRD 预览与流转 - PG Harness Enterprise</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/shared.css">
   <style>
-    .phase-dot { width: 10px; height: 10px; border-radius: 9999px; border: 1.5px solid #475569; }
-    .phase-dot.done { background: #059669; border-color: #059669; }
-    .phase-dot.current { background: #2563eb; border-color: #2563eb; box-shadow: 0 0 0 3px rgba(37,99,235,.25); }
-    .qa-card { animation: qa-pop .2s ease; }
-    @keyframes qa-pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
-    .coverage-bar { height: 6px; border-radius: 9999px; transition: width .3s; }
-    .req-item { border-left: 2px solid #334155; transition: border-color .15s; }
-    .req-item:hover { border-left-color: #60a5fa; }
-    .branch-card { transition: border-color .15s, transform .1s; cursor: pointer; }
-    .branch-card:hover { border-color: #60a5fa; }
-    .branch-card.selected { border-color: #2563eb; background: rgba(37,99,235,.08); }
+    .prd-content h1 { font-size: 1.2rem; font-weight: 700; color: #fff; margin: 1rem 0 .5rem; }
+    .prd-content h2 { font-size: 1rem; font-weight: 700; color: #e2e8f0; margin: .8rem 0 .4rem; }
+    .prd-content p { font-size: .75rem; color: #94a3b8; line-height: 1.6; margin: .4rem 0; }
+    .prd-content ul { list-style: disc; padding-left: 1.2rem; margin: .4rem 0; }
+    .prd-content li { font-size: .75rem; color: #94a3b8; line-height: 1.5; }
+    .prd-content table { width: 100%; border-collapse: collapse; margin: .5rem 0; }
+    .prd-content th { font-size: .65rem; color: #64748b; text-align: left; padding: .4rem; border-bottom: 1px solid #334155; }
+    .prd-content td { font-size: .7rem; color: #94a3b8; padding: .4rem; border-bottom: 1px solid #1e293b; }
+    [contenteditable]:focus { outline: 1.5px solid #3b82f6; border-radius: 4px; }
+    .edit-mode { border: 1px dashed #3b82f6; border-radius: 8px; padding: 1rem; }
+    /* 任务来源标注 */
+    .task-origin { font-size: 9px; color: #64748b; font-style: italic; }
+  </style>
+<style>
+    .prd-content h1 { font-size: 1.2rem; font-weight: 700; color: #fff; margin: 1rem 0 .5rem; }
+    .prd-content h2 { font-size: 1rem; font-weight: 700; color: #e2e8f0; margin: .8rem 0 .4rem; }
+    .prd-content p { font-size: .75rem; color: #94a3b8; line-height: 1.6; margin: .4rem 0; }
+    .prd-content ul { list-style: disc; padding-left: 1.2rem; margin: .4rem 0; }
+    .prd-content li { font-size: .75rem; color: #94a3b8; line-height: 1.5; }
+    .prd-content table { width: 100%; border-collapse: collapse; margin: .5rem 0; }
+    .prd-content th { font-size: .65rem; color: #64748b; text-align: left; padding: .4rem; border-bottom: 1px solid #334155; }
+    .prd-content td { font-size: .7rem; color: #94a3b8; padding: .4rem; border-bottom: 1px solid #1e293b; }
+    [contenteditable]:focus { outline: 1.5px solid #3b82f6; border-radius: 4px; }
+    .edit-mode { border: 1px dashed #3b82f6; border-radius: 8px; padding: 1rem; }
+    /* 任务来源标注 */
+    .task-origin { font-size: 9px; color: #64748b; font-style: italic; }
   </style>
 </head>
 <body class="bg-[#070a12] text-slate-100 min-h-screen flex">
-
-  <!-- 一级活动导航栏 -->
-  <aside class="activity-bar">
+<aside class="activity-bar">
     <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
       <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
     </a>
-    <!-- v2.0 MOD-17 入口（当前活跃） -->
-    <a href="run-requirements.html" class="activity-btn active" title="需求探索 (Requirements)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5.5 5.5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
     <a href="run-chat.html" class="activity-btn" title="对话工作台"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
-    <div class="my-3 w-6 border-b border-slate-800"></div>
     <a href="config-workspace.html" class="activity-btn" title="工作区管理"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5m14 0a2 2 0 012-2V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
-    <a href="config-users.html" class="activity-btn" title="用户管理"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <div class="my-3 w-6 border-b border-slate-800"></div>
+    <!-- v2.0 企业级导航组 -->
+    <a href="config-users.html" class="activity-btn" title="用户管理（v2.0）"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></a>
+    <a href="config-sso.html" class="activity-btn" title="SSO 身份对接"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2M12 3a9 9 0 100 18 9 9 0 000-18z"></path></svg></a>
     <a href="config-git.html" class="activity-btn" title="Git 仓库集成"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg></a>
     <a href="config-jenkins.html" class="activity-btn" title="Jenkins CI/CD"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.065-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg></a>
-    <div class="flex-1"></div>
-  </aside>
+    <a href="config-audit.html" class="activity-btn" title="审计日志"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></a>
+  </aside><main class="flex-1 flex overflow-hidden">
 
-  <!-- 主内容区：三栏布局 -->
-  <main class="flex-1 flex overflow-hidden">
-
-    <!-- 左栏：阶段进度 + 需求覆盖度 -->
-    <aside class="w-64 border-r border-slate-800 bg-[#0a0f1d] p-4 space-y-4 overflow-y-auto shrink-0">
-      <!-- 阶段进度 -->
-      <div>
-        <div class="text-[10px] font-mono text-slate-500 mb-2 uppercase">阶段进度</div>
-        <div class="space-y-2">
-          <div class="flex items-center space-x-2">
-            <span class="phase-dot done" id="dot-collecting"></span>
-            <span class="text-[11px] text-emerald-400 font-semibold">需求收集</span>
-            <span class="text-[10px] text-slate-600 ml-auto">6 条</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <span class="phase-dot current" id="dot-branching"></span>
-            <span class="text-[11px] text-blue-300 font-semibold">方案分支</span>
-            <span class="text-[10px] text-slate-600 ml-auto">3 个</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <span class="phase-dot" id="dot-prd"></span>
-            <span class="text-[11px] text-slate-500">PRD 确认</span>
-          </div>
-          <div class="flex items-center space-x-2">
-            <span class="phase-dot" id="dot-done"></span>
-            <span class="text-[11px] text-slate-500">完成流转</span>
-          </div>
-        </div>
+    <!-- ═══ 左栏：项目文件树 ═══ -->
+    <aside class="w-56 border-r border-slate-800 bg-[#0a0f1d] flex flex-col shrink-0">
+      <div class="px-3 py-2.5 border-b border-slate-800">
+        <div class="text-[11px] font-bold text-white truncate">在线支付校验模块</div>
+        <div class="text-[9px] text-slate-600 font-mono truncate">docs\projects\payment-module\</div>
       </div>
-
-      <!-- 覆盖度 -->
-      <div>
-        <div class="text-[10px] font-mono text-slate-500 mb-2 uppercase">需求维度覆盖度</div>
-        <div class="space-y-2.5">
-          <div>
-            <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-400">目标用户</span><span class="text-emerald-400">✓ 已覆盖</span></div>
-            <div class="w-full bg-slate-800 rounded-full coverage-bar"><div class="bg-emerald-500 h-full rounded-full" style="width:100%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-400">核心功能</span><span class="text-emerald-400">✓ 已覆盖</span></div>
-            <div class="w-full bg-slate-800 rounded-full coverage-bar"><div class="bg-emerald-500 h-full rounded-full" style="width:100%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-400">约束条件</span><span class="text-amber-400">部分</span></div>
-            <div class="w-full bg-slate-800 rounded-full coverage-bar"><div class="bg-amber-500 h-full rounded-full" style="width:60%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-400">非功能需求</span><span class="text-rose-400">未覆盖</span></div>
-            <div class="w-full bg-slate-800 rounded-full coverage-bar"><div class="bg-slate-600 h-full rounded-full" style="width:8%"></div></div>
-          </div>
-          <div>
-            <div class="flex justify-between text-[10px] mb-0.5"><span class="text-slate-400">验收标准</span><span class="text-rose-400">未覆盖</span></div>
-            <div class="w-full bg-slate-800 rounded-full coverage-bar"><div class="bg-slate-600 h-full rounded-full" style="width:5%"></div></div>
-          </div>
-        </div>
+      <div class="flex-1 overflow-y-auto py-1 text-[11px] font-mono select-none">
+        <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-400"><span class="text-slate-600">▸</span><span>💬</span><span>discussions/</span><span class="pill bg-slate-800 text-slate-500 ml-auto">3</span></div>
+        <div class="file-tree-item px-3 py-1 pl-6 flex items-center space-x-1.5 cursor-pointer text-slate-500"><span>📄</span><span class="truncate">2026-10-28-initial.md</span></div>
+        <div class="file-tree-item px-3 py-1 pl-6 flex items-center space-x-1.5 cursor-pointer text-slate-500"><span>📄</span><span class="truncate">2026-10-29-fee-rules.md</span></div>
+        <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-400"><span class="text-slate-600">▾</span><span>📋</span><span>tasks.md</span><span class="pill bg-blue-950/60 text-blue-400 ml-auto">8</span></div>
+        <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer bg-blue-950/20 text-blue-300 border-l-2 border-blue-500"><span>▾</span><span>📄</span><span>PRD.md</span><span class="pill bg-emerald-950/60 text-emerald-400 ml-auto">v0.2</span></div>
+        <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-500"><span>▸</span><span>📎</span><span>attachments/</span><span class="pill bg-slate-800 text-slate-500 ml-auto">2</span></div>
       </div>
-
-      <!-- 已收集要点 -->
-      <div>
-        <div class="text-[10px] font-mono text-slate-500 mb-2 uppercase">已收集要点（6）</div>
-        <div class="space-y-2">
-          <div class="req-item pl-2 py-1"><div class="text-[9px] text-slate-600 font-mono">目标用户</div><div class="text-[10px] text-slate-300 leading-snug">中小团队开发者，5-20 人规模</div></div>
-          <div class="req-item pl-2 py-1"><div class="text-[9px] text-slate-600 font-mono">核心功能</div><div class="text-[10px] text-slate-300 leading-snug">支付校验模块：支持 card/paypal/bank_transfer</div></div>
-          <div class="req-item pl-2 py-1"><div class="text-[9px] text-slate-600 font-mono">核心功能</div><div class="text-[10px] text-slate-300 leading-snug">手续费按方式差异化计算</div></div>
-          <div class="req-item pl-2 py-1"><div class="text-[9px] text-slate-600 font-mono">约束条件</div><div class="text-[10px] text-slate-300 leading-snug">Node.js 环境，零外部依赖</div></div>
-        </div>
-      </div>
+      <div class="px-3 py-2 border-t border-slate-800"><div class="text-[9px] text-slate-600 leading-relaxed">📁 项目文件夹 = 工作区子目录<br>所有讨论/任务/文档归档于此<br>Agent 可直接读写</div></div>
     </aside>
 
-    <!-- 中栏：对话区（Agent 逐问 + ask_user 卡片） -->
+    <!-- ═══ 中栏：自由对话区 ═══ -->
     <div class="flex-1 flex flex-col overflow-hidden border-x border-slate-800">
-      <!-- 顶栏 -->
       <div class="h-11 border-b border-slate-800 flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0">
         <div class="flex items-center space-x-2">
-          <span class="text-sm font-bold text-white">🧭 需求探索 · 在线支付校验模块</span>
+          <span class="text-sm font-bold text-white">💬 项目讨论</span>
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">自由讨论 · 无固定阶段</span>
         </div>
-        <div class="flex items-center space-x-2">
-          <span class="text-[10px] font-mono text-slate-500">Agent: deepseek-v4.1-flash</span>
-          <button onclick="alert('原型：切换到方案分支阶段')" class="px-2.5 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold">进入方案分支 →</button>
-        </div>
+        <button onclick="alert('原型：Agent 从讨论记录提炼生成 PRD，确认后落盘 PRD.md')" class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1"><span>📄</span><span>生成 PRD</span></button>
       </div>
 
-      <!-- 对话流 -->
-      <div class="flex-1 overflow-y-auto p-5 space-y-4">
-
-        <!-- Agent 消息 -->
-        <div class="flex items-start space-x-2">
-          <div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🧭</div>
-          <div class="flex-1 space-y-2">
-            <div class="text-[10px] text-slate-500 font-mono">需求分析师 Agent · 第 1 轮</div>
-            <div class="text-xs text-slate-300 leading-relaxed bg-[#0f1523] rounded-lg p-3 border border-slate-800">
-              好的，我们来梳理「在线支付校验模块」的需求。我先从目标用户开始——这个支付模块主要给什么规模的团队使用？有没有特定的行业场景（电商/SaaS/内容订阅）？
-            </div>
-          </div>
-        </div>
-
-        <!-- ask_user 卡片 -->
-        <div class="flex items-start space-x-2">
-          <div class="w-7 h-7 shrink-0"></div>
-          <div class="flex-1 max-w-md rounded-xl border border-blue-800/50 bg-blue-950/20 p-4 space-y-3 qa-card">
-            <div class="text-[10px] font-bold text-blue-300 font-mono uppercase">❓ Agent 需要你的输入</div>
-            <div class="space-y-2.5">
-              <div>
-                <div class="text-[11px] text-slate-300 mb-1">目标团队规模？</div>
-                <div class="flex flex-wrap gap-1.5">
-                  <button class="px-3 py-1 rounded border border-slate-700 text-[11px] text-slate-300 hover:border-blue-500">1-5 人</button>
-                  <button class="px-3 py-1 rounded border border-blue-500 bg-blue-950/40 text-[11px] text-blue-300">5-20 人 ✓</button>
-                  <button class="px-3 py-1 rounded border border-slate-700 text-[11px] text-slate-300 hover:border-blue-500">20+ 人</button>
-                </div>
-              </div>
-              <div>
-                <div class="text-[11px] text-slate-300 mb-1">核心功能范围？（可多选）</div>
-                <div class="grid grid-cols-2 gap-1.5">
-                  <label class="flex items-center space-x-1.5 text-[11px] text-slate-300 cursor-pointer"><input type="checkbox" checked class="accent-blue-500"> 支付方式校验</label>
-                  <label class="flex items-center space-x-1.5 text-[11px] text-slate-300 cursor-pointer"><input type="checkbox" checked class="accent-blue-500"> 手续费计算</label>
-                  <label class="flex items-center space-x-1.5 text-[11px] text-slate-300 cursor-pointer"><input type="checkbox" class="accent-blue-500"> 退款处理</label>
-                  <label class="flex items-center space-x-1.5 text-[11px] text-slate-300 cursor-pointer"><input type="checkbox" class="accent-blue-500"> 对账接口</label>
-                </div>
-              </div>
-              <div>
-                <div class="text-[11px] text-slate-300 mb-1">有无特殊约束？</div>
-                <input placeholder="如：零外部依赖 / Node.js only / 需兼容旧版…" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200">
-              </div>
-            </div>
-            <div class="flex justify-end space-x-2">
-              <button class="px-3 py-1 rounded text-[11px] text-slate-500 hover:text-slate-300">跳过这组</button>
-              <button class="px-4 py-1 rounded bg-blue-600 text-white text-[11px] font-semibold">提交回答</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 用户回答摘要 -->
-        <div class="flex items-start space-x-2 flex-row-reverse">
+      <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        <!-- 起点：一句话 -->
+        <div class="flex items-start space-x-2 flex-row-reverse chat-msg">
           <div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">你</div>
-          <div class="flex-1 space-y-1">
-            <div class="text-[10px] text-slate-500 font-mono text-right">已提交 · 3 项回答已入需求要点库</div>
-            <div class="text-xs text-slate-400 bg-[#0b1120] rounded-lg p-3 border border-slate-800 leading-relaxed">
-              → 目标用户：5-20 人中小团队<br>
-              → 核心功能：支付校验 + 手续费计算<br>
-              → 约束：Node.js，零外部依赖
+          <div class="max-w-[80%] space-y-1">
+            <div class="text-[10px] text-slate-600 font-mono text-right">起点 · 一句话</div>
+            <div class="text-xs text-slate-200 bg-blue-950/30 rounded-lg px-3 py-2 leading-relaxed">我想做一个在线支付校验的东西</div>
+          </div>
+        </div>
+
+        <!-- Agent 回应 -->
+        <div class="flex items-start space-x-2 chat-msg">
+          <div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🤖</div>
+          <div class="max-w-[85%] space-y-1">
+            <div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-slate-800 leading-relaxed">在线支付校验——好的。我先确认范围：你说的是<b class="text-white">校验支付方式是否合法</b>（比如卡号格式、支付渠道是否支持），还是<b class="text-white">完整的支付流程</b>（下单→扣款→回调）？前者是一个工具模块，后者涉及面广很多。</div>
+            <div class="flex items-center space-x-2 text-[10px] text-slate-600"><span>💡 Agent 检测到潜在任务点：</span><span class="px-1.5 py-0.5 rounded bg-slate-800/60 text-slate-400 font-mono">校验模块 vs 完整支付流程 — 需明确范围</span></div>
+          </div>
+        </div>
+
+        <!-- 用户回答 -->
+        <div class="flex items-start space-x-2 flex-row-reverse chat-msg">
+          <div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">你</div>
+          <div class="max-w-[80%] space-y-1">
+            <div class="text-xs text-slate-200 bg-blue-950/30 rounded-lg px-3 py-2 leading-relaxed">校验模块，就是一个工具函数库。给我一个支付方式和金额，我告诉你合不合法、手续费多少。不需要真的扣款。</div>
+          </div>
+        </div>
+
+        <!-- Agent 追问 -->
+        <div class="flex items-start space-x-2 chat-msg">
+          <div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🤖</div>
+          <div class="max-w-[85%] space-y-1">
+            <div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-slate-800 leading-relaxed">清晰了。追问几个影响设计的点：<br>1. <b class="text-white">支付方式</b>有哪些？card/paypal/bank_transfer 之外还有吗？<br>2. <b class="text-white">手续费</b>是固定费率还是有阶梯/封顶？<br>3. 金额用什么货币？<b class="text-white">精度</b>——用分（整数）还是元（浮点）？</div>
+          </div>
+        </div>
+
+        <!-- 用户回答 + 附件 -->
+        <div class="flex items-start space-x-2 flex-row-reverse chat-msg">
+          <div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">你</div>
+          <div class="max-w-[80%] space-y-1">
+            <div class="text-xs text-slate-200 bg-blue-950/30 rounded-lg px-3 py-2 leading-relaxed">card / paypal / bank_transfer 三种。手续费 card 2.9%，其他免费。金额用元，但内部计算要用分，不能用浮点直接算。</div>
+            <div class="text-[10px] text-slate-500 text-right">📎 附了一张费率表截图</div>
+          </div>
+        </div>
+
+        <!-- Agent 回应 + 识别任务点 -->
+        <div class="flex items-start space-x-2 chat-msg">
+          <div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🤖</div>
+          <div class="max-w-[85%] space-y-1">
+            <div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-slate-800 leading-relaxed">好的，用分做内部单位是对的。我注意到<b class="text-white">"内部计算要用分"</b>——这需要一个<b class="text-white">元↔分转换层</b>，涉及精度处理。还有一个问题：<b class="text-white">超上限</b>怎么处理？拒绝还是截断？</div>
+            <div class="rounded-lg border border-blue-800/40 bg-blue-950/20 p-2.5 mt-1">
+              <div class="text-[10px] font-bold text-blue-300 mb-1">💡 检测到 2 个任务点</div>
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 bg-[#080d1a] rounded px-2 py-1"><span>元↔分转换层（精度处理）</span><button class="text-blue-400 hover:underline">确认</button><button class="text-slate-600 hover:underline">忽略</button></div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 bg-[#080d1a] rounded px-2 py-1"><span>超上限处理策略（拒绝 or 截断）</span><button class="text-blue-400 hover:underline">确认</button><button class="text-slate-600 hover:underline">忽略</button></div>
+              </div>
             </div>
           </div>
         </div>
 
-        <!-- Agent 下一轮 -->
-        <div class="flex items-start space-x-2">
-          <div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🧭</div>
-          <div class="flex-1 space-y-2">
-            <div class="text-[10px] text-slate-500 font-mono">需求分析师 Agent · 第 2 轮</div>
-            <div class="text-xs text-slate-300 leading-relaxed bg-[#0f1523] rounded-lg p-3 border border-slate-800">
-              收到。已记录 3 条要点。接下来我需要确认<b class="text-white">验收标准</b>——这个模块交付后，你用什么方式判断它是"完成的"？比如：单元测试覆盖率 ≥ N%、手动场景验证清单、还是有明确的边界用例集？
-            </div>
-            <div class="flex space-x-2">
-              <button class="px-3 py-1.5 rounded bg-slate-800 border border-slate-700 text-[11px] text-slate-300">📝 用测试覆盖率衡量</button>
-              <button class="px-3 py-1.5 rounded bg-slate-800 border border-slate-700 text-[11px] text-slate-300">📋 用场景验证清单</button>
-              <button class="px-3 py-1.5 rounded bg-slate-800 border border-slate-700 text-[11px] text-slate-300">✍️ 自己描述</button>
-            </div>
+        <!-- 用户提出退款 -->
+        <div class="flex items-start space-x-2 flex-row-reverse chat-msg">
+          <div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">你</div>
+          <div class="max-w-[80%] space-y-1">
+            <div class="text-xs text-slate-200 bg-blue-950/30 rounded-lg px-3 py-2 leading-relaxed">超了直接拒绝不截断。另外想到一个事——<b class="text-white">退款</b>场景要不要考虑？如果退了一半怎么办？</div>
           </div>
         </div>
 
-        <!-- Agent 最新轮（当前活跃） -->
-        <div class="flex items-start space-x-2">
-          <div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🧭</div>
-          <div class="flex-1 space-y-2">
-            <div class="text-[10px] text-slate-500 font-mono">需求分析师 Agent · 第 3 轮</div>
-            <div class="text-xs text-slate-300 leading-relaxed bg-[#0f1523] rounded-lg p-3 border border-slate-800">
-              已覆盖 3/5 个维度（<b class="text-emerald-400">目标用户 ✓ 核心功能 ✓ 约束 ✓</b>），还剩<b class="text-amber-400">非功能需求</b>和<b class="text-amber-400">验收标准</b>未覆盖。<br><br>
-              关于<b class="text-white">非功能需求</b>：这个支付校验模块对<b class="text-white">性能</b>有什么要求？比如单次校验响应时间上限？预期日调用量？是否需要支持并发？<br><br>
-              这是收集的最后两个维度了，完成后我就可以生成方案分支供你选择。
+        <!-- Agent 回应退款 + 识别更多任务 -->
+        <div class="flex items-start space-x-2 chat-msg">
+          <div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🤖</div>
+          <div class="max-w-[85%] space-y-1">
+            <div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-slate-800 leading-relaxed">好问题。<b class="text-white">退款场景</b>会影响 API 设计——部分退款需要<b class="text-white">退款状态追踪</b>，复杂度会显著提升。建议第一期先做<b class="text-white">全额退款标记</b>，部分退款放二期。<br><br>目前讨论已覆盖核心功能和约束，你要不要我把这些整理成一份 PRD？还是继续聊？</div>
+            <div class="rounded-lg border border-blue-800/40 bg-blue-950/20 p-2.5 mt-1">
+              <div class="text-[10px] font-bold text-blue-300 mb-1">💡 检测到 2 个新任务点</div>
+              <div class="space-y-1">
+                <div class="flex items-center justify-between text-[10px] text-slate-400 bg-[#080d1a] rounded px-2 py-1"><span>全额退款标记（P0）</span><button class="text-blue-400 hover:underline">确认</button><button class="text-slate-600 hover:underline">忽略</button></div>
+                <div class="flex items-center justify-between text-[10px] text-slate-400 bg-[#080d1a] rounded px-2 py-1"><span>部分退款状态追踪（→ 二期）</span><button class="text-blue-400 hover:underline">确认</button><button class="text-slate-600 hover:underline">忽略</button></div>
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- 底部输入区 -->
       <div class="p-3 border-t border-slate-800 bg-[#0a0f1d] shrink-0">
         <div class="flex items-center space-x-2">
-          <input placeholder="补充回答或描述…（Enter 发送）" class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+          <button class="px-2 py-2 text-slate-500 hover:text-slate-300 text-xs" title="附加文件">📎</button>
+          <input placeholder="继续讨论… 想到什么说什么" class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
           <button class="px-4 py-2 rounded bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold">发送</button>
         </div>
       </div>
     </div>
 
-    <!-- 右栏：方案分支对比（阶段 2 预览） -->
-    <aside class="w-80 border-l border-slate-800 bg-[#0a0f1d] p-4 space-y-3 overflow-y-auto shrink-0">
-      <div class="text-[10px] font-mono text-slate-500 uppercase">方案分支（预览 · 收集完成后激活）</div>
-
-      <div class="branch-card rounded-xl bg-[#0f1523] border border-slate-700 p-4 space-y-2">
-        <div class="flex items-center justify-between">
-          <span class="text-xs font-bold text-white">方案 A · 策略模式</span>
-          <span class="px-1.5 py-0.5 rounded bg-blue-950/60 text-blue-300 text-[9px] font-mono">推荐</span>
+    <!-- ═══ 右栏：任务面板 ═══ -->
+    <aside class="w-72 border-l border-slate-800 bg-[#0a0f1d] flex flex-col shrink-0">
+      <div class="px-3 py-2.5 border-b border-slate-800 flex items-center justify-between">
+        <span class="text-[11px] font-bold text-slate-300">📋 任务面板</span>
+        <span class="text-[9px] text-slate-600 font-mono">8 项 · 来自讨论</span>
+      </div>
+      <div class="flex-1 overflow-y-auto p-2.5 space-y-3">
+        <div>
+          <div class="text-[9px] font-mono text-slate-600 uppercase mb-1.5 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-blue-500 mr-1"></span> 进行中 (2)</div>
+          <div class="space-y-1.5">
+            <div class="task-card doing rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-200 leading-snug">设计元↔分转换层（精度处理）</div><div class="flex items-center justify-between mt-1"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">讨论产出</span></div></div>
+            <div class="task-card doing rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-200 leading-snug">支付方式白名单 + 手续费规则</div><div class="flex items-center justify-between mt-1"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">讨论产出</span></div></div>
+          </div>
         </div>
-        <p class="text-[10px] text-slate-400 leading-relaxed">每种支付方式独立策略类，易于扩展新支付方式，手续费计算逻辑独立可测。</p>
-        <div class="text-[10px] space-y-0.5"><span class="text-emerald-400">+ 可扩展性强</span><br><span class="text-rose-400">− 类数量较多</span></div>
+        <div>
+          <div class="text-[9px] font-mono text-slate-600 uppercase mb-1.5 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-slate-500 mr-1"></span> 待办 (4)</div>
+          <div class="space-y-1.5">
+            <div class="task-card todo rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-300 leading-snug">超上限拒绝策略（100 万上限）</div><div class="flex items-center justify-between mt-1"><span class="pill bg-slate-800 text-slate-500">P0</span></div></div>
+            <div class="task-card todo rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-300 leading-snug">错误码体系设计</div><div class="flex items-center justify-between mt-1"><span class="pill bg-slate-800 text-slate-500">P1</span></div></div>
+            <div class="task-card todo rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-300 leading-snug">单元测试边界用例集</div><div class="flex items-center justify-between mt-1"><span class="pill bg-slate-800 text-slate-500">P1</span></div></div>
+            <div class="task-card todo rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-300 leading-snug">全额退款标记 API</div><div class="flex items-center justify-between mt-1"><span class="pill bg-slate-800 text-slate-500">P1</span></div></div>
+          </div>
+        </div>
+        <div>
+          <div class="text-[9px] font-mono text-slate-600 uppercase mb-1.5 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1"></span> 延后 (2)</div>
+          <div class="space-y-1.5">
+            <div class="task-card deferred rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-400 leading-snug">部分退款状态追踪 → 二期</div></div>
+            <div class="task-card deferred rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-400 leading-snug">对账接口 → 视需求</div></div>
+          </div>
+        </div>
       </div>
-
-      <div class="branch-card rounded-xl bg-[#0f1523] border border-slate-700 p-4 space-y-2">
-        <div class="text-xs font-bold text-white">方案 B · 规则引擎</div>
-        <p class="text-[10px] text-slate-400 leading-relaxed">配置驱动规则表，新增支付方式只需加一行配置。适合规则频繁变动的场景。</p>
-        <div class="text-[10px] space-y-0.5"><span class="text-emerald-400">+ 改动成本最低</span><br><span class="text-rose-400">− 复杂规则表达能力有限</span></div>
-      </div>
-
-      <div class="branch-card rounded-xl bg-[#0f1523] border border-slate-700 p-4 space-y-2">
-        <div class="text-xs font-bold text-white">方案 C · 最简函数</div>
-        <p class="text-[10px] text-slate-400 leading-relaxed">单函数 switch 实现，最快交付。适合明确不会再扩展的场景。</p>
-        <div class="text-[10px] space-y-0.5"><span class="text-emerald-400">+ 交付最快</span><br><span class="text-rose-400">− 扩展需重构</span></div>
-      </div>
-
-      <div class="text-[10px] text-slate-600 text-center pt-2 border-t border-slate-800">
-        ⓘ 收集完成后 Agent 自动生成分支方案<br>由用户选定后写入 PRD
-      </div>
+      <div class="px-3 py-2 border-t border-slate-800"><button class="w-full text-[10px] text-slate-600 hover:text-slate-400 text-center" onclick="alert('原型：手动添加任务')">＋ 手动添加任务</button></div>
     </aside>
   </main>
 </body>
