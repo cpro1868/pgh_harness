@@ -3,6 +3,12 @@
 > 每次会话开始时读此文件恢复上下文，结束前更新状态。
 > 当前状态：**Sprint 1~6 全部交付；D77~D88 全闭环；BPMN 真机验收、向导 v2 双模式、输入建议（/skill + @ 文件）、Token 统计七项、模型选择器 v2（Provider 分组折叠）、运行态恢复与增量重放、断连资源泄漏修复全部交付；43 套件 404 断言全绿**
 
+## 2026-10-28 增量
+
+- **生态分发方案优化**：全面转向 GitHub 原生免发布模式（`npx github:cpro1868/pgh_harness` 与 `npm install -g github:cpro1868/pgh_harness`），彻底摆脱 npm 平台的 2FA/硬件 Passkey 束缚；
+- **文档同步**：同步更新 `README.md` 与 `docs/项目启动文档.md`，将 GitHub npx 启动列为最优先推荐启动方式；
+- **记录同步**：在 `docs/工作进展记录.md` 归档此项决策与演进说明。
+
 ## 2026-10-27 增量
 
 - **「进程莫名其妙无法使用」真因修复 (TC-00-99-003)**：chat/send SSE 无 close 监听——客户端刷新后回合继续跑，心跳/审批 broker/快照 Buffer 慢性泄漏。修复：res.on('close') 立即 abort 回合 + AbortSignal 透传 LLM fetch + retryWithBackoff 支持 signal。E2E：断开 3s 内回合中止、LLM 流切断。

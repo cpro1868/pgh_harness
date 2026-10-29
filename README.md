@@ -317,12 +317,24 @@ flowchart TB
 
 ## 🚀 快速开始
 
-### 前置要求
-- **Node.js**：`v22.16.0` 或更高版本（必须包含原生 `node:sqlite`）
-- **包管理器**：`pnpm`（推荐）
-- **操作系统**：Windows 10/11、macOS、Linux（零 C++ 编译，全平台完全一致）
+### 方式 A：免克隆即开即用（推荐，无需手动克隆代码与安装环境）
 
-### 1. 克隆与安装依赖
+只要本机安装了 Node.js 22+，可直接通过 `npx` 或全局安装从 GitHub 运行：
+
+```bash
+# 1. 免安装一次性秒启运行
+npx github:cpro1868/pgh_harness
+
+# 2. 或全局安装到操作系统（以后任何终端随时输入 pgh 即可唤起）
+npm install -g github:cpro1868/pgh_harness
+
+# 启动服务
+pgh
+# 指定端口启动
+pgh --port 3211
+```
+
+### 方式 B：源码克隆与本地开发
 
 ```bash
 git clone https://github.com/cpro1868/pgh_harness.git
@@ -332,7 +344,7 @@ cd pgh_harness
 pnpm install
 ```
 
-### 2. 启动服务与工作台
+### 本地运维脚本
 
 紫提套件提供了跨平台启动与运维脚本：
 
