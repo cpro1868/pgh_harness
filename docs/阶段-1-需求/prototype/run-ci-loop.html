@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CI 闭环追踪 - PG Harness Enterprise</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+  <style>
+    .role-badge-admin { background: rgba(147,51,234,.2); color: #c084fc; }
+    .role-badge-lead { background: rgba(59,130,246,.2); color: #60a5fa; }
+    .role-badge-member { background: rgba(16,185,129,.2); color: #34d399; }
+    .user-row:hover { background: rgba(59,130,246,.06); }
+    .status-active { color: #34d399; }
+    .status-disabled { color: #f87171; }
+    .status-locked { color: #fbbf24; }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100">
+<div class='min-h-screen p-6'>
+    <h1 class='text-lg font-bold text-white flex items-center space-x-2 mb-5'><span>🔄</span><span>端到端自动化闭环追踪</span><span class='text-[9px] px-1.5 py-0.5 rounded bg-violet-950/60 text-violet-300 font-mono'>v2.0 MOD-15</span></h1>
+    <div class='max-w-3xl mx-auto space-y-4'>
+      <div class='rounded-xl bg-[#0f1523] border border-slate-800 p-4'>
+        <div class='text-xs font-bold text-white mb-3'>会话 sess_...fyptzg · 修复任务全轨迹</div>
+        <div class='space-y-1'>
+          <div class='flex items-center space-x-3 p-2 rounded bg-emerald-950/20'><span class='text-emerald-400 text-xs'>✓</span><span class='text-[11px] text-slate-300'>Agent 修复 payment.js — 10:38:22</span></div>
+          <div class='flex items-center space-x-3 p-2 rounded bg-emerald-950/20'><span class='text-emerald-400 text-xs'>✓</span><span class='text-[11px] text-slate-300'>推送审批通过（liwen）→ push origin agent/fix-42 — 10:39:01</span></div>
+          <div class='flex items-center space-x-3 p-2 rounded bg-emerald-950/20'><span class='text-emerald-400 text-xs'>✓</span><span class='text-[11px] text-slate-300'>PR #15 自动创建 — 10:39:05</span></div>
+          <div class='flex items-center space-x-3 p-2 rounded bg-rose-950/20'><span class='text-rose-400 text-xs'>✗</span><span class='text-[11px] text-slate-300'>Jenkins #42 FAILURE — 失败日志回灌 Agent — 10:41:30</span></div>
+          <div class='flex items-center space-x-3 p-2 rounded bg-blue-950/20'><span class='text-blue-400 text-xs'>→</span><span class='text-[11px] text-slate-300'>Agent 基于失败日志继续修复（第 2/3 次重试）</span></div>
+          <div class='flex items-center space-x-3 p-2 rounded bg-emerald-950/20'><span class='text-emerald-400 text-xs'>✓</span><span class='text-[11px] text-slate-300'>Jenkins #43 SUCCESS — 闭环完成 — 10:48:12</span></div>
+        </div>
+      </div>
+      <div class='rounded-xl bg-[#0f1523] border border-slate-800 p-4'>
+        <div class='text-xs font-bold text-slate-300 mb-2'>Jenkins #42 失败日志（已回灌 Agent · untrusted 边界标注）</div>
+        <pre class='text-[10px] font-mono text-rose-300 bg-[#080d1a] rounded p-3 overflow-x-auto'>[ERROR] src/payment.js:15 TypeError: Cannot read property 'fee' of undefined
+[ERROR] Tests run: 12, Failures: 2, Errors: 0</pre>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

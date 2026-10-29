@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>用户管理 - PG Harness Enterprise</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+  <style>
+    .role-badge-admin { background: rgba(147,51,234,.2); color: #c084fc; }
+    .role-badge-lead { background: rgba(59,130,246,.2); color: #60a5fa; }
+    .role-badge-member { background: rgba(16,185,129,.2); color: #34d399; }
+    .user-row:hover { background: rgba(59,130,246,.06); }
+    .status-active { color: #34d399; }
+    .status-disabled { color: #f87171; }
+    .status-locked { color: #fbbf24; }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex">
+
+  <!-- 一级活动导航栏（v2.0 增加：用户管理/审计） -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30 hover:bg-blue-600/30 transition">
+      <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+    </a>
+    <a href="run-chat.html" class="activity-btn" title="对话工作台"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <a href="config-workspace.html" class="activity-btn" title="工作区管理"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5m14 0a2 2 0 012-2V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg></a>
+    <a href="config-providers.html" class="activity-btn" title="模型与Provider资产"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg></a>
+    <div class="my-3 w-6 border-b border-slate-800"></div>
+    <!-- v2.0 企业级导航组 -->
+    <a href="config-users.html" class="activity-btn active" title="用户管理（v2.0）"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></a>
+    <a href="config-sso.html" class="activity-btn" title="SSO 身份对接"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 11V7a4 4 0 118 0m-4 8v2M12 3a9 9 0 100 18 9 9 0 000-18z"></path></svg></a>
+    <a href="config-git.html" class="activity-btn" title="Git 仓库集成"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg></a>
+    <a href="config-jenkins.html" class="activity-btn" title="Jenkins CI/CD"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.065-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg></a>
+    <a href="config-audit.html" class="activity-btn" title="审计日志"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></a>
+  </aside>
+
+  <!-- 主内容区 -->
+  <main class="flex-1 p-6 overflow-y-auto">
+    <!-- 页头 -->
+    <div class="flex items-center justify-between mb-5">
+      <div>
+        <h1 class="text-lg font-bold text-white flex items-center space-x-2"><span>👥</span><span>用户管理</span><span class="text-[9px] px-1.5 py-0.5 rounded bg-violet-950/60 text-violet-300 font-mono">v2.0 MOD-13</span></h1>
+        <p class="text-[11px] text-slate-500 mt-0.5">管理平台用户、角色分配与账号状态</p>
+      </div>
+      <div class="flex items-center space-x-2">
+        <button onclick="alert('原型：打开新建用户弹窗')" class="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow flex items-center space-x-1"><span>＋</span><span>新建用户</span></button>
+      </div>
+    </div>
+
+    <!-- 统计卡 -->
+    <div class="grid grid-cols-4 gap-4 mb-5">
+      <div class="p-4 rounded-xl bg-[#0f1523] border border-slate-800"><div class="text-[10px] text-slate-500 mb-1">总用户数</div><div class="text-2xl font-bold text-white">12</div></div>
+      <div class="p-4 rounded-xl bg-[#0f1523] border border-slate-800"><div class="text-[10px] text-slate-500 mb-1">活跃</div><div class="text-2xl font-bold text-emerald-400">10</div></div>
+      <div class="p-4 rounded-xl bg-[#0f1523] border border-slate-800"><div class="text-[10px] text-slate-500 mb-1">管理员 / 组长</div><div class="text-2xl font-bold text-violet-400">2 / 3</div></div>
+      <div class="p-4 rounded-xl bg-[#0f1523] border border-slate-800"><div class="text-[10px] text-slate-500 mb-1">SSO 账号占比</div><div class="text-2xl font-bold text-sky-400">75%</div></div>
+    </div>
+
+    <!-- 用户列表 -->
+    <div class="rounded-xl bg-[#0f1523] border border-slate-800 overflow-hidden">
+      <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+        <div class="flex items-center space-x-3">
+          <input type="text" placeholder="搜索用户名/邮箱…" class="bg-[#080d1a] border border-slate-700 rounded px-3 py-1.5 text-xs text-slate-200 w-56 focus:outline-none focus:border-blue-500">
+          <select class="bg-[#080d1a] border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300"><option>全部角色</option><option>admin</option><option>lead</option><option>member</option></select>
+          <select class="bg-[#080d1a] border border-slate-700 rounded px-2 py-1.5 text-xs text-slate-300"><option>全部状态</option><option>active</option><option>disabled</option></select>
+        </div>
+        <span class="text-[10px] text-slate-600 font-mono">共 12 条</span>
+      </div>
+      <table class="w-full text-xs">
+        <thead class="bg-[#0b1120] text-slate-500 text-[10px] uppercase">
+          <tr><th class="px-4 py-2.5 text-left">用户</th><th class="px-4 py-2.5 text-left">角色</th><th class="px-4 py-2.5 text-left">登录方式</th><th class="px-4 py-2.5 text-left">状态</th><th class="px-4 py-2.5 text-left">最后登录</th><th class="px-4 py-2.5 text-left">会话数</th><th class="px-4 py-2.5 text-right">操作</th></tr>
+        </thead>
+        <tbody class="divide-y divide-slate-800/60">
+          <tr class="user-row"><td class="px-4 py-2.5"><div class="flex items-center space-x-2"><div class="w-7 h-7 rounded-full bg-violet-600/30 text-violet-300 flex items-center justify-center text-[10px] font-bold">CA</div><div><div class="text-slate-200 font-semibold">Caesar (管理员)</div><div class="text-[10px] text-slate-500">caesar1868@outlook.com</div></div></div></td><td class="px-4 py-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-mono role-badge-admin">admin</span></td><td class="px-4 py-2.5 text-slate-400">本地密码</td><td class="px-4 py-2.5"><span class="status-active">● active</span></td><td class="px-4 py-2.5 text-slate-500">今天 10:38</td><td class="px-4 py-2.5 text-slate-400">4</td><td class="px-4 py-2.5 text-right space-x-1"><button class="text-blue-400 hover:underline text-[11px]">编辑</button></td></tr>
+          <tr class="user-row"><td class="px-4 py-2.5"><div class="flex items-center space-x-2"><div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold">LW</div><div><div class="text-slate-200 font-semibold">李文 (组长)</div><div class="text-[10px] text-slate-500">liwen@company.com</div></div></div></td><td class="px-4 py-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-mono role-badge-lead">lead</span></td><td class="px-4 py-2.5 text-slate-400">SSO · Azure AD</td><td class="px-4 py-2.5"><span class="status-active">● active</span></td><td class="px-4 py-2.5 text-slate-500">昨天 18:22</td><td class="px-4 py-2.5 text-slate-400">7</td><td class="px-4 py-2.5 text-right space-x-1"><button class="text-blue-400 hover:underline text-[11px]">编辑</button><button class="text-rose-400 hover:underline text-[11px]">禁用</button></td></tr>
+          <tr class="user-row"><td class="px-4 py-2.5"><div class="flex items-center space-x-2"><div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold">ZS</div><div><div class="text-slate-200 font-semibold">张三</div><div class="text-[10px] text-slate-500">zhangsan@company.com</div></div></div></td><td class="px-4 py-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-mono role-badge-member">member</span></td><td class="px-4 py-2.5 text-slate-400">SSO · 飞书</td><td class="px-4 py-2.5"><span class="status-active">● active</span></td><td class="px-4 py-2.5 text-slate-500">今天 09:15</td><td class="px-4 py-2.5 text-slate-400">3</td><td class="px-4 py-2.5 text-right space-x-1"><button class="text-blue-400 hover:underline text-[11px]">编辑</button><button class="text-rose-400 hover:underline text-[11px]">禁用</button></td></tr>
+          <tr class="user-row"><td class="px-4 py-2.5"><div class="flex items-center space-x-2"><div class="w-7 h-7 rounded-full bg-amber-600/30 text-amber-300 flex items-center justify-center text-[10px] font-bold">LS</div><div><div class="text-slate-200 font-semibold">李四</div><div class="text-[10px] text-slate-500">lisi@company.com</div></div></div></td><td class="px-4 py-2.5"><span class="px-2 py-0.5 rounded text-[10px] font-mono role-badge-member">member</span></td><td class="px-4 py-2.5 text-slate-400">本地密码</td><td class="px-4 py-2.5"><span class="status-locked">● locked</span></td><td class="px-4 py-2.5 text-slate-500">3 天前</td><td class="px-4 py-2.5 text-slate-400">1</td><td class="px-4 py-2.5 text-right space-x-1"><button class="text-blue-400 hover:underline text-[11px]">编辑</button><button class="text-emerald-400 hover:underline text-[11px]">解锁</button></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- RBAC 权限矩阵速览 -->
+    <div class="mt-6 rounded-xl bg-[#0f1523] border border-slate-800 p-4">
+      <h3 class="text-xs font-bold text-slate-300 mb-3">RBAC 权限矩阵</h3>
+      <table class="w-full text-[11px]">
+        <thead><tr class="text-slate-500"><th class="text-left py-1.5">能力</th><th class="text-center py-1.5">admin</th><th class="text-center py-1.5">lead</th><th class="text-center py-1.5">member</th></tr></thead>
+        <tbody class="divide-y divide-slate-800/40">
+          <tr><td class="py-1.5 text-slate-300">用户管理（创建/禁用/重置密码）</td><td class="text-center text-emerald-400">✓</td><td class="text-center text-slate-600">✗</td><td class="text-center text-slate-600">✗</td></tr>
+          <tr><td class="py-1.5 text-slate-300">全局设置（Provider/系统配置）</td><td class="text-center text-emerald-400">✓</td><td class="text-center text-slate-600">✗</td><td class="text-center text-slate-600">✗</td></tr>
+          <tr><td class="py-1.5 text-slate-300">审计查看（所辖范围）</td><td class="text-center text-emerald-400">✓ 全部</td><td class="text-center text-sky-400">✓ 所辖</td><td class="text-center text-slate-600">✗</td></tr>
+          <tr><td class="py-1.5 text-slate-300">Git 凭据绑定</td><td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td><td class="text-center text-slate-600">✗</td></tr>
+          <tr><td class="py-1.5 text-slate-300">推送审批放行 (Push Gate)</td><td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td><td class="text-center text-amber-400">发起</td></tr>
+          <tr><td class="py-1.5 text-slate-300">Jenkins 触发</td><td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓</td><td class="text-center text-emerald-400">✓（授权任务）</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </main>
+</body>
+</html>

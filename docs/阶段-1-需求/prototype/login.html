@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>登录 - PG Harness Enterprise</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <script src="js/mock-data.js"></script>
+  <style>
+    .role-badge-admin { background: rgba(147,51,234,.2); color: #c084fc; }
+    .role-badge-lead { background: rgba(59,130,246,.2); color: #60a5fa; }
+    .role-badge-member { background: rgba(16,185,129,.2); color: #34d399; }
+    .user-row:hover { background: rgba(59,130,246,.06); }
+    .status-active { color: #34d399; }
+    .status-disabled { color: #f87171; }
+    .status-locked { color: #fbbf24; }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100">
+<div class='min-h-screen flex items-center justify-center p-4'>
+      <div class='w-full max-w-sm rounded-2xl bg-[#0f172a] border border-slate-700 shadow-2xl p-8 space-y-5'>
+        <div class='text-center space-y-2'><div class='text-2xl font-bold text-white'>PG Harness Enterprise</div><div class='text-[11px] text-slate-500'>企业智能体协作平台</div></div>
+        <div class='space-y-3'>
+          <input placeholder='用户名 / 邮箱' class='w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2.5 text-xs text-slate-200'>
+          <input type='password' placeholder='密码' class='w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2.5 text-xs text-slate-200'>
+          <button class='w-full py-2.5 rounded bg-blue-600 text-white text-xs font-semibold'>登录</button>
+        </div>
+        <div class='flex items-center space-x-3'><div class='flex-1 border-t border-slate-800'></div><span class='text-[10px] text-slate-600'>或</span><div class='flex-1 border-t border-slate-800'></div></div>
+        <button class='w-full py-2.5 rounded border border-slate-700 text-slate-300 text-xs hover:border-blue-500 transition'>🔐 使用企业 SSO 登录</button>
+        <button class='w-full py-2.5 rounded border border-slate-700 text-slate-300 text-xs hover:border-sky-500 transition'>💬 使用飞书扫码</button>
+      </div>
+    </div>
+</body>
+</html>
