@@ -42,6 +42,23 @@
     .agent-card { transition: border-color .12s, opacity .15s; }
     .agent-card.off { opacity: .4; }
   </style>
+  <script>
+    function switchTab(tab) {
+      ['chunks', 'next'].forEach(id => {
+        document.getElementById('panel-' + id).classList.toggle('hidden', id !== tab);
+        document.getElementById('tab-' + id).classList.toggle('active', id === tab);
+        document.getElementById('tab-' + id).classList.toggle('text-slate-500', id !== tab);
+        document.getElementById('tab-' + id).classList.toggle('text-slate-300', id !== tab);
+      });
+    }
+    function toggleChunkChildren(id) {
+      document.getElementById(id + '-children')?.classList.toggle('hidden');
+    }
+    function toggleTaskGroup(el) {
+      el.classList.toggle('collapsed');
+      el.nextElementSibling?.classList.toggle('hidden');
+    }
+  </script>
 </head>
 <body class="bg-[#070a12] text-slate-100 min-h-screen flex">
 
