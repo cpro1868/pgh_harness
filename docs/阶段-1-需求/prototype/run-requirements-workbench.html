@@ -276,6 +276,20 @@
                   </div>
                 </div>
                 <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-approved text-[9px]">approved</span><span class="text-[9px] text-slate-600 ml-auto">✓ 3 项已讨论</span></div>
+                <!-- 关联任务（挂在叶子分块下） -->
+                <div class="mt-1 pl-3 space-y-1">
+                  <div class="task-card doing rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                    <div class="flex items-start justify-between">
+                      <div class="text-[10px] text-slate-200 leading-snug flex-1">支付方式白名单校验规则设计</div>
+                      <div class="flex space-x-0.5 ml-1 shrink-0">
+                        <button class="op-btn text-blue-400" style="width:18px;height:18px" title="设为讨论点">🎯</button>
+                        <button class="op-btn text-slate-500" style="width:18px;height:18px" title="编辑任务" onclick="openTaskModal('支付方式白名单校验规则设计','设计白名单校验规则','doing','P0','白名单机制')">⚙️</button>
+                        <button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除任务" onclick="alert('原型：删除任务（需确认）')">🗑</button>
+                      </div>
+                    </div>
+                    <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 分块：白名单机制</span></div>
+                  </div>
+                </div>
               </div>
               <div class="chunk-node rounded px-2 py-1">
                 <div class="flex items-center justify-between">
@@ -288,25 +302,7 @@
                     <button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button>
                   </div>
                 </div>
-                <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-discussed text-[9px]">discussed</span></div>
-              </div>
-            </div>
-            <!-- 分块下挂任务 -->
-            <div class="mt-1.5 pl-3 space-y-1">
-              <div class="text-[9px] text-slate-600 font-mono mb-0.5">关联任务 (1)</div>
-              <div class="task-card doing rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
-                <div class="flex items-start justify-between">
-                  <div class="text-[10px] text-slate-200 leading-snug flex-1">支付方式白名单 + 手续费规则</div>
-                  <div class="flex space-x-0.5 ml-1 shrink-0">
-                    <button class="op-btn text-blue-400" style="width:18px;height:18px" title="设为讨论点">🎯</button>
-                    <button class="op-btn text-slate-500" style="width:18px;height:18px" title="编辑任务" onclick="openTaskModal('支付方式白名单 + 手续费规则','设计白名单校验和费率计算','doing','P0','支付方式校验')">⚙️</button>
-                    <button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除任务" onclick="alert('原型：删除任务（需确认）')">🗑</button>
-                  </div>
-                </div>
-                <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 分块：支付方式校验</span></div>
-              </div>
-            </div>
-          </div>
+                <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-discussed text-[9px]">discussed</span><span class="text-[9px] text-slate-600 ml-auto">? 待细化</span></div>
 
           <!-- 分块 2 -->
           <div class="chunk-node rounded-lg px-2 py-1.5">
@@ -334,23 +330,26 @@
             </div>
             <div class="chunk-children mt-1 space-y-1" id="ch2-children">
               <div class="chunk-node rounded px-2 py-1">
-                <div class="flex items-center justify-between"><span class="text-[10px] text-slate-300">费率规则</span><div class="flex space-x-0.5"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openChunkModal('费率规则','card 2.9% bp 存储','approved','P0','功能, 支付, 费率')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
-                <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-approved text-[9px]">approved</span></div>
-              </div>
-              <div class="chunk-node rounded px-2 py-1">
                 <div class="flex items-center justify-between"><span class="text-[10px] text-slate-300">精度处理（元↔分）</span><div class="flex space-x-0.5"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openChunkModal('精度处理（元↔分）','内部以分计算避免浮点精度','discussed','P0','功能, 精度')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
                 <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-discussed text-[9px]">discussed</span></div>
+                <!-- 关联任务（挂在叶子分块"精度处理"下） -->
+                <div class="mt-1 pl-3 space-y-1">
+                  <div class="task-card doing rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                    <div class="flex items-start justify-between"><div class="text-[10px] text-slate-200 leading-snug flex-1">设计元↔分转换层（精度处理）</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" title="编辑任务" onclick="openTaskModal('设计元↔分转换层（精度处理）','精度安全金额转换','doing','P0','精度处理（元↔分）')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+                    <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 分块：精度处理</span></div>
+                  </div>
+                </div>
               </div>
-            </div>
-            <div class="mt-1.5 pl-3 space-y-1">
-              <div class="text-[9px] text-slate-600 font-mono mb-0.5">关联任务 (2)</div>
-              <div class="task-card doing rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
-                <div class="flex items-start justify-between"><div class="text-[10px] text-slate-200 leading-snug flex-1">设计元↔分转换层（精度处理）</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openTaskModal('设计元↔分转换层','精度安全金额转换','doing','P0','精度处理（元↔分）')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
-                <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 精度处理</span></div>
-              </div>
-              <div class="task-card todo rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
-                <div class="flex items-start justify-between"><div class="text-[10px] text-slate-300 leading-snug flex-1">阶梯/封顶策略确认</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openTaskModal('阶梯/封顶策略确认','讨论确认阶梯或封顶','todo','P0','手续费计算')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
-                <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 手续费计算</span></div>
+              <div class="chunk-node rounded px-2 py-1">
+                <div class="flex items-center justify-between"><span class="text-[10px] text-slate-300">费率规则</span><div class="flex space-x-0.5"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openChunkModal('费率规则','card 2.9% bp 存储','approved','P0','功能, 支付, 费率')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+                <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-approved text-[9px]">approved</span></div>
+                <!-- 关联任务（挂在叶子分块"费率规则"下） -->
+                <div class="mt-1 pl-3 space-y-1">
+                  <div class="task-card todo rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                    <div class="flex items-start justify-between"><div class="text-[10px] text-slate-300 leading-snug flex-1">阶梯/封顶策略确认</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" title="编辑任务" onclick="openTaskModal('阶梯/封顶策略确认','讨论确认阶梯或封顶','todo','P0','费率规则')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+                    <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 分块：费率规则</span></div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
