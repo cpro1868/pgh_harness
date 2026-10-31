@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>项目工作台 - PG Harness Enterprise</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="css/shared.css">
+  <style>
+    .chat-msg { animation: msg-in .15s ease; }
+    @keyframes msg-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
+    .task-card { transition: border-color .12s, background .12s; }
+    .task-card:hover { border-color: #475569; }
+    .task-card.doing { border-left: 2.5px solid #3b82f6; }
+    .task-card.todo { border-left: 2.5px solid #64748b; }
+    .task-card.done { border-left: 2.5px solid #059669; opacity: .6; }
+    .task-card.deferred { border-left: 2.5px solid #f59e0b; opacity: .55; }
+    .file-tree-item { transition: background .1s; }
+    .file-tree-item:hover { background: rgba(59,130,246,.08); }
+    .pill { font-size: 9px; padding: 1px 6px; border-radius: 9999px; }
+    .next-step-card { transition: border-color .12s; cursor: pointer; }
+    .next-step-card:hover { border-color: #60a5fa; }
+    .agent-detect { animation: qa-pop .2s ease; }
+    @keyframes qa-pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+    .chunk-node { transition: background .1s; }
+    .chunk-node:hover { background: rgba(59,130,246,.08); }
+    .chunk-node.focused { background: rgba(37,99,235,.15); border-left: 2.5px solid #3b82f6; }
+    .chunk-status-draft { color: #94a3b8; }
+    .chunk-status-discussed { color: #60a5fa; }
+    .chunk-status-analyzed { color: #a78bfa; }
+    .chunk-status-approved { color: #34d399; }
+    .chunk-children { margin-left: 14px; border-left: 1.5px solid #334155; }
+    .op-btn { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 10px; }
+    .op-btn:hover { background: rgba(59,130,246,.2); }
+    .agent-toggle { width: 28px; height: 16px; border-radius: 9999px; position: relative; cursor: pointer; transition: background .15s; }
+    .agent-toggle .knob { width: 12px; height: 12px; border-radius: 9999px; background: #fff; position: absolute; top: 2px; transition: left .15s; }
+    .agent-toggle.on { background: #059669; }
+    .agent-toggle.on .knob { left: 14px; }
+    .agent-toggle.off { background: #334155; }
+    .agent-toggle.off .knob { left: 2px; }
+    .agent-avatar { width: 24px; height: 24px; border-radius: 9999px; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; }
+    .agent-card { transition: border-color .12s, opacity .15s; }
+    .agent-card.off { opacity: .4; }
+    .modal-overlay { animation: fade .1s ease; }
+    @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+    .modal-box { animation: pop .15s ease; }
+    @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+  </style>
+</head>
+<body class="bg-[#070a12] text-slate-100 min-h-screen flex">
+
+  <!-- ═══ 弹出层：Agent 设置 ═══ -->
+  <div id="modal-agent" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-agent')">
+    <div class="w-full max-w-md rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <span class="text-sm font-bold text-white" id="agent-modal-title">编辑 Agent</span>
+        <button onclick="closeModal('modal-agent')" class="text-slate-500 hover:text-slate-300">✕</button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div><label class="text-slate-400 text-[11px] block mb-1">名称</label><input id="f-agent-name" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></div>
+        <div><label class="text-slate-400 text-[11px] block mb-1">角色描述</label><input id="f-agent-role" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></div>
+        <div><label class="text-slate-400 text-[11px] block mb-1">模型</label><select id="f-agent-model" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"><option>deepseek-v4.1-flash</option><option>glm-5.3</option><option>kimi-k2.7-code</option><option>claude-haiku-5.5</option></select></div>
+        <div><label class="text-slate-400 text-[11px] block mb-1">系统提示词</label><textarea id="f-agent-prompt" rows="4" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 font-mono"></textarea></div>
+        <div class="flex items-center justify-between pt-1">
+          <button onclick="deleteAgent()" class="text-rose-400 hover:text-rose-300 text-[11px] underline">🗑 删除此 Agent</button>
+          <div class="flex space-x-2"><button onclick="closeModal('modal-agent')" class="px-3 py-1.5 rounded bg-slate-700 text-slate-300 text-xs">取消</button><button onclick="saveAgent()" class="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold">保存</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 弹出层：需求分块设置 ═══ -->
+  <div id="modal-chunk" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-chunk')">
+    <div class="w-full max-w-md rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <span class="text-sm font-bold text-white">编辑分块</span>
+        <button onclick="closeModal('modal-chunk')" class="text-slate-500 hover:text-slate-300">✕</button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div><label class="text-slate-400 text-[11px] block mb-1">名称</label><input id="f-chunk-name" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></div>
+        <div><label class="text-slate-400 text-[11px] block mb-1">详细描述</label><textarea id="f-chunk-desc" rows="3" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></textarea></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-slate-400 text-[11px] block mb-1">状态</label><select id="f-chunk-status" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"><option>draft</option><option>discussed</option><option>analyzed</option><option>approved</option></select></div>
+          <div><label class="text-slate-400 text-[11px] block mb-1">优先级</label><select id="f-chunk-priority" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"><option>P0</option><option>P1</option><option>P2</option></select></div>
+        </div>
+        <div><label class="text-slate-400 text-[11px] block mb-1">标签（逗号分隔）</label><input id="f-chunk-tags" placeholder="功能, 支付, 接口" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></div>
+        <div class="flex items-center justify-between pt-1">
+          <button onclick="deleteChunk()" class="text-rose-400 hover:text-rose-300 text-[11px] underline">🗑 删除此分块</button>
+          <div class="flex space-x-2"><button onclick="closeModal('modal-chunk')" class="px-3 py-1.5 rounded bg-slate-700 text-slate-300 text-xs">取消</button><button onclick="saveChunk()" class="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold">保存</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 弹出层：任务设置 ═══ -->
+  <div id="modal-task" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-task')">
+    <div class="w-full max-w-md rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <span class="text-sm font-bold text-white">编辑任务</span>
+        <button onclick="closeModal('modal-task')" class="text-slate-500 hover:text-slate-300">✕</button>
+      </div>
+      <div class="p-5 space-y-3">
+        <div><label class="text-slate-400 text-[11px] block mb-1">任务名称</label><input id="f-task-name" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></div>
+        <div><label class="text-slate-400 text-[11px] block mb-1">详细描述</label><textarea id="f-task-desc" rows="3" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></textarea></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="text-slate-400 text-[11px] block mb-1">状态</label><select id="f-task-status" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"><option>todo</option><option>doing</option><option>done</option><option>deferred</option></select></div>
+          <div><label class="text-slate-400 text-[11px] block mb-1">优先级</label><select id="f-task-priority" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"><option>P0</option><option>P1</option><option>P2</option></select></div>
+        </div>
+        <div><label class="text-slate-400 text-[11px] block mb-1">来源分块</label><input id="f-task-source" readonly class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-500 font-mono"></div>
+        <div class="flex items-center justify-between pt-1">
+          <button onclick="deleteTask()" class="text-rose-400 hover:text-rose-300 text-[11px] underline">🗑 删除此任务</button>
+          <div class="flex space-x-2"><button onclick="closeModal('modal-task')" class="px-3 py-1.5 rounded bg-slate-700 text-slate-300 text-xs">取消</button><button onclick="saveTask()" class="px-4 py-1.5 rounded bg-blue-600 text-white text-xs font-semibold">保存</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ 一级导航 ═══ -->
+  <aside class="activity-bar">
+    <a href="index.html" class="w-10 h-10 rounded-xl bg-blue-600/20 text-blue-400 flex items-center justify-center mb-4 border border-blue-500/30"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg></a>
+    <a href="run-requirements.html" class="activity-btn active" title="项目工作台"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg></a>
+    <a href="run-chat.html" class="activity-btn" title="对话工作台"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
+    <div class="my-3 w-6 border-b border-slate-800"></div>
+    <a href="config-users.html" class="activity-btn" title="用户管理"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg></a>
+    <a href="config-git.html" class="activity-btn" title="Git 仓库集成"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 12h14M5 12a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v4a2 2 0 01-2 2M5 12a2 2 0 00-2 2v4a2 2 0 002 2h14a2 2 0 002-2v-4a2 2 0 00-2-2m-2-4h.01M17 16h.01"></path></svg></a>
+    <a href="config-jenkins.html" class="activity-btn" title="Jenkins CI/CD"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.065-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg></a>
+    <a href="config-audit.html" class="activity-btn" title="审计日志"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg></a>
+    <div class="flex-1"></div>
+  </aside>
+
+  <!-- 主区域 -->
+  <main class="flex-1 flex overflow-hidden">
+
+    <!-- ═══ 左栏：Agent 管理 + 项目文件树 ═══ -->
+    <aside class="w-64 border-r border-slate-800 bg-[#0a0f1d] flex flex-col shrink-0">
+
+      <!-- Agent 管理 -->
+      <div class="border-b border-slate-800">
+        <div class="px-3 py-2.5 flex items-center justify-between">
+          <span class="text-[11px] font-bold text-slate-300">🤖 讨论 Agent</span>
+          <button class="text-blue-400 hover:underline text-[10px]" onclick="openAgentModal()">＋</button>
+        </div>
+        <div class="px-2.5 pb-2.5 space-y-1.5" id="agent-list">
+          <!-- 主 Agent（不可删除） -->
+          <div class="agent-card rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2 flex items-center space-x-2" data-agent="main">
+            <div class="agent-avatar bg-blue-600/30 text-blue-300">🧭</div>
+            <div class="flex-1 min-w-0 cursor-pointer" onclick="openAgentModal('需求分析师','需求分析与引导','deepseek-v4.1-flash','你是一名需求分析师...')">
+              <div class="text-[11px] font-semibold text-slate-200 truncate">需求分析师</div>
+              <div class="text-[9px] text-slate-600 font-mono truncate">deepseek-v4.1-flash</div>
+            </div>
+            <span class="pill bg-blue-950/60 text-blue-400 text-[9px]">主控</span>
+          </div>
+          <!-- Agent 2（可点击编辑+删除） -->
+          <div class="agent-card rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2 flex items-center space-x-2" data-agent="sec">
+            <div class="agent-avatar bg-rose-600/30 text-rose-300">🔒</div>
+            <div class="flex-1 min-w-0 cursor-pointer" onclick="openAgentModal('安全评审','安全与合规审查','glm-5.3','你是安全评审专家...')">
+              <div class="text-[11px] font-semibold text-slate-200 truncate">安全评审</div>
+              <div class="text-[9px] text-slate-600 font-mono truncate">glm-5.3</div>
+            </div>
+            <div class="flex items-center space-x-1">
+              <button class="op-btn text-slate-500" title="编辑 Agent" onclick="event.stopPropagation(); openAgentModal('安全评审','安全与合规审查','glm-5.3','你是安全评审专家...')">⚙️</button>
+              <div class="agent-toggle on" onclick="event.stopPropagation(); this.classList.toggle('on'); this.classList.toggle('off')"><div class="knob"></div></div>
+            </div>
+          </div>
+          <!-- Agent 3 -->
+          <div class="agent-card off rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2 flex items-center space-x-2" data-agent="perf">
+            <div class="agent-avatar bg-amber-600/30 text-amber-300">⚡</div>
+            <div class="flex-1 min-w-0 cursor-pointer" onclick="openAgentModal('性能优化','性能分析与建议','kimi-k2.7-code','你是性能优化专家...')">
+              <div class="text-[11px] font-semibold text-slate-400 truncate">性能优化</div>
+              <div class="text-[9px] text-slate-600 font-mono truncate">kimi-k2.7-code</div>
+            </div>
+            <div class="flex items-center space-x-1">
+              <button class="op-btn text-slate-500" title="编辑 Agent" onclick="event.stopPropagation(); openAgentModal('性能优化','性能分析与建议','kimi-k2.7-code','你是性能优化专家...')">⚙️</button>
+              <div class="agent-toggle off" onclick="event.stopPropagation(); this.classList.toggle('on'); this.classList.toggle('off')"><div class="knob"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 项目文件树 -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="px-3 py-2 border-b border-slate-800">
+          <div class="text-[11px] font-bold text-white truncate">在线支付校验模块</div>
+          <div class="text-[9px] text-slate-600 font-mono truncate">docs\scope\payment-module\</div>
+        </div>
+        <div class="py-1 text-[11px] font-mono select-none">
+          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer bg-emerald-950/20 text-emerald-300 border-l-2 border-emerald-500"><span>📄</span><span>GUIDE.md</span><span class="pill bg-emerald-950/60 text-emerald-400 ml-auto">索引</span></div>
+          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-400"><span class="text-slate-600">▸</span><span>💬</span><span>discussions/</span><span class="pill bg-slate-800 text-slate-500 ml-auto">3</span></div>
+          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-400"><span>▾</span><span>📋</span><span>tasks.md</span><span class="pill bg-blue-950/60 text-blue-400 ml-auto">8</span></div>
+          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-500 opacity-50"><span>📄</span><span>PRD.md</span><span class="text-slate-600 text-[9px]">待生成</span></div>
+          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-500"><span>▸</span><span>📎</span><span>attachments/</span><span class="pill bg-slate-800 text-slate-500 ml-auto">2</span></div>
+        </div>
+        <div class="px-3 py-2 border-t border-slate-800"><div class="text-[9px] text-slate-600 leading-relaxed">📁 项目文件夹<br>所有内容归档于此<br>Agent 可直接读写</div></div>
+      </div>
+    </aside>
+
+    <!-- ═══ 中栏：自由对话区 ═══ -->
+    <div class="flex-1 flex flex-col overflow-hidden border-x border-slate-800">
+      <div class="h-11 border-b border-slate-800 flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0">
+        <div class="flex items-center space-x-2">
+          <span class="text-sm font-bold text-white">💬 项目讨论</span>
+          <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">自由讨论 · 多 Agent 引导</span>
+        </div>
+        <button onclick="alert('原型：Agent 从讨论记录提炼生成 PRD → write_file 落盘 PRD.md → 弹出流转面板')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-[11px]" title="导出需求分块和任务清单" onclick="alert('原型：导出需求分块和任务清单为 Markdown/CSV')">📤</button><button class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1"><span>📄</span><span>生成 PRD</span></button>
+      </div>
+
+      <div class="flex-1 overflow-y-auto p-4 space-y-3">
+        <div class="flex items-start space-x-2 flex-row-reverse chat-msg"><div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">你</div><div class="max-w-[80%] space-y-1"><div class="text-[10px] text-slate-600 font-mono text-right">起点 · 一句话</div><div class="text-xs text-slate-200 bg-blue-950/30 rounded-lg px-3 py-2 leading-relaxed">我想做一个在线支付校验的东西</div></div></div>
+        <div class="flex items-start space-x-2 chat-msg"><div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🧭</div><div class="max-w-[85%] space-y-1"><div class="text-[10px] text-blue-300 font-mono">需求分析师</div><div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-slate-800 leading-relaxed">在线支付校验——好的。确认范围：是<b class="text-white">校验支付方式是否合法</b>，还是<b class="text-white">完整支付流程</b>？前者是工具模块，后者涉及面广很多。</div></div></div>
+        <div class="flex items-start space-x-2 flex-row-reverse chat-msg"><div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">你</div><div class="max-w-[80%] space-y-1"><div class="text-xs text-slate-200 bg-blue-950/30 rounded-lg px-3 py-2 leading-relaxed">校验模块，工具函数库。给我一个支付方式和金额，我告诉你合不合法、手续费多少。不需要真的扣款。</div></div></div>
+        <div class="flex items-start space-x-2 chat-msg"><div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🧭</div><div class="max-w-[85%] space-y-1"><div class="text-[10px] text-blue-300 font-mono">需求分析师</div><div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-slate-800 leading-relaxed">清晰了。追问几个影响设计的点：<br>1. <b class="text-white">支付方式</b>有哪些？<br>2. <b class="text-white">手续费</b>固定费率还是阶梯？<br>3. 金额<b class="text-white">精度</b>——分还是元？</div></div></div>
+        <div class="flex items-start space-x-2 flex-row-reverse chat-msg"><div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">你</div><div class="max-w-[80%] space-y-1"><div class="text-xs text-slate-200 bg-blue-950/30 rounded-lg px-3 py-2 leading-relaxed">card/paypal/bank_transfer 三种。card 手续费 2.9%，其他免费。金额用元，内部计算用分。</div><div class="text-[10px] text-slate-500 text-right">📎 费率表截图</div></div></div>
+        <div class="flex items-start space-x-2 chat-msg"><div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🧭</div><div class="max-w-[85%] space-y-1"><div class="text-[10px] text-blue-300 font-mono">需求分析师</div><div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-slate-800 leading-relaxed">好的，用分做内部单位是对的。我注意到<b class="text-white">"内部计算要用分"</b>——需要<b class="text-white">元↔分转换层</b>。还有一个问题：<b class="text-white">超上限</b>怎么处理？</div>
+          <div class="agent-detect rounded-lg border border-emerald-800/40 bg-emerald-950/20 p-2.5"><div class="text-[10px] font-bold text-emerald-300 mb-1">📦 已创建需求分块</div><div class="space-y-1"><div class="flex items-center justify-between text-[10px] bg-[#080d1a] rounded px-2 py-1"><span class="text-slate-300">📦 支付方式校验</span><span class="text-emerald-400 text-[9px]">✓</span></div><div class="flex items-center justify-between text-[10px] bg-[#080d1a] rounded px-2 py-1"><span class="text-slate-300">📦 手续费计算</span><span class="text-emerald-400 text-[9px]">✓</span></div><div class="flex items-center justify-between text-[10px] bg-[#080d1a] rounded px-2 py-1"><span class="text-slate-300">📦 精度处理（元↔分）</span><button class="text-blue-400 text-[9px] hover:underline">确认</button></div></div></div>
+          <div class="agent-detect rounded-lg border border-blue-800/40 bg-blue-950/20 p-2.5"><div class="text-[10px] font-bold text-blue-300 mb-1">💡 检测到 2 个任务点</div><div class="space-y-1"><div class="flex items-center justify-between text-[10px] text-slate-400 bg-[#080d1a] rounded px-2 py-1"><span>元↔分转换层</span><button class="text-blue-400 hover:underline">确认</button><button class="text-slate-600 hover:underline">忽略</button></div><div class="flex items-center justify-between text-[10px] text-slate-400 bg-[#080d1a] rounded px-2 py-1"><span>超上限策略</span><button class="text-blue-400 hover:underline">确认</button><button class="text-slate-600 hover:underline">忽略</button></div></div></div>
+        </div></div>
+        <div class="flex items-start space-x-2 flex-row-reverse chat-msg"><div class="w-7 h-7 rounded-full bg-emerald-600/30 text-emerald-300 flex items-center justify-center text-[10px] font-bold shrink-0">你</div><div class="max-w-[80%] space-y-1"><div class="text-xs text-slate-200 bg-blue-950/30 rounded-lg px-3 py-2 leading-relaxed">超了直接拒绝。另外想到——<b class="text-white">退款</b>场景要不要考虑？</div></div></div>
+        <div class="flex items-start space-x-2 chat-msg"><div class="w-7 h-7 rounded-full bg-blue-600/30 text-blue-300 flex items-center justify-center text-[10px] font-bold shrink-0">🧭</div><div class="max-w-[85%] space-y-1"><div class="text-[10px] text-blue-300 font-mono">需求分析师</div><div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-slate-800 leading-relaxed">退款场景会影响 API 设计——建议第一期先做<b class="text-white">全额退款标记</b>，部分退款放二期。目前讨论已覆盖核心功能，要不要我整理成 PRD？</div>
+          <div class="agent-detect rounded-lg border border-emerald-800/40 bg-emerald-950/20 p-2.5"><div class="text-[10px] font-bold text-emerald-300 mb-1">📦 已创建需求分块</div><div class="space-y-1"><div class="flex items-center justify-between text-[10px] bg-[#080d1a] rounded px-2 py-1"><span class="text-slate-300">📦 退款标记</span><button class="text-blue-400 text-[9px] hover:underline">确认</button></div></div></div>
+          <div class="agent-detect rounded-lg border border-blue-800/40 bg-blue-950/20 p-2.5"><div class="text-[10px] font-bold text-blue-300 mb-1">💡 检测到 2 个任务点</div><div class="space-y-1"><div class="flex items-center justify-between text-[10px] text-slate-400 bg-[#080d1a] rounded px-2 py-1"><span>全额退款标记（P0）</span><button class="text-blue-400 hover:underline">确认</button><button class="text-slate-600 hover:underline">忽略</button></div><div class="flex items-center justify-between text-[10px] text-slate-400 bg-[#080d1a] rounded px-2 py-1"><span>部分退款状态追踪（→ 二期）</span><button class="text-blue-400 hover:underline">确认</button><button class="text-slate-600 hover:underline">忽略</button></div></div></div>
+        </div></div>
+        <div class="flex items-start space-x-2 chat-msg"><div class="w-7 h-7 rounded-full bg-rose-600/30 text-rose-300 flex items-center justify-center text-[10px] font-bold shrink-0">🔒</div><div class="max-w-[85%] space-y-1"><div class="text-[10px] text-rose-300 font-mono">安全评审 Agent</div><div class="text-xs text-slate-300 bg-[#0f1523] rounded-lg px-3 py-2.5 border border-rose-800/40 leading-relaxed">从安全角度补充：建议增加<b class="text-white">金额上限校验</b>和<b class="text-white">负数/NaN 显式拒绝</b>。手续费费率建议用<b class="text-white">基点（bp）</b>而非百分比存储。</div></div></div>
+      </div>
+
+      <div class="p-3 border-t border-slate-800 bg-[#0a0f1d] shrink-0">
+        <div class="flex items-center space-x-2">
+          <button class="px-2 py-2 text-slate-500 text-xs" title="附加文件">📎</button>
+          <input placeholder="继续讨论…" class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
+          <button class="px-4 py-2 rounded bg-blue-600 text-white text-xs font-semibold">发送</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ 右栏：需求分块（含任务）+ 下一步建议 ═══ -->
+    <aside class="w-80 border-l border-slate-800 bg-[#0a0f1d] flex flex-col shrink-0">
+      <div class="flex border-b border-slate-800 text-[11px]">
+        <button class="tab-btn active flex-1 py-2.5 text-slate-300" onclick="switchTab('chunks')" id="tab-chunks">📦 需求分块</button>
+        <button class="tab-btn flex-1 py-2.5 text-slate-500" onclick="switchTab('next')" id="tab-next">🧭 建议</button>
+      </div>
+
+      <div id="panel-chunks" class="flex-1 overflow-y-auto p-2.5">
+        <div class="text-[9px] text-slate-600 mb-2 flex items-center justify-between">
+          <span>分块树 · 点击名称展开/收起 · ⚙️ 编辑 · 🗑 删除</span>
+          <button class="text-blue-400 hover:underline text-[10px]" onclick="openChunkModal()">＋</button>
+        </div>
+
+        <div class="space-y-1">
+          <!-- 分块 1 -->
+          <div class="chunk-node rounded-lg px-2 py-1.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch1')">
+                <span class="text-slate-600 text-[9px]">▾</span>
+                <span class="text-[11px] font-semibold text-slate-200 truncate">支付方式校验</span>
+                <span class="chunk-status-approved text-[9px]" title="已批准">●</span>
+              </div>
+              <div class="flex items-center space-x-0.5">
+                <button class="op-btn text-blue-400" title="设为讨论点" onclick="alert('原型：设为讨论点——接下来围绕这个分块讨论')">🎯</button>
+                <button class="op-btn text-slate-500" title="编辑分块" onclick="openChunkModal('支付方式校验','支持 card/paypal/bank_transfer 三种方式的合法性校验','approved','P0','功能, 支付')">⚙️</button>
+                <button class="op-btn text-rose-400" title="删除分块" onclick="alert('原型：删除分块（需确认）')">🗑</button>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1.5 mt-0.5">
+              <span class="pill" style="background:rgba(147,51,234,.15);color:#c084fc">功能</span>
+              <span class="chunk-status-approved text-[9px]">approved</span>
+            </div>
+            <div class="chunk-children mt-1 space-y-1" id="ch1-children">
+              <div class="chunk-node rounded px-2 py-1">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch1-a')">
+                    <span class="text-[10px] text-slate-300">白名单机制</span><span class="chunk-status-approved text-[9px]">●</span>
+                  </div>
+                  <div class="flex space-x-0.5">
+                    <button class="op-btn text-blue-400" style="width:18px;height:18px" title="设为讨论点">🎯</button>
+                    <button class="op-btn text-slate-500" style="width:18px;height:18px" title="编辑" onclick="openChunkModal('白名单机制','支持 card/paypal/bank_transfer 白名单','approved','P0','功能, 支付')">⚙️</button>
+                    <button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-approved text-[9px]">approved</span><span class="text-[9px] text-slate-600 ml-auto">✓ 3 项已讨论</span></div>
+              </div>
+              <div class="chunk-node rounded px-2 py-1">
+                <div class="flex items-center justify-between">
+                  <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch1-b')">
+                    <span class="text-[10px] text-slate-300">错误码体系</span><span class="chunk-status-discussed text-[9px]">●</span>
+                  </div>
+                  <div class="flex space-x-0.5">
+                    <button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button>
+                    <button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openChunkModal('错误码体系','invalid_method/unsupported_method/invalid_amount','discussed','P1','功能, 支付')">⚙️</button>
+                    <button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button>
+                  </div>
+                </div>
+                <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-discussed text-[9px]">discussed</span></div>
+              </div>
+            </div>
+            <!-- 分块下挂任务 -->
+            <div class="mt-1.5 pl-3 space-y-1">
+              <div class="text-[9px] text-slate-600 font-mono mb-0.5">关联任务 (1)</div>
+              <div class="task-card doing rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                <div class="flex items-start justify-between">
+                  <div class="text-[10px] text-slate-200 leading-snug flex-1">支付方式白名单 + 手续费规则</div>
+                  <div class="flex space-x-0.5 ml-1 shrink-0">
+                    <button class="op-btn text-blue-400" style="width:18px;height:18px" title="设为讨论点">🎯</button>
+                    <button class="op-btn text-slate-500" style="width:18px;height:18px" title="编辑任务" onclick="openTaskModal('支付方式白名单 + 手续费规则','设计白名单校验和费率计算','doing','P0','支付方式校验')">⚙️</button>
+                    <button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除任务" onclick="alert('原型：删除任务（需确认）')">🗑</button>
+                  </div>
+                </div>
+                <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 分块：支付方式校验</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分块 2 -->
+          <div class="chunk-node rounded-lg px-2 py-1.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch2')">
+                <span class="text-slate-600 text-[9px]">▾</span>
+                <span class="text-[11px] font-semibold text-slate-200 truncate">手续费计算</span>
+                <span class="chunk-status-discussed text-[9px]" title="讨论中">●</span>
+              </div>
+              <div class="flex items-center space-x-0.5">
+                <button class="op-btn text-emerald-400" title="🎯 当前讨论聚焦">🎯</button>
+                <button class="op-btn text-slate-500" title="编辑分块" onclick="openChunkModal('手续费计算','按支付方式差异化计算手续费','discussed','P0','功能, 支付, 费率')">⚙️</button>
+                <button class="op-btn text-rose-400" title="删除分块" onclick="alert('原型：删除分块（需确认）')">🗑</button>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1.5 mt-0.5">
+              <span class="pill" style="background:rgba(147,51,234,.15);color:#c084fc">功能</span>
+              <span class="chunk-status-discussed text-[9px]">discussed</span>
+            </div>
+            <div class="mt-1.5 p-2 rounded bg-[#080d1a] text-[10px] space-y-1">
+              <div class="text-slate-500 font-mono text-[9px] uppercase mb-1">讨论进度</div>
+              <div class="flex items-center space-x-1.5 text-slate-400"><span class="text-emerald-400">✓</span><span>card 2.9% 费率确认</span></div>
+              <div class="flex items-center space-x-1.5 text-slate-400"><span class="text-emerald-400">✓</span><span>bp 基点存储方案确认</span></div>
+              <div class="flex items-center space-x-1.5 text-slate-400"><span class="text-amber-400">?</span><span>阶梯/封顶策略未确认</span></div>
+            </div>
+            <div class="chunk-children mt-1 space-y-1" id="ch2-children">
+              <div class="chunk-node rounded px-2 py-1">
+                <div class="flex items-center justify-between"><span class="text-[10px] text-slate-300">费率规则</span><div class="flex space-x-0.5"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openChunkModal('费率规则','card 2.9% bp 存储','approved','P0','功能, 支付, 费率')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+                <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-approved text-[9px]">approved</span></div>
+              </div>
+              <div class="chunk-node rounded px-2 py-1">
+                <div class="flex items-center justify-between"><span class="text-[10px] text-slate-300">精度处理（元↔分）</span><div class="flex space-x-0.5"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openChunkModal('精度处理（元↔分）','内部以分计算避免浮点精度','discussed','P0','功能, 精度')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+                <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-discussed text-[9px]">discussed</span></div>
+              </div>
+            </div>
+            <div class="mt-1.5 pl-3 space-y-1">
+              <div class="text-[9px] text-slate-600 font-mono mb-0.5">关联任务 (2)</div>
+              <div class="task-card doing rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                <div class="flex items-start justify-between"><div class="text-[10px] text-slate-200 leading-snug flex-1">设计元↔分转换层（精度处理）</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openTaskModal('设计元↔分转换层','精度安全金额转换','doing','P0','精度处理（元↔分）')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+                <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 精度处理</span></div>
+              </div>
+              <div class="task-card todo rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                <div class="flex items-start justify-between"><div class="text-[10px] text-slate-300 leading-snug flex-1">阶梯/封顶策略确认</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openTaskModal('阶梯/封顶策略确认','讨论确认阶梯或封顶','todo','P0','手续费计算')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+                <div class="flex items-center justify-between mt-0.5"><span class="pill bg-slate-800 text-slate-500">P0</span><span class="text-[9px] text-slate-600">← 手续费计算</span></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分块 3 -->
+          <div class="chunk-node rounded-lg px-2 py-1.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch3')">
+                <span class="text-slate-600 text-[9px]">▾</span>
+                <span class="text-[11px] font-semibold text-slate-200 truncate">金额边界</span>
+                <span class="chunk-status-draft text-[9px]" title="草稿">●</span>
+              </div>
+              <div class="flex items-center space-x-0.5">
+                <button class="op-btn text-blue-400" title="设为讨论点">🎯</button>
+                <button class="op-btn text-slate-500" title="编辑分块" onclick="openChunkModal('金额边界','NaN/Infinity/负数/超上限处理','draft','P0','功能, 边界')">⚙️</button>
+                <button class="op-btn text-rose-400" title="删除分块" onclick="alert('原型：删除分块（需确认）')">🗑</button>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1.5 mt-0.5">
+              <span class="pill" style="background:rgba(147,51,234,.15);color:#c084fc">功能</span>
+              <span class="chunk-status-draft text-[9px]">draft</span>
+            </div>
+            <div class="mt-1.5 pl-3 space-y-1">
+              <div class="text-[9px] text-slate-600 font-mono mb-0.5">关联任务 (1)</div>
+              <div class="task-card todo rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                <div class="flex items-start justify-between"><div class="text-[10px] text-slate-300 leading-snug flex-1">超上限拒绝策略（100 万上限）</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openTaskModal('超上限拒绝策略','100 万上限拒绝','todo','P0','金额边界')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分块 4 -->
+          <div class="chunk-node rounded-lg px-2 py-1.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch4')">
+                <span class="text-slate-600 text-[9px]">▾</span>
+                <span class="text-[11px] font-semibold text-slate-200 truncate">退款标记</span>
+                <span class="chunk-status-draft text-[9px]" title="草稿">●</span>
+              </div>
+              <div class="flex items-center space-x-0.5">
+                <button class="op-btn text-blue-400" title="设为讨论点">🎯</button>
+                <button class="op-btn text-slate-500" title="编辑分块" onclick="openChunkModal('退款标记','全额退款标记 API','draft','P1','功能, 退款')">⚙️</button>
+                <button class="op-btn text-rose-400" title="删除分块" onclick="alert('原型：删除分块（需确认）')">🗑</button>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1.5 mt-0.5">
+              <span class="pill" style="background:rgba(147,51,234,.15);color:#c084fc">功能</span>
+              <span class="chunk-status-draft text-[9px]">draft</span>
+            </div>
+            <div class="mt-1.5 pl-3 space-y-1">
+              <div class="text-[9px] text-slate-600 font-mono mb-0.5">关联任务 (1)</div>
+              <div class="task-card todo rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                <div class="flex items-start justify-between"><div class="text-[10px] text-slate-300 leading-snug flex-1">全额退款标记 API</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openTaskModal('全额退款标记 API','全额退款标记','todo','P1','退款标记')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 分块 5 -->
+          <div class="chunk-node rounded-lg px-2 py-1.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch5')">
+                <span class="text-slate-600 text-[9px]">▾</span>
+                <span class="text-[11px] font-semibold text-slate-200 truncate">非功能需求</span>
+                <span class="chunk-status-draft text-[9px]" title="草稿">●</span>
+              </div>
+              <div class="flex items-center space-x-0.5">
+                <button class="op-btn text-blue-400" title="设为讨论点">🎯</button>
+                <button class="op-btn text-slate-500" title="编辑分块" onclick="openChunkModal('非功能需求','测试覆盖率/性能/并发','draft','P1','非功能')">⚙️</button>
+                <button class="op-btn text-rose-400" title="删除分块" onclick="alert('原型：删除分块（需确认）')">🗑</button>
+              </div>
+            </div>
+            <div class="flex items-center space-x-1.5 mt-0.5">
+              <span class="pill" style="background:rgba(16,185,129,.15);color:#34d399">非功能</span>
+              <span class="chunk-status-draft text-[9px]">draft</span>
+            </div>
+            <div class="mt-1.5 pl-3 space-y-1">
+              <div class="text-[9px] text-slate-600 font-mono mb-0.5">关联任务 (1)</div>
+              <div class="task-card todo rounded bg-[#080d1a] border border-slate-800 px-2 py-1.5">
+                <div class="flex items-start justify-between"><div class="text-[10px] text-slate-300 leading-snug flex-1">单元测试边界用例集</div><div class="flex space-x-0.5 ml-1 shrink-0"><button class="op-btn text-blue-400" style="width:18px;height:18px">🎯</button><button class="op-btn text-slate-500" style="width:18px;height:18px" onclick="openTaskModal('单元测试边界用例集','边界用例测试','todo','P1','非功能需求')">⚙️</button><button class="op-btn text-rose-400" style="width:18px;height:18px" title="删除">🗑</button></div></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 完成（可折叠，默认收起） -->
+        <div class="mb-3">
+          <div class="task-group-toggle flex items-center space-x-1.5 text-[9px] font-mono text-slate-600 uppercase mb-1.5 cursor-pointer" onclick="toggleTaskGroup(this)">
+            <span class="arrow">▾</span><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 mr-1"></span> 完成 (3)
+          </div>
+          <div class="space-y-1.5">
+            <div class="task-card done rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2">
+              <div class="flex items-start justify-between"><div class="text-[11px] text-slate-500 line-through flex-1">支付范围确认（校验 vs 完整流程）</div></div>
+            </div>
+            <div class="task-card done rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2">
+              <div class="flex items-start justify-between"><div class="text-[11px] text-slate-500 line-through flex-1">手续费费率确认（card 2.9%）</div></div>
+            </div>
+            <div class="task-card done rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2">
+              <div class="flex items-start justify-between"><div class="text-[11px] text-slate-500 line-through flex-1">精度方案确认（元→分，bp 存费率）</div></div>
+            </div>
+          </div>
+        </div>
+        <!-- 延后 -->
+          <div class="mt-2 px-2">
+            <div class="text-[9px] font-mono text-slate-600 uppercase mb-1 flex items-center"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1"></span> 延后</div>
+            <div class="task-card deferred rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-400 leading-snug">部分退款状态追踪 → 二期</div></div>
+            <div class="task-card deferred rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-400 leading-snug">对账接口 → 视需求</div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab 2: 下一步建议 -->
+      <div id="panel-next" class="flex-1 overflow-y-auto p-2.5 hidden">
+        <div class="text-[9px] text-slate-600 mb-2">Agent 基于讨论进度与分块状态自动推荐</div>
+        <div class="space-y-2">
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">补充非功能需求（性能/并发/安全）</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">明确验收标准</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-amber-800/40 bg-amber-950/10 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-amber-300 leading-snug flex-1">⚠️ 潜在冲突：性能要求 vs 零外部依赖</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：Agent 诊断</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">分块「金额边界」仍为 draft——建议讨论确认</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：分块状态分析</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-emerald-300 leading-snug flex-1">讨论覆盖度已较高——可以生成 PRD 了</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：Agent 综合判断</div></div>
+        </div>
+      </div>
+
+      <div class="px-3 py-2 border-t border-slate-800">
+        <button class="w-full text-[10px] text-slate-600 hover:text-slate-400 text-center" onclick="alert('原型：手动添加')">＋ 手动添加</button>
+      </div>
+    </aside>
+  </main>
+
+  <script>
+    // ═══ 弹出层控制 ═══
+    function openAgentModal(name, role, model, prompt) {
+      document.getElementById('agent-modal-title').textContent = name ? '编辑 Agent' : '新建 Agent';
+      document.getElementById('f-agent-name').value = name || '';
+      document.getElementById('f-agent-role').value = role || '';
+      document.getElementById('f-agent-model').value = model || 'deepseek-v4.1-flash';
+      document.getElementById('f-agent-prompt').value = prompt || '';
+      document.getElementById('modal-agent').classList.remove('hidden');
+    }
+    function openChunkModal(name, desc, status, priority, tags) {
+      document.getElementById('f-chunk-name').value = name || '';
+      document.getElementById('f-chunk-desc').value = desc || '';
+      document.getElementById('f-chunk-status').value = status || 'draft';
+      document.getElementById('f-chunk-priority').value = priority || 'P1';
+      document.getElementById('f-chunk-tags').value = tags || '';
+      document.getElementById('modal-chunk').classList.remove('hidden');
+    }
+    function openTaskModal(name, desc, status, priority, source) {
+      document.getElementById('f-task-name').value = name || '';
+      document.getElementById('f-task-desc').value = desc || '';
+      document.getElementById('f-task-status').value = status || 'todo';
+      document.getElementById('f-task-priority').value = priority || 'P1';
+      document.getElementById('f-task-source').value = source || '';
+      document.getElementById('modal-task').classList.remove('hidden');
+    }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function deleteAgent() { closeModal('modal-agent'); alert('原型：删除 Agent（需确认）'); }
+    function deleteChunk() { closeModal('modal-chunk'); alert('原型：删除分块（需确认）'); }
+    function deleteTask() { closeModal('modal-task'); alert('原型：删除任务（需确认）'); }
+    function saveAgent() { closeModal('modal-agent'); alert('原型：保存 Agent'); }
+    function saveChunk() { closeModal('modal-chunk'); alert('原型：保存分块'); }
+    function saveTask() { closeModal('modal-task'); alert('原型：保存任务'); }
+
+    // ═══ Tab 切换 ═══
+    function switchTab(tab) {
+      ['chunks', 'next'].forEach(id => {
+        document.getElementById('panel-' + id)?.classList.toggle('hidden', id !== tab);
+        document.getElementById('tab-' + id)?.classList.toggle('active', id === tab);
+      });
+    }
+
+    // ═══ 分块子节点折叠 ═══
+    function toggleChunkChildren(id) {
+      document.getElementById(id + '-children')?.classList.toggle('hidden');
+    }
+
+    // ═══ 任务分组折叠 ═══
+    function toggleTaskGroup(el) {
+      el.classList.toggle('collapsed');
+      const content = el.nextElementSibling;
+      if (content) content.classList.toggle('hidden');
+    }
+
+    // ═══ 模型选择面板外部关闭 ═══
+    document.addEventListener('mousedown', (e) => {
+      const container = document.getElementById('model-select-v2');
+      if (container && !container.contains(e.target)) {
+        document.getElementById('ms-panel')?.classList.add('hidden');
+      }
+    });
+  </script>
+</body>
+</html>
