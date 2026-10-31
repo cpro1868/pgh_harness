@@ -21,16 +21,16 @@
     <div class="flex-1"></div>
   </aside>
 
-  <main class="flex-1 p-6 overflow-y-auto">
-    <div class="flex items-center justify-between mb-5">
+  <main class="flex-1 p-8 max-w-5xl w-full mx-auto space-y-8">
+    <div class="flex items-center justify-between">
       <div>
-        <h1 class="text-lg font-bold text-white flex items-center space-x-2"><span>🧭</span><span>需求探索</span><span class="text-[9px] px-1.5 py-0.5 rounded bg-violet-950/60 text-violet-300 font-mono">v2.0 MOD-17</span></h1>
-        <p class="text-[11px] text-slate-500 mt-0.5">从一句话想法开始，通过讨论逐步形成需求分块、任务和 PRD</p>
+        <h1 class="text-2xl font-bold text-white tracking-tight">需求探索</h1>
+        <p class="text-xs text-slate-400 mt-1">从一句话想法开始，通过讨论逐步形成需求分块、任务和 PRD。支持多项目并行探索。</p>
       </div>
       <button onclick="alert('原型：新建需求探索会话——输入项目名和一句话描述')" class="px-4 py-2 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold shadow flex items-center space-x-1"><span>＋</span><span>新建探索</span></button>
     </div>
 
-    <div class="space-y-3 max-w-3xl">
+    <section class="border border-slate-800 rounded-xl bg-[#0f1523] p-6 shadow-xl space-y-4">
       <!-- 会话 1：进行中 -->
       <div class="req-card rounded-xl bg-[#0f1523] border border-slate-800 p-4" onclick="location.href='run-requirements-workbench.html'">
         <div class="flex items-start justify-between mb-2">
@@ -72,7 +72,7 @@
           <div class="flex items-center space-x-2">
             <span class="text-xs font-bold text-slate-400">数据导出工具</span>
             <span class="phase-pill bg-slate-800 text-slate-500">草稿</span>
-          </div>
+          </div></section>
           <span class="text-[9px] text-slate-600 font-mono">昨天</span>
         </div>
         <p class="text-[11px] text-slate-600">一句话：导出各种格式的数据报表…（尚未开始讨论）</p>
@@ -81,3 +81,4 @@
   </main>
 </body>
 </html>
+
