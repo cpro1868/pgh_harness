@@ -248,7 +248,7 @@
           <!-- 分块 1 -->
           <div class="chunk-node rounded-lg px-2 py-1.5">
             <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch1')">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkCollapse(this)">
                 <span class="text-slate-600 text-[9px]">▾</span>
                 <span class="text-[11px] font-semibold text-slate-200 truncate">支付方式校验</span>
                 <span class="chunk-status-approved text-[9px]" title="已批准">●</span>
@@ -266,7 +266,7 @@
             <div class="chunk-children mt-1 space-y-1" id="ch1-children">
               <div class="chunk-node rounded px-2 py-1">
                 <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch1-a')">
+                  <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkCollapse(this)">
                     <span class="text-[10px] text-slate-300">白名单机制</span><span class="chunk-status-approved text-[9px]">●</span>
                   </div>
                   <div class="flex space-x-0.5">
@@ -293,7 +293,7 @@
               </div>
               <div class="chunk-node rounded px-2 py-1">
                 <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch1-b')">
+                  <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkCollapse(this)">
                     <span class="text-[10px] text-slate-300">错误码体系</span><span class="chunk-status-discussed text-[9px]">●</span>
                   </div>
                   <div class="flex space-x-0.5">
@@ -307,7 +307,7 @@
           <!-- 分块 2 -->
           <div class="chunk-node rounded-lg px-2 py-1.5">
             <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch2')">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkCollapse(this)">
                 <span class="text-slate-600 text-[9px]">▾</span>
                 <span class="text-[11px] font-semibold text-slate-200 truncate">手续费计算</span>
                 <span class="chunk-status-discussed text-[9px]" title="讨论中">●</span>
@@ -357,7 +357,7 @@
           <!-- 分块 3 -->
           <div class="chunk-node rounded-lg px-2 py-1.5">
             <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch3')">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkCollapse(this)">
                 <span class="text-slate-600 text-[9px]">▾</span>
                 <span class="text-[11px] font-semibold text-slate-200 truncate">金额边界</span>
                 <span class="chunk-status-draft text-[9px]" title="草稿">●</span>
@@ -383,7 +383,7 @@
           <!-- 分块 4 -->
           <div class="chunk-node rounded-lg px-2 py-1.5">
             <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch4')">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkCollapse(this)">
                 <span class="text-slate-600 text-[9px]">▾</span>
                 <span class="text-[11px] font-semibold text-slate-200 truncate">退款标记</span>
                 <span class="chunk-status-draft text-[9px]" title="草稿">●</span>
@@ -409,7 +409,7 @@
           <!-- 分块 5 -->
           <div class="chunk-node rounded-lg px-2 py-1.5">
             <div class="flex items-center justify-between">
-              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkChildren('ch5')">
+              <div class="flex items-center space-x-1.5 cursor-pointer min-w-0" onclick="toggleChunkCollapse(this)">
                 <span class="text-slate-600 text-[9px]">▾</span>
                 <span class="text-[11px] font-semibold text-slate-200 truncate">非功能需求</span>
                 <span class="chunk-status-draft text-[9px]" title="草稿">●</span>
@@ -519,6 +519,17 @@
     }
 
     // ═══ 分块子节点折叠 ═══
+    function toggleChunkCollapse(el) {
+      const node = el.closest('.chunk-node');
+      if (!node) return;
+      const panel = node.querySelector('.chunk-children');
+      const tasks = node.querySelector('.pl-3');
+      let anyVisible = false;
+      if (panel) anyVisible = !panel.classList.contains('hidden');
+      if (tasks && !tasks.classList.contains('hidden')) anyVisible = true;
+      if (panel) panel.classList.toggle('hidden', anyVisible);
+      if (tasks) tasks.classList.toggle('hidden', anyVisible);
+    }
     function toggleChunkChildren(id) {
       document.getElementById(id + '-children')?.classList.toggle('hidden');
     }
