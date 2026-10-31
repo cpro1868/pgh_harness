@@ -459,5 +459,68 @@
       </div>
     </aside>
   </main>
+
+  <script>
+    // ═══ 弹出层控制 ═══
+    function openAgentModal(name, role, model, prompt) {
+      document.getElementById('agent-modal-title').textContent = name ? '编辑 Agent' : '新建 Agent';
+      document.getElementById('f-agent-name').value = name || '';
+      document.getElementById('f-agent-role').value = role || '';
+      document.getElementById('f-agent-model').value = model || 'deepseek-v4.1-flash';
+      document.getElementById('f-agent-prompt').value = prompt || '';
+      document.getElementById('modal-agent').classList.remove('hidden');
+    }
+    function openChunkModal(name, desc, status, priority, tags) {
+      document.getElementById('f-chunk-name').value = name || '';
+      document.getElementById('f-chunk-desc').value = desc || '';
+      document.getElementById('f-chunk-status').value = status || 'draft';
+      document.getElementById('f-chunk-priority').value = priority || 'P1';
+      document.getElementById('f-chunk-tags').value = tags || '';
+      document.getElementById('modal-chunk').classList.remove('hidden');
+    }
+    function openTaskModal(name, desc, status, priority, source) {
+      document.getElementById('f-task-name').value = name || '';
+      document.getElementById('f-task-desc').value = desc || '';
+      document.getElementById('f-task-status').value = status || 'todo';
+      document.getElementById('f-task-priority').value = priority || 'P1';
+      document.getElementById('f-task-source').value = source || '';
+      document.getElementById('modal-task').classList.remove('hidden');
+    }
+    function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function deleteAgent() { closeModal('modal-agent'); alert('原型：删除 Agent（需确认）'); }
+    function deleteChunk() { closeModal('modal-chunk'); alert('原型：删除分块（需确认）'); }
+    function deleteTask() { closeModal('modal-task'); alert('原型：删除任务（需确认）'); }
+    function saveAgent() { closeModal('modal-agent'); alert('原型：保存 Agent'); }
+    function saveChunk() { closeModal('modal-chunk'); alert('原型：保存分块'); }
+    function saveTask() { closeModal('modal-task'); alert('原型：保存任务'); }
+
+    // ═══ Tab 切换 ═══
+    function switchTab(tab) {
+      ['chunks', 'next'].forEach(id => {
+        document.getElementById('panel-' + id)?.classList.toggle('hidden', id !== tab);
+        document.getElementById('tab-' + id)?.classList.toggle('active', id === tab);
+      });
+    }
+
+    // ═══ 分块子节点折叠 ═══
+    function toggleChunkChildren(id) {
+      document.getElementById(id + '-children')?.classList.toggle('hidden');
+    }
+
+    // ═══ 任务分组折叠 ═══
+    function toggleTaskGroup(el) {
+      el.classList.toggle('collapsed');
+      const content = el.nextElementSibling;
+      if (content) content.classList.toggle('hidden');
+    }
+
+    // ═══ 模型选择面板外部关闭 ═══
+    document.addEventListener('mousedown', (e) => {
+      const container = document.getElementById('model-select-v2');
+      if (container && !container.contains(e.target)) {
+        document.getElementById('ms-panel')?.classList.add('hidden');
+      }
+    });
+  </script>
 </body>
 </html>
