@@ -47,7 +47,7 @@
     @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
   </style>
 </head>
-<body class="bg-[#070a12] text-slate-100 min-h-screen flex">
+<body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden">
 
   <!-- ═══ 弹出层：Agent 设置 ═══ -->
   <div id="modal-agent" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-agent')">
@@ -238,7 +238,7 @@
         <button class="tab-btn flex-1 py-2.5 text-slate-500" onclick="switchTab('next')" id="tab-next">🧭 建议</button>
       </div>
 
-      <div id="panel-chunks" class="overflow-y-auto p-2.5">
+      <div id="panel-chunks" class="overflow-y-auto p-2.5" style="display:block">
         <div class="text-[9px] text-slate-600 mb-2 flex items-center justify-between">
           <span>分块树 · 点击名称展开/收起 · ⚙️ 编辑 · 🗑 删除</span>
           <button class="text-blue-400 hover:underline text-[10px]" onclick="openChunkModal()">＋</button>
@@ -459,7 +459,7 @@
       </div>
 
       <!-- Tab 2: 下一步建议 -->
-      <div id="panel-next" class="overflow-y-auto p-2.5 hidden" style="min-height:200px">
+      <div id="panel-next" class="overflow-y-auto p-2.5" style="display:none; min-height:200px">
         <div class="text-[9px] text-slate-600 mb-2">Agent 基于讨论进度与分块状态自动推荐</div>
         <div class="space-y-2">
           <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">补充非功能需求（性能/并发/安全）</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析</div></div>
@@ -513,8 +513,15 @@
     // ═══ Tab 切换 ═══
     function switchTab(tab) {
       ['chunks', 'next'].forEach(id => {
-        document.getElementById('panel-' + id)?.classList.toggle('hidden', id !== tab);
-        document.getElementById('tab-' + id)?.classList.toggle('active', id === tab);
+        const panel = document.getElementById('panel-' + id);
+        if (!panel) return;
+        panel.style.display = (id === tab) ? 'block' : 'none';
+        const btn = document.getElementById('tab-' + id);
+        if (btn) {
+          btn.classList.toggle('active', id === tab);
+          btn.classList.toggle('text-slate-500', id !== tab);
+          btn.classList.toggle('text-slate-300', id === tab);
+        }
       });
     }
 
