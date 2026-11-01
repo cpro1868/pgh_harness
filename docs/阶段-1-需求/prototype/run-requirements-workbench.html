@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>项目工作台 - PG Harness Enterprise</title>
+  <title>需求讨论区 - PG Harness Enterprise</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="css/shared.css">
   <style>
@@ -198,7 +198,7 @@
     <div class="flex-1 flex flex-col overflow-hidden border-x border-slate-800">
       <div class="h-11 border-b border-slate-800 flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0">
         <div class="flex items-center space-x-2">
-          <span class="text-sm font-bold text-white">💬 项目讨论</span>
+          <span class="text-sm font-bold text-white">💬 需求讨论区</span>
           <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">自由讨论 · 多 Agent 引导</span>
         </div>
         <button onclick="alert('原型：Agent 从讨论记录提炼生成 PRD → write_file 落盘 PRD.md → 弹出流转面板')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-[11px]" title="导出需求分块和任务清单" onclick="alert('原型：导出需求分块和任务清单为 Markdown/CSV')">📤</button><button class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1"><span>📄</span><span>生成 PRD</span></button>
@@ -232,13 +232,13 @@
     </div>
 
     <!-- ═══ 右栏：需求分块（含任务）+ 下一步建议 ═══ -->
-    <aside class="w-80 border-l border-slate-800 bg-[#0a0f1d] flex flex-col shrink-0">
+    <aside class="w-80 border-l border-slate-800 bg-[#0a0f1d] flex flex-col shrink-0 overflow-y-auto">
       <div class="flex border-b border-slate-800 text-[11px]">
         <button class="tab-btn active flex-1 py-2.5 text-slate-300" onclick="switchTab('chunks')" id="tab-chunks">📦 需求分块</button>
         <button class="tab-btn flex-1 py-2.5 text-slate-500" onclick="switchTab('next')" id="tab-next">🧭 建议</button>
       </div>
 
-      <div id="panel-chunks" class="flex-1 overflow-y-auto p-2.5">
+      <div id="panel-chunks" class="overflow-y-auto p-2.5">
         <div class="text-[9px] text-slate-600 mb-2 flex items-center justify-between">
           <span>分块树 · 点击名称展开/收起 · ⚙️ 编辑 · 🗑 删除</span>
           <button class="text-blue-400 hover:underline text-[10px]" onclick="openChunkModal()">＋</button>
@@ -459,7 +459,7 @@
       </div>
 
       <!-- Tab 2: 下一步建议 -->
-      <div id="panel-next" class="flex-1 overflow-y-auto p-2.5 hidden">
+      <div id="panel-next" class="overflow-y-auto p-2.5 hidden" style="min-height:200px">
         <div class="text-[9px] text-slate-600 mb-2">Agent 基于讨论进度与分块状态自动推荐</div>
         <div class="space-y-2">
           <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">补充非功能需求（性能/并发/安全）</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析</div></div>
@@ -551,3 +551,4 @@
   </script>
 </body>
 </html>
+
