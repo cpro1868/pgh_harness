@@ -20,6 +20,7 @@
     .pill { font-size: 9px; padding: 1px 6px; border-radius: 9999px; }
     .next-step-card { transition: border-color .12s; cursor: pointer; }
     .next-step-card:hover { border-color: #60a5fa; }
+    .tab-btn.active { background: rgba(59,130,246,.15); color: #93c5fd; }
     .agent-detect { animation: qa-pop .2s ease; }
     @keyframes qa-pop { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
     .chunk-node { transition: background .1s; }
@@ -304,6 +305,9 @@
                   </div>
                 </div>
                 <div class="flex items-center space-x-1 mt-0.5"><span class="chunk-status-discussed text-[9px]">discussed</span><span class="text-[9px] text-slate-600 ml-auto">? 待细化</span></div>
+              </div>
+            </div>
+          </div>
 
           <!-- 分块 2 -->
           <div class="chunk-node rounded-lg px-2 py-1.5">
@@ -456,19 +460,20 @@
             <div class="task-card deferred rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-400 leading-snug">部分退款状态追踪 → 二期</div></div>
             <div class="task-card deferred rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2"><div class="text-[11px] text-slate-400 leading-snug">对账接口 → 视需求</div></div>
           </div>
-        </div>
+      </div>
       </div>
 
       <!-- Tab 2: 下一步建议 -->
       <div id="panel-next" class="absolute inset-0 overflow-y-auto p-2.5" style="display:none">
-        <div class="text-[9px] text-slate-600 mb-2">Agent 基于讨论进度与分块状态自动推荐</div>
+        <div class="text-[9px] text-slate-600 mb-2 leading-relaxed">Agent 每轮讨论后自动分析，从 3 个维度推荐下一步：<span class="text-slate-500">① 覆盖度分析（遗漏话题） ② Agent 诊断（矛盾/冲突） ③ 分块状态（draft 未确认项）</span></div>
         <div class="space-y-2">
-          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">补充非功能需求（性能/并发/安全）</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析</div></div>
-          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">明确验收标准</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析</div></div>
-          <div class="next-step-card rounded-lg bg-[#0f1523] border border-amber-800/40 bg-amber-950/10 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-amber-300 leading-snug flex-1">⚠️ 潜在冲突：性能要求 vs 零外部依赖</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：Agent 诊断</div></div>
-          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">分块「金额边界」仍为 draft——建议讨论确认</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：分块状态分析</div></div>
-          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-emerald-300 leading-snug flex-1">讨论覆盖度已较高——可以生成 PRD 了</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：Agent 综合判断</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行——Agent 将围绕该建议发起一轮讨论')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">补充非功能需求（性能/并发/安全）</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'" title="忽略该建议">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析 · 检测到「性能」「安全」尚未讨论</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行——Agent 将围绕该建议发起一轮讨论')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">明确验收标准</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'" title="忽略该建议">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析 · 「验收标准」出现 0 次</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-amber-800/40 bg-amber-950/10 p-2.5" onclick="alert('原型：执行——Agent 将围绕该建议发起一轮讨论')"><div class="flex items-start justify-between"><div class="text-[11px] text-amber-300 leading-snug flex-1">⚠️ 潜在冲突：性能要求 vs 零外部依赖</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'" title="忽略该建议">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：Agent 诊断 · 「500ms 内响应」与「禁用缓存组件」存在张力</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行——Agent 将围绕该建议发起一轮讨论')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">分块「金额边界」仍为 draft——建议讨论确认</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'" title="忽略该建议">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：分块状态分析 · draft 状态超过 2 轮讨论未更新</div></div>
+          <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行——Agent 将围绕该建议发起一轮讨论')"><div class="flex items-start justify-between"><div class="text-[11px] text-emerald-300 leading-snug flex-1">讨论覆盖度已较高——可以生成 PRD 了</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'" title="忽略该建议">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：Agent 综合判断 · 5 个分块中 4 个已 approved/discussed</div></div>
         </div>
+      </div>
       </div>
 
       <div class="px-3 py-2 border-t border-slate-800">
