@@ -238,11 +238,12 @@
         <button class="tab-btn flex-1 py-2.5 text-slate-500" onclick="switchTab('next')" id="tab-next">🧭 建议</button>
       </div>
 
-      <div id="panel-chunks" class="overflow-y-auto p-2.5" style="display:block">
-        <div class="text-[9px] text-slate-600 mb-2 flex items-center justify-between">
-          <span>分块树 · 点击名称展开/收起 · ⚙️ 编辑 · 🗑 删除</span>
-          <button class="text-blue-400 hover:underline text-[10px]" onclick="openChunkModal()">＋</button>
-        </div>
+      <div class="flex-1 relative overflow-hidden">
+        <div id="panel-chunks" class="absolute inset-0 overflow-y-auto p-2.5" style="display:block">
+          <div class="text-[9px] text-slate-600 mb-2 flex items-center justify-between">
+            <span>分块树 · 点击名称展开/收起 · ⚙️ 编辑 · 🗑 删除</span>
+            <button class="text-blue-400 hover:underline text-[10px]" onclick="openChunkModal()">＋</button>
+          </div>
 
         <div class="space-y-1">
           <!-- 分块 1 -->
@@ -459,7 +460,7 @@
       </div>
 
       <!-- Tab 2: 下一步建议 -->
-      <div id="panel-next" class="overflow-y-auto p-2.5" style="display:none; min-height:200px">
+      <div id="panel-next" class="absolute inset-0 overflow-y-auto p-2.5" style="display:none">
         <div class="text-[9px] text-slate-600 mb-2">Agent 基于讨论进度与分块状态自动推荐</div>
         <div class="space-y-2">
           <div class="next-step-card rounded-lg bg-[#0f1523] border border-slate-800 p-2.5" onclick="alert('原型：执行')"><div class="flex items-start justify-between"><div class="text-[11px] text-slate-300 leading-snug flex-1">补充非功能需求（性能/并发/安全）</div><button class="text-slate-600 text-[10px] ml-1" onclick="event.stopPropagation(); this.closest('.next-step-card').style.opacity='.4'; this.textContent='✕'">✕</button></div><div class="text-[9px] text-slate-600 mt-1">来源：覆盖度分析</div></div>
@@ -558,4 +559,5 @@
   </script>
 </body>
 </html>
+
 
