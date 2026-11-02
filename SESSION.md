@@ -5,6 +5,11 @@
 
 ## 2026-10-28 增量
 
+- **MOD-17 需求规格与 PRD 全量落盘**：
+  - 通过 grilling 逐一完成 7 大业务分支访谈对齐（入口模式、Coordinator 动态调度、提议+人工确认、仅叶子分块挂任务、下游 PRD/Pipeline 双向流转、下一步建议一键执行、历史变更追加决策）；
+  - 更新 `docs/阶段-1-需求/v2.0-企业级平台需求规格说明书.md`，将 MOD-17 正式纳入 v2.0 功能全景与功能矩阵；
+  - 交付正式文档 `docs/阶段-1-需求/MOD-17-需求探索与分块管理规格说明书.md`（包含业务痛点、7 宪法规则、功能细则、7 张客户端 SQLite DDL 与 6 项验收标准）；
+  - 交付并验证两套高保真交互原型：`docs/阶段-1-需求/prototype/run-requirements.html`（对齐主视觉风格、指标卡片、纯原生实时搜索与状态过滤、新建弹窗）与 `docs/阶段-1-需求/prototype/run-requirements-workbench.html`（多 Agent 侧栏管理、分块树挂载任务、下一步建议带来源依据）；
 - **生态分发方案优化**：全面转向 GitHub 原生免发布模式（`npx github:cpro1868/pgh_harness` 与 `npm install -g github:cpro1868/pgh_harness`），彻底摆脱 npm 平台的 2FA/硬件 Passkey 束缚；
 - **文档同步**：同步更新 `README.md` 与 `docs/项目启动文档.md`，将 GitHub npx 启动列为最优先推荐启动方式；
 - **记录同步**：在 `docs/工作进展记录.md` 归档此项决策与演进说明。
