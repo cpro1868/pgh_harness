@@ -1,190 +1,246 @@
-# MOD-17 需求探索与分块管理详细需求规格说明书
+# MOD-17 / MOD-13 需求探索与分块管理详细需求规格说明书 (全面细化版)
 
 > 文档标识：`docs/阶段-1-需求/MOD-17-需求探索与分块管理规格说明书.md`  
-> 所属阶段：阶段-1-需求  
-> 版本：v1.0  
+> 所属阶段：阶段-1-需求（客户端发源能力）  
+> 版本：v2.0-Detailed  
 > 状态：正式归档  
-> 关联文档：`docs/阶段-1-需求/v2.0-企业级平台需求规格说明书.md`、`docs/superpowers/specs/2026-10-28-requirements-explorer-design.md`、`docs/superpowers/specs/2026-10-28-client-server-boundary.md`  
-> 原型实现：`docs/阶段-1-需求/prototype/run-requirements.html`、`docs/阶段-1-需求/prototype/run-requirements-workbench.html`
+> 关联主文档：`docs/阶段-1-需求/功能模块需求规格说明书.md` (MOD-13 章节)、`docs/superpowers/specs/2026-10-28-requirements-explorer-design.md`、`docs/superpowers/specs/2026-10-28-client-server-boundary.md`  
+> 运行原型：`docs/阶段-1-需求/prototype/run-requirements.html`、`docs/阶段-1-需求/prototype/run-requirements-workbench.html`
 
 ---
 
-## 1. 业务背景与定位
+## 1. 业务目标与运行边界
 
-### 1.1 痛点分析
-传统软件开发中，开发者与业务人员面对复杂命题时，通常仅有一个模糊、发散的「一句话想法」（如「支持多渠道通知」「给支付加上风控规则」），在未理清边界之前直接进入编码极易产生返工。
-现有市面上的 AI 编码助手大多仅支持单点代码补全或单轮提问，缺乏：
-1. **多视角启发**：无法由产品、架构、安全等多角色协同质疑与补充；
-2. **渐进式收敛**：无法将漫无边际的对话沉淀为清晰的分块结构与可量化验收标准；
-3. **下游闭环**：讨论完毕后文档与任务脱节，难以无缝衔接流水线与编码 Agent。
+### 1.1 业务核心定位
+MOD-17 定位为 PG Harness 客户端的**上游发源地**，专门解决软件工程中最棘手的**「想法发散、边界模糊、任务脱节」**三大难题。
+它通过将非结构化的自然语言研讨，与结构化的树形工程分块进行实时双向映射，实现**「边聊边结构化、分块出任务、PRD 自动成型、一键导入流水线」**的连续生产力。
 
-### 1.2 模块定位与职责边界
-MOD-17（需求探索与分块管理）作为 PG Harness 的**上游发源地**，负责引导用户完成从「模糊想法」到「规范 PRD + 任务清单」的全流程。
-- **纯客户端能力**：根据系统职责边界规范（`2026-10-28-client-server-boundary.md`），MOD-17 为纯客户端前端/本地组件，7 张数据实体表无需服务端 `owner_id`，存储于本地 SQLite / 客户端本地库；
-- **核心输入**：用户的一句话初始描述、参考代码/文档附件；
-- **核心输出**：具有层级依赖的「需求分块树」、挂载在叶子分块上的「可执行任务清单」、标准 PRD Markdown 规范文档、一键流转 Pipeline 的任务包。
+### 1.2 客户端纯前端运行边界
+根据《客户端与服务端职责边界规范》（`2026-10-28-client-server-boundary.md`）：
+1. **纯单机客户端存储**：需求探索的所有会话数据、分块树、任务清单与建议记录，仅持久化于本地 SQLite / 客户端本地存储；数据表均无需 `owner_id`；
+2. **零服务端鉴权侵入**：不依赖企业级 SSO 鉴权与服务端审批流，无需网络连接企业后台即可完整使用；
+3. **模型直连能力**：调用系统已配置的全局 Provider 资产池（如 DeepSeek、OpenAI、Anthropic、本地 Ollama）直接发起多 Agent 研讨。
 
 ---
 
-## 2. 7 大核心业务决策规则（业务宪法）
+## 2. 核心状态机与生命周期流转
 
-根据需求访谈对齐的业务分支，MOD-17 必须严格遵守以下 7 条核心规则：
+### 2.1 探索项目会话生命周期
+```mermaid
+stateDiagram-v2
+    [*] --> draft: 用户新建会话/仅输入一句话
+    draft --> discussing: 用户与Agent开始首轮对话
+    discussing --> discussing: 多轮启发探讨 / 分块提炼 / 任务挂载
+    discussing --> prd_ready: 核心分块 Approved 且 PRD 生成
+    prd_ready --> discussing: 用户重新发起深入补充讨论
+    prd_ready --> transitioned: 一键导出任务并投递至 Pipeline
+    transitioned --> [*]
+```
 
-| # | 规则项 | 业务定义与系统行为 |
-|---|---|---|
-| **R1** | **会话生命周期与自适应入口** | 支持低门槛「直接开聊」：输入第一句话即开启新探索会话，系统后台异步提炼项目标题并生成初始建议分块；同时提供「高阶新建弹窗」，支持显式绑定特定工作区目录与指定初始 Agent 组合阵容。 |
-| **R2** | **多 Agent 协作调度 (Coordinator 模式)** | 左侧侧栏支持常驻多个专业 Agent 角色。用户发言后，由内置的「协调者 (Coordinator)」进行语义意图分析，动态路由并指派 1~2 个最相关的专家 Agent 作答，杜绝全员并发抢答与无序刷屏。 |
-| **R3** | **分块与任务提炼 (双重确认机制)** | Agent 在讨论流中识别出新的需求点或任务时，以交互式卡片形式呈现在消息下方；**严禁静默落盘**，必须由用户点击「采纳」或勾选确认后，才正式持久化至右侧需求分块树。 |
-| **R4** | **树形拓扑与挂载约束** | 分块树支持任意级父子层级（Parent Chunk / Sub Chunk）；**严格限制任务（Task）仅能挂载在底层「叶子分块 (Leaf Chunk)」之下**；父分块仅承载概念范畴聚类，不直接挂载任务，保证责任边界单一。 |
-| **R5** | **终局产出与下游双流向对接** | 当分块确认充分后，系统提供灵活选择：<br>1. **仅生成 PRD**：一键导出结构化 PRD.md 规范沉淀于本地，供后续补充完善；<br>2. **直转 Pipeline**：一键将所有 Approved 叶子任务包打包投递至下游角色流水线（MOD-10），自动创建工单启动开发。 |
-| **R6** | **下一步建议驱动机制** | 结合讨论深度、覆盖度分析（如缺失非功能/安全要求）、Draft 状态分块超时未确认等维度，Agent 主动生成下一步建议卡片。用户点击卡片即可「一键将建议填入输入框并触发新一轮针对性研讨」，同时提供「忽略」标记。 |
-| **R7** | **历史变更稳态保障** | 用户修改前序发言或重新生成时，系统不执行破坏性的分块树推翻；而是比对差异，在对话流末尾追加提示「检测到前序输入修订，分块 [X] 可能存在变动，请确认是否更新」，由人工决策合并。 |
-
----
-
-## 3. 功能详细规格
-
-### 3.1 F17.1 需求探索会话管理与检索
-- **列表与卡片视图**：
-  - 展示会话标题、ID、状态（讨论中 discussing / PRD已就绪 prd_ready / 草稿 draft）、一句话起点、最后更新时间；
-  - 统计元数据徽章：分块数量、任务数量、讨论轮数、参与 Agent 数量、参考附件数量、关联工作区；
-- **实时检索与过滤**：
-  - 纯前端实时响应输入框：支持匹配项目名、初始痛点描述、分块标签；
-  - 状态快捷过滤组：全部 / 讨论中 / PRD 已生成 / 草稿；
-  - 无匹配状态优雅空状态引导（Empty State），支持一键重置筛选；
-- **新建向导弹窗**：
-  - 支持配置项目主题名（必填）、一句话想法与痛点（必填）；
-  - 支持选择绑定本地工作区目录；
-  - 支持预置 Agent 团队（标准三人组：PM+架构+QA；极简双人组：分析+架构；安全增强组）。
-
-### 3.2 F17.2 多 Agent 侧栏配置与讨论工作台
-- **Agent 管理侧栏（左栏）**：
-  - 角色卡片：展示 Avatar、名称、定位（如「需求分析」「技术架构」「QA 质检」）、绑定模型（如 deepseek-v4.1-flash）、启用/停用开关；
-  - 单 Agent 操作：支持点击编辑（修改名称、角色定位、LLM 端点模型、专属 System Prompt 覆写）、支持物理删除（需弹窗二次确认）；
-  - 新增 Agent：支持自定义创建专属角色加入当前项目讨论；
-- **交互工作台（中栏）**：
-  - 顶栏信息：展示项目名称、所属阶段状态、快捷操作（导出分块、生成 PRD、转入流水线）；
-  - 沉浸式对话流：按角色彩色区分发言气泡，支持 Markdown、代码高亮与思考折叠；
-  - Agent 提议卡片：包含「新增分块提议」与「识别任务提议」，附带快速操作按钮（🎯 设为当前焦点 / ✓ 采纳落盘 / ✕ 忽略）；
-  - 底部输入区：支持多行富文本输入、支持引用分块（`#分块名`）定向讨论、支持 `@Agent` 强制点名。
-
-### 3.3 F17.3 需求分块树与叶子任务看板（右栏 Tab 1）
-- **分块树可视化**：
-  - 层次缩进展示，点击父节点展开/收起子分块；
-  - 节点状态管理：`draft`（草稿待定）→ `discussed`（已讨论）→ `analyzed`（已分析）→ `approved`（已批准/冻结）；
-  - 节点操作：🎯 设为讨论焦点（自动注入上下文让 Agent 专门围绕其分析）、⚙️ 编辑分块（弹窗修改名称、范围描述、优先级 P0~P3、业务标签）、🗑 删除分块；
-- **叶子分块任务挂载**：
-  - 状态分类看板：`todo`（待办）、`doing`（实施中）、`done`（已确认完成）、`deferred`（延后二期）；
-  - 任务操作：支持点击编辑名称、验收要求、所属分块与优先级，支持删除与状态拖拽流转；
-- **顶栏快捷工具**：一键全选展开/收起、快速导出分块树结构。
-
-### 3.4 F17.4 智能建议与冲突诊断（右栏 Tab 2）
-- **动态生成维度**：
-  1. **覆盖度分析**：检测是否遗漏性能、并发、幂等、边界安全等非功能需求；
-  2. **冲突诊断**：检测 Agent 之间或用户需求中的矛盾点（如「高性能低延迟」与「完全无缓存组件」的张力）；
-  3. **状态推进**：检测长期处于 `draft` 未冻结的分块，建议优先确认；
-  4. **终局就绪度评估**：当 approved 分块占比达标时，主动推荐生成 PRD；
-- **建议卡片交互**：
-  - 显示建议内容与详细来源证据；
-  - 点击建议：一键填充到底部输入框，并触发 Coordinator 发起新一轮探讨；
-  - 点击 ✕ 按钮：卡片置灰半透明淡出，标记为已忽略。
+- **草稿态 (draft)**：创建了项目但尚未展开实质性研讨；
+- **讨论中 (discussing)**：多 Agent 介入，持续产生对话、分块与任务提炼卡片；
+- **PRD 就绪 (prd_ready)**：需求分块大多批准冻结，已生成标准 PRD 文档；
+- **已流转 (transitioned)**：任务包已成功投递至角色流水线或会话工作台进入编码实施。
 
 ---
 
-## 4. 数据实体结构（纯客户端 SQLite）
+### 2.2 需求分块状态机 (Chunk State Machine)
+```mermaid
+stateDiagram-v2
+    [*] --> draft: Agent 识别提议并经用户采纳
+    draft --> discussed: 用户与Agent就该分块进行针对性讨论
+    discussed --> analyzed: 完成边界规则与技术可行性澄清
+    analyzed --> approved: 用户审查确认，冻结分块范围
+    approved --> discussed: 需求变更，重新激活讨论
+```
 
-```sql
--- 1. 探索会话主表
-CREATE TABLE IF NOT EXISTS req_sessions (
-  id TEXT PRIMARY KEY,
-  title TEXT NOT NULL,
-  initial_prompt TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'discussing', -- draft | discussing | prd_ready
-  workspace_id TEXT,
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
+- **`draft` (草稿)**：刚从对话中识别并确认落盘，仅有初步标题与范围概要；
+- **`discussed` (已讨论)**：至少经历 1 轮针对性讨论，已明确业务范围与排除项；
+- **`analyzed` (已分析)**：已补充非功能需求、安全合规要求与关联代码文件边界；
+- **`approved` (已批准/冻结)**：用户正式核准，不可随意变更，具备流转实施资格。
 
--- 2. 参与 Agent 角色表
-CREATE TABLE IF NOT EXISTS req_agents (
-  id TEXT PRIMARY KEY,
-  session_id TEXT NOT NULL,
-  name TEXT NOT NULL,
-  role_title TEXT NOT NULL,
-  model_id TEXT NOT NULL,
-  system_prompt TEXT NOT NULL,
-  is_enabled INTEGER NOT NULL DEFAULT 1,
-  sort_order INTEGER NOT NULL DEFAULT 0
-);
+---
 
--- 3. 需求分块树表 (自关联父子树)
-CREATE TABLE IF NOT EXISTS req_chunks (
-  id TEXT PRIMARY KEY,
-  session_id TEXT NOT NULL,
-  parent_id TEXT, -- NULL 为根分块
-  title TEXT NOT NULL,
-  description TEXT,
-  status TEXT NOT NULL DEFAULT 'draft', -- draft | discussed | analyzed | approved
-  priority TEXT NOT NULL DEFAULT 'P1', -- P0 | P1 | P2 | P3
-  tags TEXT, -- 逗号分隔
-  created_at INTEGER NOT NULL,
-  updated_at INTEGER NOT NULL
-);
+### 2.3 叶子任务状态机 (Task State Machine)
+```mermaid
+stateDiagram-v2
+    [*] --> todo: 挂载在叶子分块下
+    todo --> doing: 分配实施 / 正在开发
+    doing --> done: 编码与测试通过
+    todo --> deferred: 评估为二期范围 / 延后
+    deferred --> todo: 恢复至当期实施
+```
 
--- 4. 任务点表 (仅挂载在叶子分块)
-CREATE TABLE IF NOT EXISTS req_tasks (
-  id TEXT PRIMARY KEY,
-  session_id TEXT NOT NULL,
-  chunk_id TEXT NOT NULL, -- 必须指向叶子 chunk
-  title TEXT NOT NULL,
-  acceptance_criteria TEXT,
-  status TEXT NOT NULL DEFAULT 'todo', -- todo | doing | done | deferred
-  priority TEXT NOT NULL DEFAULT 'P1',
-  sort_order INTEGER NOT NULL DEFAULT 0
-);
+- **`todo` (待办)**：待实施的原子工程任务；
+- **`doing` (进行中)**：已投递至流水线并由编码 Agent 正在处理；
+- **`done` (已完成)**：代码已提交且自动化验证通过；
+- **`deferred` (延后)**：经讨论确认为后续期次实现，从当期执行序列中剥离。
 
--- 5. 对话流消息表
-CREATE TABLE IF NOT EXISTS req_messages (
-  id TEXT PRIMARY KEY,
-  session_id TEXT NOT NULL,
-  agent_id TEXT, -- NULL 为人类用户
-  role TEXT NOT NULL, -- user | assistant | system
-  content TEXT NOT NULL,
-  thinking_content TEXT,
-  detected_payload TEXT, -- JSON: 提议的分块或任务卡片
-  created_at INTEGER NOT NULL
-);
+---
 
--- 6. 下一步建议表
-CREATE TABLE IF NOT EXISTS req_suggestions (
-  id TEXT PRIMARY KEY,
-  session_id TEXT NOT NULL,
-  content TEXT NOT NULL,
-  source_type TEXT NOT NULL, -- coverage | conflict | status | readiness
-  source_reason TEXT NOT NULL,
-  is_dismissed INTEGER NOT NULL DEFAULT 0,
-  created_at INTEGER NOT NULL
-);
+## 3. 多 Agent 协调器 (Coordinator) 调度架构与 Prompt 规范
 
--- 7. 生成的 PRD 文档沉淀表
-CREATE TABLE IF NOT EXISTS req_prds (
-  id TEXT PRIMARY KEY,
-  session_id TEXT NOT NULL,
-  version TEXT NOT NULL,
-  markdown_content TEXT NOT NULL,
-  exported_at INTEGER NOT NULL
-);
+### 3.1 调度架构原则
+- **动态仲裁**：所有用户输入首先流经 Coordinator，由 Coordinator 基于上下文分析当前最迫切需要解答的视角；
+- **发言人数约束**：单次回合仅唤醒 1~2 个最相关的 Agent 发言，杜绝 3 个以上 Agent 同时刷屏；
+- **强行点名机制**：若用户输入中显式包含 `@角色名`，Coordinator 必须将该角色作为主答复者。
+
+### 3.2 角色定位矩阵
+| 角色标识 | 角色名称 | 核心职责 | 触发关键词/议题范畴 |
+|---|---|---|---|
+| `agent_pm` | 产品分析师 (PM) | 梳理用户痛点、业务流程、功能边界、排除项与交互预期 | 需求、场景、用户、流程、边界、为什么要做 |
+| `agent_arch` | 技术架构师 (Architect) | 评估技术选型、存储模型、接口契约、并发性能、依赖包 | 数据库、API、性能、架构、第三方库、存储、延迟 |
+| `agent_qa` | 质检与安全专家 (QA/Security) | 提出异常分支、边界用例、幂等重试、权限防越权与安全审计 | 测试、校验、报错、重试、安全、鉴权、漏洞、异常 |
+
+### 3.3 Coordinator 决策与调度算法 (伪代码与 Prompt 模板)
+```typescript
+interface CoordinatorDecision {
+  primary_agent_id: string;      // 主答复角色
+  secondary_agent_id?: string;    // 协作者角色（可选）
+  discussion_topic: string;       // 本次回合聚焦点
+  detected_actions: {             // 自动侦测的潜在提议
+    suggest_new_chunk?: { title: string; parent_id?: string; description: string; priority: 'P0'|'P1'|'P2' };
+    suggest_new_task?: { chunk_id: string; title: string; acceptance_criteria: string; priority: 'P0'|'P1' };
+  };
+}
+```
+
+**系统引导 Prompt 规约 (Coordinator System Instruction)**：
+```text
+你是一个精益软件工程的多角色研讨协调者。你的任务是引导用户将模糊需求逐步结构化：
+1. 观察当前对话历史与右侧已有的需求分块树；
+2. 如果用户刚刚抛出一个新业务场景，指派【产品分析师】主导提问并细化流程；
+3. 如果用户开始讨论实现技术、性能指标或存储，指派【技术架构师】评估方案与边界；
+4. 如果某项功能看似讨论成熟，指派【质检与安全专家】挖掘边界异常与验收标准；
+5. 如果发现了明确可拆分的功能模块，在回复尾部输出提议卡片（包含分块名称、建议父分块与任务描述），供人类用户确认采纳。
 ```
 
 ---
 
-## 5. 验收标准与验证矩阵
+## 4. 交互时序流详细规格
 
-| 编号 | 验收项 | 验证条件与预期结果 | 对应测试/原型 |
+### 4.1 核心研讨与提议确认时序流
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户 (User)
+    participant UI as 工作台界面 (Workbench)
+    participant Coord as 协调器 (Coordinator)
+    participant Agent as 专家 Agent (PM/Arch/QA)
+    participant Store as 本地存储 (SQLite)
+
+    User->>UI: 输入一句话想法："我想做在线支付校验模块"
+    UI->>Coord: 提交意图分析请求
+    Coord->>Coord: 评估议题范畴 → 裁决由 PM 主答，QA 补充
+    Coord->>Agent: 调用 PM 角色发起启发式追问
+    Agent-->>UI: 流式返回分析文本，尾部附带 [提议分块: 支付方式校验] 卡片
+    UI-->>User: 渲染气泡与提议卡片 (🎯 设为讨论点 / ✓ 采纳 / ✕ 忽略)
+    
+    User->>UI: 点击【✓ 采纳】
+    UI->>Store: 执行 INSERT INTO req_chunks 持久化
+    UI->>UI: 右侧分块树动态插入新节点 (状态: draft)
+    
+    User->>UI: 继续提问："我们要支持 card/paypal，但金额不能为负"
+    UI->>Coord: 提交讨论上下文
+    Coord->>Agent: 路由至 QA 角色针对金额边界发问
+    Agent-->>UI: 回复校验逻辑，尾部附带 [提议叶子任务: 金额有效性边界测试]
+    User->>UI: 点击【✓ 采纳挂载到叶子分块】
+    UI->>Store: 执行 INSERT INTO req_tasks
+    UI->>UI: 叶子分块下动态展开挂载任务看板卡片
+```
+
+---
+
+### 4.2 下一步建议一键执行时序流
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户
+    participant UI as 工作台界面
+    participant Diag as 冲突与覆盖度诊断引擎
+    participant Coord as 协调器
+
+    UI->>Diag: 每轮讨论结束触发静态诊断
+    Diag->>Diag: 扫描分块树 → 发现「非功能需求」出现频次为 0
+    Diag->>UI: 右栏建议面板插入卡片："补充非功能需求（性能/并发/安全）"
+    
+    User->>UI: 点击建议卡片
+    UI->>UI: 自动将推荐议题注入底部输入框："请技术架构师与QA评估本模块的非功能需求（性能要求与安全边界）"
+    UI->>Coord: 模拟用户提交，自动触发新一轮研讨
+```
+
+---
+
+### 4.3 历史编辑撤回差异提示流
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User as 用户
+    participant UI as 工作台界面
+    participant Store as 本地存储
+
+    User->>UI: 点击编辑第 2 轮历史提问并重新提交
+    UI->>UI: 检测到该轮次后已有 3 个分块已生成落盘
+    UI->>UI: 保持右侧分块树完全不动（禁止强行清空或篡改）
+    UI->>UI: 在最新对话流底部追加黄色预警通知条：
+    Note over UI: "⚠️ 检测到前序需求发生修订，已生成分块「支付方式校验」可能存在范围偏差"
+    UI-->>User: 提供操作项：【对比差异并重新评估】|【忽略差异，保留当前分块】
+```
+
+---
+
+## 5. PRD 生成规范与下游流水线映射字典
+
+### 5.1 生成 PRD.md 规范模版结构
+当用户点击【生成 PRD】时，系统从本地数据库聚合所有数据，套用标准模板生成：
+```markdown
+# [项目名称] 产品需求规格说明书 (PRD)
+
+> 生成时间：YYYY-MM-DD HH:mm  
+> 讨论深度：X 轮对话 / Y 个角色参与  
+> 状态：Ready for Engineering Pipeline  
+
+## 1. 业务背景与目标
+[聚合初始 prompt 与第一轮讨论沉淀的核心痛点]
+
+## 2. 需求分块与功能架构树 (Chunk Breakdown)
+- 📦 模块 1：[分块名称] (状态: approved, 优先级: P0)
+  - 范围说明：...
+  - 验收准则 (Acceptance Criteria)：...
+  - 关联工程任务清单：
+    - [ ] Task 1.1: [任务标题] (责任人: Agent/Coder, 优先级: P0)
+    - [ ] Task 1.2: [任务标题]
+- 📦 模块 2：...
+
+## 3. 非功能需求与安全合规
+- 性能与并发要求：...
+- 异常边界与错误码规范：...
+
+## 4. 实施交接与 Pipeline 关联
+- 目标实施工作区：[workspace_path]
+- 建议执行角色流水线：[Pipeline-Template-ID]
+```
+
+---
+
+### 5.2 任务映射至下游角色流水线字典
+| MOD-17 实体属性 | 映射至 MOD-10 角色流水线 (Pipeline) | 映射说明 |
+|---|---|---|
+| `req_chunks.title` | `PipelineStage.name` 或工单模块组 | 分块作为流水线的 Stage 或特性泳道 |
+| `req_tasks.title` | `PipelineTask.title` | 直接作为具体的代码编写或测试任务工单 |
+| `req_tasks.acceptance_criteria` | `PipelineTask.prompt` | 转化为供编码 Agent 执行的验收断言要求 |
+| `req_tasks.priority` | `PipelineTask.priority` | 严格继承 P0~P3 调度优先级 |
+| `req_tasks.status = 'approved'` | `PipelineTask.status = 'ready'` | 仅 approved 分块下的任务才允许进入就绪队列 |
+
+---
+
+## 6. 全面验收矩阵 (Acceptance Criteria)
+
+| 编号 | 功能领域 | 测试场景与验证行为 | 预期结果与质量准绳 |
 |---|---|---|---|
-| **AC-17-01** | 列表检索与状态过滤 | 在 `run-requirements.html` 输入关键字能即时过滤出目标卡片；切换状态 Tab 正确显示对应分类；无结果时正确显示 Empty State。 | 原型通过 |
-| **AC-17-02** | 布局与 Tab 切换 | 在 `run-requirements-workbench.html` 点击「需求分块」与「建议」Tab，双面板各自独立滚动，内容完整渲染，无布局塌陷或零高度。 | 原型通过 |
-| **AC-17-03** | Agent 管理交互 | 支持在左侧侧栏独立开关 Agent（卡片半透明禁用）；支持点击 ⚙️ 弹窗修改模型与提示词；支持删除确认。 | 原型通过 |
-| **AC-17-04** | 分块与任务层级 | 仅叶子分块显示挂载任务看板；点击父分块折叠展开正确隐藏子分块及任务；支持弹窗编辑分块与任务属性。 | 原型通过 |
-| **AC-17-05** | 建议清单交互 | 右栏建议卡片具备清晰的「来源依据」；点击执行可自动代入输入框并触发研讨；点击 ✕ 可标记忽略淡出。 | 原型通过 |
-| **AC-17-06** | 规格入库与 PRD 导出 | 平台 v2.0 规格说明书正式包含 MOD-17 章节；工作台具备「导出需求分块」与「生成 PRD」操作入口。 | 原型/文档通过 |
+| **AC-01** | 检索与状态过滤 | 在 `run-requirements.html` 输入关键字实时过滤卡片；点击状态筛选切换分类。 | 响应耗时 < 50ms；无匹配时呈现空状态并提供一键重置。 |
+| **AC-02** | 工作台双 Tab 独立布局 | 在 `run-requirements-workbench.html` 切换「需求分块」与「建议」Tab。 | 两个面板均具独立 `overflow-y-auto` 滚动能力，内容完整展开，绝对高度无 0 塌陷。 |
+| **AC-03** | Agent 动态管理 | 在左栏切换 Agent 状态开关；点击 ⚙️ 修改模型与提示词；点击删除角色。 | 关闭后半透明禁用，不再参与调度；修改与删除弹窗交互正常且有确认拦截。 |
+| **AC-04** | 树形折叠与挂载隔离 | 点击父分块折叠展开子节点；检查任务挂载位置。 | 父分块仅能嵌套子分块；**任务卡片仅在最底层叶子分块展开**，父分块绝对不挂任务。 |
+| **AC-05** | 建议清单交互闭环 | 查看建议面板各卡片的来源依据；点击任意建议卡片。 | 每条建议均标注清晰证据来源；点击后立即将议题回填到底部输入框并触发研讨。 |
+| **AC-06** | PRD 导出与下游对接 | 在工作台点击「导出需求分块」与「生成 PRD」。 | 能够正确导出标准 Markdown 树形文档，具备跳转 Pipeline 实施的完整数据映射。 |
