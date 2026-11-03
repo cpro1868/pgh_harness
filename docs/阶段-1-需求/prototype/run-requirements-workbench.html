@@ -50,6 +50,112 @@
 </head>
 <body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden">
 
+  <!-- ═══ 弹出层：PRD 生成（模板选择 + 逐章进度） ═══ -->
+  <div id="modal-prd" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-prd')">
+    <div class="w-full max-w-lg rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
+      <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
+        <h3 class="text-sm font-bold text-white flex items-center space-x-2"><span>📄</span><span>生成 PRD 需求文档</span></h3>
+        <button onclick="closeModal('modal-prd')" class="text-slate-500 hover:text-slate-300">✕</button>
+      </div>
+
+      <!-- 步骤 1：配置 -->
+      <div id="prd-config" class="p-5 space-y-4">
+        <div>
+          <label class="text-[11px] text-slate-400 block mb-1.5">选择 PRD 模板</label>
+          <select id="prd-template" class="w-full bg-[#080d1a] border border-slate-700 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-blue-500">
+            <option>⭐ 完整 PRD 标准模板（12 章节 · 内置）</option>
+            <option>轻量精简模板（5 章节）</option>
+          </select>
+          <p class="text-[10px] text-slate-600 mt-1">模板与生成提示词可在 <a href="config-prd-templates.html" class="text-blue-400 hover:underline">PRD 模板库</a> 中管理</p>
+        </div>
+        <div>
+          <label class="text-[11px] text-slate-400 block mb-1.5">生成模式</label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="p-3 rounded-lg border border-blue-500/60 bg-blue-950/20 cursor-pointer">
+              <input type="radio" name="prd-mode" checked class="ctx-check" onchange="setPrdMode('section')">
+              <span class="text-xs font-semibold text-blue-300 ml-1">逐章节生成</span>
+              <p class="text-[10px] text-slate-500 mt-1 leading-relaxed">每章独立生成，单章可重试，长文质量高</p>
+            </label>
+            <label class="p-3 rounded-lg border border-slate-700 cursor-pointer opacity-50" id="fast-mode-card" title="分块数量 > 5 时不可用">
+              <input type="radio" name="prd-mode" disabled class="ctx-check" onchange="setPrdMode('fast')">
+              <span class="text-xs font-semibold text-slate-400 ml-1">快速模式</span>
+              <p class="text-[10px] text-slate-600 mt-1 leading-relaxed">单次调用全文直出（当前分块 > 5 不可用）</p>
+            </label>
+          </div>
+        </div>
+        <div class="flex justify-end space-x-2 pt-1">
+          <button onclick="closeModal('modal-prd')" class="px-3.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 text-xs">取消</button>
+          <button onclick="startPrdGenerate()" class="px-4 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow">🚀 开始生成</button>
+        </div>
+      </div>
+
+      <!-- 步骤 2：逐章进度 -->
+      <div id="prd-progress" class="hidden p-5 space-y-2.5">
+        <div class="flex items-center justify-between mb-1">
+          <span class="text-xs font-semibold text-slate-300">生成进度</span>
+          <span class="text-[10px] font-mono text-slate-500" id="prd-progress-count">2 / 12 章节</span>
+        </div>
+        <div class="h-1.5 rounded-full bg-slate-800 overflow-hidden"><div class="h-full bg-emerald-500 rounded-full transition-all" style="width:17%"></div></div>
+
+        <div class="space-y-1.5 mt-3 max-h-72 overflow-y-auto">
+          <div class="flex items-center space-x-2 px-3 py-2 rounded bg-[#0c1220] border border-slate-800">
+            <span class="progress-dot bg-emerald-500"></span><span class="text-xs text-slate-300 flex-1">01 文档信息与交付完整性检查</span>
+            <span class="text-[10px] text-emerald-400">✓ 完成</span>
+          </div>
+          <div class="flex items-center space-x-2 px-3 py-2 rounded bg-[#0c1220] border border-slate-800">
+            <span class="progress-dot bg-emerald-500"></span><span class="text-xs text-slate-300 flex-1">02 背景与问题定义</span>
+            <span class="text-[10px] text-emerald-400">✓ 完成</span>
+          </div>
+          <div class="flex items-center space-x-2 px-3 py-2 rounded bg-[#0c1220] border border-blue-500/40">
+            <span class="progress-dot bg-blue-500 animate-pulse"></span><span class="text-xs text-blue-300 flex-1">03 产品目标、范围与非目标</span>
+            <span class="text-[10px] text-blue-400">生成中…</span>
+          </div>
+          <div class="flex items-center space-x-2 px-3 py-2 rounded bg-[#0c1220] border border-slate-800 opacity-60">
+            <span class="progress-dot bg-slate-600"></span><span class="text-xs text-slate-500 flex-1">04 用户、场景与用户故事</span>
+            <span class="text-[10px] text-slate-600">等待</span>
+          </div>
+          <div class="flex items-center space-x-2 px-3 py-2 rounded bg-[#0c1220] border border-rose-800/50">
+            <span class="progress-dot bg-rose-500"></span><span class="text-xs text-rose-300 flex-1">05 异常流程</span>
+            <button onclick="alert('原型：单章重试——仅重新生成本章节')" class="text-[10px] px-2 py-0.5 rounded bg-rose-900/60 text-rose-300 hover:bg-rose-800">✕ 失败 · 重试</button>
+          </div>
+        </div>
+        <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+          <button onclick="showPrdResult()" class="text-xs text-blue-400 hover:underline">查看已完成章节 →</button>
+          <button onclick="closeModal('modal-prd')" class="px-3 py-1.5 rounded bg-slate-800 text-slate-400 border border-slate-700 text-xs">后台运行</button>
+        </div>
+      </div>
+
+      <!-- 步骤 3：结果与编辑 -->
+      <div id="prd-result" class="hidden p-5 space-y-3">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-semibold text-emerald-400">✓ PRD 已生成（V3 · 完整 PRD 标准模板）</span>
+          <div class="flex items-center space-x-2">
+            <select class="bg-[#080d1a] border border-slate-700 rounded px-2 py-1 text-[10px] text-slate-400">
+              <option>版本历史：V3（当前）</option><option>V2</option><option>V1</option>
+            </select>
+          </div>
+        </div>
+        <div class="space-y-1.5 max-h-60 overflow-y-auto">
+          <div class="flex items-center justify-between px-3 py-2 rounded bg-[#0c1220] border border-slate-800">
+            <span class="text-xs text-slate-300">02 背景与问题定义</span>
+            <button onclick="alert('原型：AI 重生成前需确认——该章节已被手动编辑')" class="text-[10px] text-slate-500 hover:text-blue-400">✎ 已人工编辑</button>
+          </div>
+          <div class="flex items-center justify-between px-3 py-2 rounded bg-[#0c1220] border border-slate-800">
+            <span class="text-xs text-slate-300">05 异常流程</span>
+            <div class="space-x-2">
+              <button onclick="alert('原型：编辑章节内容并回写保存')" class="text-[10px] text-blue-400 hover:underline">编辑</button>
+              <button onclick="alert('原型：单章重试')" class="text-[10px] text-slate-500 hover:text-blue-400">重生成</button>
+            </div>
+          </div>
+        </div>
+        <div class="flex justify-end space-x-2 pt-2 border-t border-slate-800">
+          <button onclick="alert('原型：复制 Markdown')" class="px-3 py-1.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-xs">复制全文</button>
+          <button onclick="alert('原型：导出 PRD.md 文件到本地')" class="px-3.5 py-1.5 rounded bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-semibold shadow">导出 PRD.md</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <!-- ═══ 弹出层：Agent 设置 ═══ -->
   <div id="modal-agent" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-agent')">
     <div class="w-full max-w-md rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
@@ -202,7 +308,7 @@
           <span class="text-sm font-bold text-white">💬 需求讨论区</span>
           <span class="text-[9px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-500 font-mono">自由讨论 · 多 Agent 引导</span>
         </div>
-        <button onclick="alert('原型：Agent 从讨论记录提炼生成 PRD → write_file 落盘 PRD.md → 弹出流转面板')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-[11px]" title="导出需求分块和任务清单" onclick="alert('原型：导出需求分块和任务清单为 Markdown/CSV')">📤</button><button class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1"><span>📄</span><span>生成 PRD</span></button>
+        <button onclick="alert('原型：导出需求分块和任务清单为 Markdown/CSV')" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-[11px]" title="导出需求分块和任务清单">📤</button><button onclick="openPrdModal()" class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1"><span>📄</span><span>生成 PRD</span></button>
       </div>
 
       <div class="flex-1 overflow-y-auto p-4 space-y-3">
@@ -509,6 +615,23 @@
       document.getElementById('modal-task').classList.remove('hidden');
     }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
+    // ═══ PRD 生成弹层 ═══
+    function openPrdModal() {
+      document.getElementById('prd-config').classList.remove('hidden');
+      document.getElementById('prd-progress').classList.add('hidden');
+      document.getElementById('prd-result').classList.add('hidden');
+      document.getElementById('modal-prd').classList.remove('hidden');
+    }
+    function setPrdMode(mode) { /* 原型：仅状态切换 */ }
+    function startPrdGenerate() {
+      document.getElementById('prd-config').classList.add('hidden');
+      document.getElementById('prd-progress').classList.remove('hidden');
+    }
+    function showPrdResult() {
+      document.getElementById('prd-progress').classList.add('hidden');
+      document.getElementById('prd-result').classList.remove('hidden');
+    }
     function deleteAgent() { closeModal('modal-agent'); alert('原型：删除 Agent（需确认）'); }
     function deleteChunk() { closeModal('modal-chunk'); alert('原型：删除分块（需确认）'); }
     function deleteTask() { closeModal('modal-task'); alert('原型：删除任务（需确认）'); }
