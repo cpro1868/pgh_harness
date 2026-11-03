@@ -2,9 +2,10 @@
 
 > 文档标识：`docs/阶段-2-设计/MOD-17-需求探索详细设计.md`  
 > 所属阶段：阶段-2-设计（详细设计）  
-> 版本：v1.0  
+> 版本：v1.1（纳入 PRD 模板库与智能生成引擎）  
 > 上游文档：`docs/阶段-2-设计/MOD-17-需求探索概要设计.md`  
-> 实现基准：`packages/core/src/turn-loop.ts`（ChatFn 模式）、`apps/server/src/index.ts`（路由与 SSE 模式）、`packages/plugins/storage-sqlite/src/database.ts`（DDL 模式）
+> 实现基准：`packages/core/src/turn-loop.ts`（ChatFn 模式）、`apps/server/src/index.ts`（路由与 SSE 模式）、`packages/plugins/storage-sqlite/src/database.ts`（DDL 模式）  
+> PRD 质量基准：`docs/templates/智能研究助手_完整PRD.md`（16 章企业级结构）
 
 ---
 
@@ -103,13 +104,43 @@ CREATE TABLE IF NOT EXISTS req_prds (
   session_id TEXT NOT NULL REFERENCES req_sessions(id) ON DELETE CASCADE,
   version INTEGER NOT NULL,
   markdown_content TEXT NOT NULL,
+  template_id TEXT,                             -- 使用的模板（可空=旧版直出）
   exported_at INTEGER NOT NULL
 );
 CREATE INDEX IF NOT EXISTS idx_req_prds_session ON req_prds(session_id, version DESC);
+
+-- 8. PRD 模板表
+CREATE TABLE IF NOT EXISTS prd_templates (
+  id TEXT PRIMARY KEY,                          -- tpl_{timestamp}_{rand}
+  name TEXT NOT NULL,
+  description TEXT NOT NULL DEFAULT '',
+  is_default INTEGER NOT NULL DEFAULT 0,        -- 全局唯一默认（事务内先清后设）
+  is_builtin INTEGER NOT NULL DEFAULT 0,        -- 内置参考模板（可复制派生、可编辑内容、不可删除）
+  created_at INTEGER NOT NULL,
+  updated_at INTEGER NOT NULL
+);
+
+-- 9. PRD 模板章节表
+CREATE TABLE IF NOT EXISTS prd_template_sections (
+  id TEXT PRIMARY KEY,
+  template_id TEXT NOT NULL REFERENCES prd_templates(id) ON DELETE CASCADE,
+  sort_order INTEGER NOT NULL,
+  title TEXT NOT NULL,                          -- 章节标题，如「1. 背景与问题定义」
+  guidance TEXT NOT NULL DEFAULT '',            -- 撰写指导说明（给用户看）
+  prompt_template TEXT NOT NULL,                -- 本章节 LLM 撰写提示词（含变量占位）
+  context_sources TEXT NOT NULL DEFAULT '[]',   -- JSON 数组：messages/chunks/tasks/session_meta
+  min_words INTEGER,                            -- 篇幅下限（可空）
+  enabled INTEGER NOT NULL DEFAULT 1
+);
+CREATE INDEX IF NOT EXISTS idx_prd_sections_tpl ON prd_template_sections(template_id, sort_order);
 ```
 
+**内置参考模板种子数据（seed，database.ts 初始化时若表空则写入）**：
+- 模板名「完整 PRD 标准模板」，is_builtin=1，章节以 `docs/templates/智能研究助手_完整PRD.md` 的 16 章结构为基准裁剪为 12 个核心章节（文档信息表、背景与问题定义、目标/范围/非目标、用户故事与场景、核心概念与规则、流程与状态、功能需求、异常流程、非功能与风险、验收标准、依赖与决策项、评审通过标准）；
+- 每章节预置 prompt_template（指导 LLM 从 `{{chunks.tree}}`/`{{messages.recent}}` 等提炼撰写）与推荐 context_sources。
+
 ### 1.2 数据访问层（新增 `plugins/storage-sqlite/src/requirements-store.ts`）
-- 方法集：`listSessions / getSessionSnapshot / createSession / updateSessionStatus / listAgents / upsertAgent / deleteAgent / insertMessage / updateProposalState / insertChunk / updateChunk / deleteChunk / listChunksTree / insertTask / updateTask / deleteTask / replaceSuggestions / insertPrd`
+- 方法集：`listSessions / getSessionSnapshot / createSession / updateSessionStatus / listAgents / upsertAgent / deleteAgent / insertMessage / updateProposalState / insertChunk / updateChunk / deleteChunk / listChunksTree / insertTask / updateTask / deleteTask / replaceSuggestions / insertPrd / listPrdTemplates / getPrdTemplate / createPrdTemplate / updatePrdTemplate / deletePrdTemplate / setDefaultPrdTemplate / listTemplateSections / upsertTemplateSection / reorderTemplateSections`
 - **约定**：所有写操作使用 `this.raw.transaction()` 包裹；树查询在 JS 侧组装（数据量级 < 千节点，不做递归 SQL）。
 
 ---
@@ -177,6 +208,50 @@ export interface SuggestionItem {
   sourceType: SuggestionSource;
   sourceReason: string;
   isDismissed: boolean;
+}
+
+// ═══ PRD 模板体系 ═══
+
+/** 系统内置变量白名单（引擎注入，禁止用户自造语法） */
+export type SystemVariable =
+  | 'project.title'
+  | 'project.initial_prompt'
+  | 'chunks.tree'
+  | 'tasks.by_chunk'
+  | 'messages.recent'
+  | 'suggestions.active';
+
+export type ContextSource = 'session_meta' | 'messages' | 'chunks' | 'tasks';
+
+export interface PrdTemplateSection {
+  id: string;
+  sortOrder: number;
+  title: string;
+  guidance: string;
+  promptTemplate: string;         // 含 {{var}} 占位
+  contextSources: ContextSource[];
+  minWords: number | null;
+  enabled: boolean;
+}
+
+export interface PrdTemplate {
+  id: string;
+  name: string;
+  description: string;
+  isDefault: boolean;
+  isBuiltin: boolean;
+  sections: PrdTemplateSection[];
+  updatedAt: number;
+}
+
+export type PrdGenerateMode = 'section' | 'fast';
+
+export interface PrdSectionResult {
+  sectionId: string;
+  title: string;
+  content: string;               // 生成的 Markdown
+  status: 'pending' | 'generating' | 'done' | 'error' | 'manually_edited';
+  error?: string;
 }
 ```
 
@@ -292,12 +367,88 @@ type StreamEvent =
 
 ---
 
-## 6. PRD 生成器（`packages/core/src/requirements/prd-generator.ts`）
+## 6. PRD 模板渲染器与生成引擎
 
-- 纯模板函数 `renderPrd(snapshot): string`，无 LLM 依赖；
-- 版本号 = 该会话 req_prds 现有 max(version) + 1；
-- 结构遵循需求规格 §5.1 模板；分块树按 DFS 序输出缩进列表；仅输出 status ∈ {discussed, analyzed, approved} 的分块（draft 不进 PRD，另列「待定项」附录）；
-- 任务清单仅输出非 deferred 任务。
+### 6.1 模板变量渲染器（`packages/core/src/requirements/template-renderer.ts`）
+
+**系统变量解析（白名单严格匹配）**：
+```typescript
+const SYSTEM_VARIABLES: Record<SystemVariable, (snap: SessionSnapshot) => string> = {
+  'project.title':          s => s.session.title,
+  'project.initial_prompt': s => s.session.initialPrompt,
+  'chunks.tree':            s => renderChunkTreeText(s.chunkTree),
+  'tasks.by_chunk':         s => renderTasksGrouped(s.chunkTree),
+  'messages.recent':        s => summarizeMessages(s.messages, 20),
+  'suggestions.active':     s => s.suggestions.filter(x => !x.isDismissed).map(x => x.content).join('\n'),
+};
+```
+
+**注入规则（S3 安全）**：
+- 渲染输出统一包裹：`<data name="{{chunks.tree}}">\n...内容...\n</data>`；
+- 内容做防御性处理：剥离内容中出现的 `</data>` 伪造闭合（替换为 `\u003c/data\u003e`）；
+- 未知 `{{...}}` 占位符（非白名单）→ 渲染为 `⚠️ 未知变量` 并 console.warn，不静默吞掉。
+
+**章节上下文组装**：
+- 按章节 `contextSources` 勾选，将对应数据源文本（同样 `<data>` 包裹）附加到提示词末尾的「参考资料」区；
+- 模板提示词本体位于边界外（指令区），数据永远在边界内。
+
+### 6.2 PRD 生成引擎（`packages/core/src/requirements/prd-engine.ts`）
+
+```typescript
+async function generatePrd(ctx: {
+  sessionId: string;
+  templateId: string;
+  mode: PrdGenerateMode;
+  chat: ChatFn;
+  onEvent: (evt: PrdStreamEvent) => void;
+}): Promise<{ markdown: string; version: number }>
+```
+
+**逐章节模式（mode='section'，默认）**：
+```
+sections = 启用的章节（enabled=1，按 sortOrder 排序）
+for section of sections:
+  onEvent({type:'section_start', sectionId, title})
+  try:
+    prompt = renderer.buildSectionPrompt(template, section, snapshot)
+    content = await chat([{role:'user', content: prompt}], [])   // 非流式，temperature=0.7
+    校验 content 非空且 minWords 达标（未达标追加一次扩写重试）
+    results.push({...section, content, status:'done'})
+    onEvent({type:'section_done', sectionId, preview: content.slice(0,200)})
+  catch err:
+    results.push({...section, content:'', status:'error', error: err.message})
+    onEvent({type:'section_error', sectionId, message})           // 不阻塞后续章节
+markdown = 拼接(results)  // 章节标题 + 内容，error 章节留占位「[本章节生成失败，可重试]」
+version = store.insertPrd(sessionId, markdown, templateId)
+onEvent({type:'prd_done', version})
+```
+
+**快速模式（mode='fast'，前置校验分块总数 ≤ 5）**：
+- 单次调用：全部章节标题 + 指导说明 + 全量上下文 → 直出全文；
+- 失败则整体报错（无单章重试语义）。
+
+**单章重试与手动编辑（补充 API 语义）**：
+- `POST /api/requirements/:id/prd/:version/sections/:sectionId/retry`：仅重生成该章，保留其余章节内容，成功后 version 递增落盘；
+- `POST /api/requirements/:id/prd/:version/sections/:sectionId/edit`：保存人工修订，status='manually_edited'，version 递增；
+- **AI 重新生成已手动编辑的章节前，前端弹确认**（防覆盖人工成果）。
+
+**PrdStreamEvent 联合类型**：
+```typescript
+type PrdStreamEvent =
+  | { type: 'section_start'; sectionId: string; title: string }
+  | { type: 'section_done'; sectionId: string; preview: string }
+  | { type: 'section_error'; sectionId: string; message: string }
+  | { type: 'prd_done'; version: number }
+  | { type: 'error'; message: string };
+```
+
+**质量锚定策略**（对齐参考 PRD 深度）：
+- 内置模板各章节 prompt_template 中固化撰写要求（如异常流程章节要求「以表格输出：类别/场景/系统处理/用户反馈/P0」；验收标准章节要求「可测试的编号化 AC 列表」）；
+- 生成前置校验：会话无任何分块时拒绝生成并提示「请先完成至少一轮需求分块」。
+
+### 6.3 内置模板种子（database.ts 初始化）
+- 表空时写入「完整 PRD 标准模板」（is_builtin=1, is_default=1），12 个核心章节，章节结构裁剪自 `docs/templates/智能研究助手_完整PRD.md`；
+- 内置模板：可编辑内容、可复制派生、**不可删除**（deleteTemplate 服务端拦截 is_builtin）。
 
 ---
 
@@ -317,7 +468,18 @@ type StreamEvent =
 | POST/PATCH/DELETE | `/api/requirements/:id/chunks[/:chunkId]` | 分块 CRUD + 状态流转 | 字段集 | `{chunk}` / `{ok}` |
 | POST/PATCH/DELETE | `/api/requirements/:id/tasks[/:taskId]` | 任务 CRUD（服务端校验叶子约束） | 字段集 | `{task}` / `{ok}` |
 | POST/PATCH/DELETE | `/api/requirements/:id/agents[/:agentId]` | Agent 角色管理 | 字段集 | `{agent}` / `{ok}` |
-| GET | `/api/requirements/:id/prd` | 生成并返回最新 PRD Markdown | — | `{markdown,version}` |
+| GET | `/api/requirements/:id/prd` | 获取最新 PRD Markdown | — | `{markdown,version,sectionResults[]}` |
+| POST | `/api/requirements/:id/prd/generate` | 发起 PRD 生成（SSE 响应） | `{templateId,mode:'section'\|'fast'}` | SSE PrdStreamEvent 流 |
+| POST | `/api/requirements/:id/prd/:version/sections/:sectionId/retry` | 单章节重试 | — | `{sectionResult}` |
+| POST | `/api/requirements/:id/prd/:version/sections/:sectionId/edit` | 章节手动编辑回写 | `{content}` | `{sectionResult,version}` |
+| GET | `/api/prd-templates` | 模板列表（含章节数） | — | `{templates[]}` |
+| POST | `/api/prd-templates` | 新建/复制模板 | `{name,description,copyFrom?}` | `{template}` |
+| GET | `/api/prd-templates/:id` | 模板详情（含全部章节） | — | `{template}` |
+| PUT | `/api/prd-templates/:id` | 更新模板（名称/描述/事务性全量替换章节） | `{name,description,sections[]}` | `{template}` |
+| DELETE | `/api/prd-templates/:id` | 删除模板（is_builtin 拒绝） | — | `{ok}` / 400 |
+| POST | `/api/prd-templates/:id/default` | 设为默认（事务清旧设新） | — | `{ok}` |
+| POST | `/api/prd-templates/:id/preview` | 基于指定会话数据 dry-run 渲染章节提示词 | `{sessionId,sectionId?}` | `{renderedPrompt[]}` |
+| GET/POST | `/api/prd-templates/export` / `/api/prd-templates/import` | 导出 JSON / 导入 JSON（schema 校验） | JSON 文件 | 文件流 / `{template}` |
 | POST | `/api/requirements/:id/transition` | 投递 Pipeline | `{pipelineTemplateId}` | `{pipelineInstanceId}` |
 
 - **安全**：全部路由走既有 token 门禁中间件；transition 前服务端二次校验「任务所在分块必须 approved」；SSE 连接复用既有 res.close 清理模式（防 TC-00-99-003 同型泄漏）。
@@ -331,8 +493,49 @@ type StreamEvent =
 apps/server/client/
 ├─ run-requirements.html            # 列表页（原型迁移 + 接真实 API）
 ├─ run-requirements-workbench.html  # 工作台页（原型迁移 + 接真实 API）
-└─ js/requirements.js                # 共享控制器（原生 JS，IIFE 模块）
+├─ config-prd-templates.html        # PRD 模板管理页（新增）
+├─ js/requirements.js                # 共享控制器（原生 JS，IIFE 模块）
+└─ js/prd-templates.js               # 模板编辑器控制器（新增）
 ```
+
+### 8.2.1 PRD 模板管理页设计（config-prd-templates.html + prd-templates.js）
+
+**页面结构**（风格对齐 config-skills.html）：
+```
+top-app-bar：面包屑「设置控制台 / PRD 模板库」+ [新建模板] [导入模板 JSON] 按钮
+main：
+  ① 模板卡片网格：名称 / 描述 / 章节数徽章 / 默认标记 ⭐ / 内置标记 📌 / 更新时间
+     卡片操作：编辑 | 复制 | 导出 | 删除（内置模板禁用删除）| 设为默认
+  ② 模板编辑器（点击编辑展开）：
+     - 基础信息：名称 / 描述
+     - 章节列表：可拖拽排序（HTML5 dragstart/dragover，序号实时重排）
+       每章节折叠面板：
+       ├─ 标题 / 启用开关 / 字数下限
+       ├─ 指导说明 textarea
+       ├─ 生成提示词 textarea（等宽字体）
+       │   └─ 变量插入工具栏：6 个系统变量按钮，点击在光标处插入 {{var}}
+       └─ 上下文勾选：☐ 会话元信息 ☐ 讨论记录 ☐ 分块树 ☐ 任务清单
+     - [预览提示词]：选择探索会话 dry-run，弹窗展示渲染后的完整 prompt（含 <data> 边界）
+     - [保存]：PUT 全量提交，服务端事务替换章节
+```
+
+**prd-templates.js 模块划分**：
+```
+1. tplApi        —— 模板 CRUD fetch 封装
+2. tplState      —— {templates, currentTemplate, dirty}
+3. renderCards   —— 模板卡片网格
+4. renderEditor  —— 编辑器（章节排序 UI + 逐章节表单）
+5. varToolbar    —— 变量插入（textarea selectionStart 定位）
+6. dragSort      —— 原生拖拽排序
+7. preview       —— dry-run 弹窗渲染
+8. importExport  —— JSON 文件导入（FileReader + schema 校验）与下载
+```
+
+### 8.2 工作台 PRD 生成面板（run-requirements-workbench.html 增量）
+- 顶栏「生成 PRD」按钮 → 弹窗：选择模板（下拉，默认模板置顶）+ 模式选择（逐章/快速，快速模式分块>5 时禁用并提示）；
+- 生成中：模态进度面板逐章节展示 pending/generating/done/error 状态与预览摘要；
+- 生成完成：章节列表支持 [重试]（error 章节）/ [编辑]（人工修订回写）/ [查看全文]；
+- PRD 版本历史：简单下拉列出历史版本号，可查看任意版本 Markdown。
 
 ### 8.2 requirements.js 模块划分（单文件内分段）
 ```
@@ -369,6 +572,9 @@ apps/server/client/
 | `diagnostics.test.ts` | 四维检查器 | 覆盖度零命中产出建议；矛盾对命中产出 conflict；dismissed 状态在重算后保留 |
 | `prd-generator.test.ts` | 模板渲染 | draft 分块只进附录；deferred 任务不出现；版本号递增 |
 | `requirements-api.test.ts` | 路由集成 | 未带 token → 401；transition 含非 approved 分块任务 → 400 且状态不变；SSE close 后资源清理 |
+| `prd-template-store.test.ts` | 模板 CRUD 与约束 | 设默认唯一性（旧默认自动清除）；内置模板删除被拒；章节排序事务替换后顺序正确；导入非法 schema JSON → 400 |
+| `template-renderer.test.ts` | 变量注入与边界 | 6 个系统变量正确注入且均包裹 `<data>`；内容中 `</data>` 被转义；**未知 `{{var}}` 渲染为警告标记而非静默替换**；章节上下文按勾选组装 |
+| `prd-engine.test.ts` | 生成编排 | 逐章模式：某章失败不阻塞后续章节且产物含占位；单章重试仅更新该章且 version 递增；手动编辑后 status='manually_edited'；**快速模式分块>5 → 400 拒绝**；无分块会话生成 → 拒绝并提示；版本号严格递增 |
 | `requirements-ui.test.ts` | 前端 JS 逻辑（DOM stub，同 topbar 测试模式） | escapeHtml 转义模型输出；搜索过滤计数；Tab 切换 display |
 
 ---
@@ -380,7 +586,9 @@ apps/server/client/
 | 1 | types.ts + requirements-store.ts + DDL + 测试 | 无 | 中 |
 | 2 | coordinator.ts（含降级）+ 测试 | 1 | 中 |
 | 3 | engine.ts（runTurn/acceptProposal/divergence）+ 测试 | 1,2 | 大 |
-| 4 | diagnostics.ts + prd-generator.ts + 测试 | 1 | 中 |
-| 5 | 服务端路由 + SSE 通道 + 集成测试 | 1~4 | 大 |
-| 6 | 前端两页接入 + requirements.js + UI 测试 | 5 | 大 |
-| 7 | activity-bar 全站导航注入 + 收尾自检（pnpm check + self-check） | 6 | 小 |
+| 4 | diagnostics.ts + 测试 | 1 | 中 |
+| 5 | template-renderer.ts + prd-engine.ts + 内置模板种子 + 测试 | 1 | 大 |
+| 6 | 服务端路由 + SSE 通道 + 集成测试 | 1~5 | 大 |
+| 7 | 前端两页接入 + requirements.js + UI 测试 | 6 | 大 |
+| 8 | config-prd-templates.html + prd-templates.js + 模板测试 | 6 | 中 |
+| 9 | activity-bar 全站导航注入 + 收尾自检（pnpm check + self-check） | 7,8 | 小 |

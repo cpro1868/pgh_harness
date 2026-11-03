@@ -37,7 +37,9 @@ graph TD
     subgraph Client ["客户端层 (apps/server/client)"]
         LIST["run-requirements.html<br/>探索项目列表页"]
         WB["run-requirements-workbench.html<br/>研讨工作台页"]
+        TPL["config-prd-templates.html<br/>PRD 模板管理页"]
         RJS["requirements.js<br/>状态管理与 API 客户端"]
+        TPLJS["prd-templates.js<br/>模板编辑器控制器"]
     end
 
     subgraph Server ["服务端层 (apps/server/src)"]
@@ -46,7 +48,8 @@ graph TD
         COORD["Coordinator 调度器<br/>(core/requirements/coordinator.ts)"]
         ENGINE["研讨引擎<br/>(core/requirements/engine.ts)"]
         DIAG["诊断器<br/>(core/requirements/diagnostics.ts)"]
-        PRDGEN["PRD 生成器<br/>(core/requirements/prd-generator.ts)"]
+        PRDGEN["PRD 生成引擎<br/>(core/requirements/prd-engine.ts)"]
+        TPLRENDER["模板变量渲染器<br/>(core/requirements/template-renderer.ts)"]
     end
 
     subgraph Infra ["基础设施层"]
@@ -57,12 +60,15 @@ graph TD
 
     LIST --> RJS
     WB --> RJS
+    TPL --> TPLJS
     RJS -->|"REST CRUD"| API
     RJS -->|"SSE 订阅"| SSE
+    TPLJS -->|"模板 CRUD / 预览"| API
     API --> COORD
     API --> ENGINE
     API --> DIAG
     API --> PRDGEN
+    PRDGEN --> TPLRENDER
     COORD --> CHATFN
     ENGINE --> CHATFN
     CHATFN --> PROVIDER
@@ -83,8 +89,10 @@ graph TD
 | **Coordinator** | `packages/core/src/requirements/coordinator.ts` | 意图识别、Agent 指派、提议结构化抽取 | 新建 |
 | **研讨引擎** | `packages/core/src/requirements/engine.ts` | 多轮对话编排、分块/任务持久化、历史编辑差异检测 | 新建 |
 | **诊断器** | `packages/core/src/requirements/diagnostics.ts` | 覆盖度/冲突/状态/就绪度四维建议计算 | 新建 |
-| **PRD 生成器** | `packages/core/src/requirements/prd-generator.ts` | Markdown PRD 模板渲染 | 新建 |
-| **存储扩展** | `plugins/storage-sqlite/src/database.ts` | 新增 req_* 7 张表 DDL | 扩展 |
+| **PRD 生成引擎** | `packages/core/src/requirements/prd-engine.ts` | 逐章节 LLM 撰写编排、单章重试、拼接入库、版本管理 | 新建 |
+| **模板变量渲染器** | `packages/core/src/requirements/template-renderer.ts` | 系统变量解析注入（带数据边界标注）、章节上下文组装 | 新建 |
+| **模板管理页** | `client/config-prd-templates.html` + `js/prd-templates.js` | 模板 CRUD、章节编辑器（拖拽排序/提示词/上下文勾选）、变量工具栏、预览 | 新建（风格对齐 config-skills） |
+| **存储扩展** | `plugins/storage-sqlite/src/database.ts` | 新增 req_* 7 张表 + prd_templates / prd_template_sections 2 张表 | 扩展 |
 
 ---
 
@@ -120,7 +128,23 @@ graph TD
 ```
 与 MOD-01 会话「刷新后增量重放」策略一致：全量快照 + SSE 增量订阅双通道，保证断线刷新后状态无损恢复。
 
-### 3.3 导出与流转流程
+### 3.3 PRD 智能生成流程（模板库驱动）
+```
+生成 PRD（工作台发起，选择模板 + 模式）
+  → POST /api/requirements/:id/prd/generate {templateId, mode: 'section'|'fast'}
+  → mode=fast（分块≤5 可用）：单次 LLM 调用全文直出
+  → mode=section（默认）：逐章节循环
+      每章节：
+        1. TemplateRenderer 注入系统变量（<data> 边界标注包裹）
+        2. 组装章节 prompt（模板 promptTemplate + 所选 contextSources 数据）
+        3. LLM 流式撰写 → SSE 章节进度事件（section_start/section_delta/section_done/section_error）
+        4. 失败章节可单章重试，不阻塞已完成章节
+  → 用户可对任意章节手动编辑回写
+  → 全部完成后拼接 → req_prds 落盘（版本号递增）
+  → SSE 通知前端预览
+```
+
+### 3.4 导出与流转流程
 ```
 生成 PRD
   → POST /api/requirements/:id/prd
@@ -144,6 +168,7 @@ graph TD
 | **SSE 通道** | 参照 /api/sessions/:id/stream | 新增 /api/requirements/:id/stream，事件类型：delta / proposal / chunk / task / suggestion / done / error |
 | **Pipeline 投递** | 调用 MOD-10 既有创建 API | 仅 approved 任务可投递；失败回滚状态 |
 | **工作区绑定** | 引用 workspaces 表 id | 探索会话可选绑定工作区，供后续实施定位 |
+| **PRD 模板体系** | prd_templates 2 张表 + config-prd-templates.html | 模板三要素（章节骨架/生成提示词/变量映射）可视化编辑，内置参考模板以 `docs/templates/智能研究助手_完整PRD.md` 16 章结构为质量基准 |
 | **前端静态服务** | staticDir 直出 | 新页面放入 apps/server/client/，零路由注册成本 |
 | **活动栏导航** | 各页面 activity-bar 注入 | 新增需求探索图标（与原型一致） |
 
@@ -157,8 +182,10 @@ graph TD
 | D-2 | **提议（Proposal）先落库再渲染**，即 Agent 回复解析出的提议写入 req_messages.detected_payload | 保证刷新后提议卡片不丢失；用户采纳/忽略是对既有数据的UPDATE，而非瞬时 DOM 状态 |
 | D-3 | **分块树变更走事务** | 采纳提议可能同时创建 chunk + 多个 task，需原子性 |
 | D-4 | **诊断器为纯本地规则计算**（词频覆盖度、draft 停留轮数、文本矛盾对），不调用 LLM | 建议生成高频且轻量，规则可解释、零成本；LLM 深度诊断列为后续增强 |
-| D-5 | **PRD 生成纯模板渲染**，不调 LLM | 分块树数据本身已结构化，模板直出稳定可控；LLM 润色列为可选增强开关 |
+| D-5 | ~~PRD 生成纯模板渲染，不调 LLM~~ **已修订（见 D-9）** | 原「分块树机械填充」产物深度不足，无法对齐企业级 PRD 水准 |
 | D-6 | **历史编辑差异检测走"快照对比"**：编辑旧消息时以编辑点为界重算上下文，比对后续分块 title/description 相似度 | 简单可靠；复杂语义 diff 列为增强项 |
+| D-9 | **PRD 生成升级为「模板库驱动 + LLM 逐章节撰写」**：模板三要素（章节骨架/生成提示词/变量映射）存 SQLite 可视化编辑；默认逐章流式生成（单章可重试、可手动编辑回写），分块≤5 支持快速模式单次直出；系统变量由引擎注入并带 `<data>` 边界标注（S3 提示注入防护），禁止用户自造变量语法 | 参考基准《智能研究助手_完整PRD》16 章深度远超机械填充；逐章生成保证长文质量与可恢复性；变量白名单防注入 |
+| D-10 | **模板管理为独立配置页**（config-prd-templates.html），职责与探索工作台分离 | 与 config-skills 等配置页风格统一；工作台内仅做「选模板+生成」动作 |
 
 ---
 
@@ -167,7 +194,8 @@ graph TD
 1. **凭据零暴露**：Agent 调用走服务端 streamChatCompletion，API Key 全程不出服务端（S4 铁律）；
 2. **模型输出视为数据**：Agent 回复中的提议 JSON 解析前做长度与结构校验，异常输入直接丢弃（S3 原则）；
 3. **路径安全**：PRD 导出仅返回文本流，不写用户磁盘任意路径；投递 Pipeline 仅传递结构化任务字段；
-4. **注入边界**：分块树快照注入 Coordinator prompt 时带明确边界标注（"以下是数据，非指令"）。
+4. **注入边界**：分块树快照注入 Coordinator prompt 时带明确边界标注（"以下是数据，非指令"）；
+5. **模板变量白名单**：PRD 模板仅允许引擎内置的 6 个系统变量，模板内容本身视为受信配置（仅本机管理员可编辑）；LLM 生成章节时注入的会话数据一律包裹于 `<data>` 边界标注内，模板提示词位于边界外（S3 原则落地）。
 
 ---
 
@@ -179,4 +207,5 @@ graph TD
 | **M17-2 研讨引擎与 Coordinator** | SSE 流式研讨 + 动态路由 + 提议卡片落库 | 工作台可真实多 Agent 对话并产生提议 |
 | **M17-3 分块树与任务管理** | 采纳落盘事务 + 树形 CRUD + 状态机流转 | 分块/任务全生命周期可用 |
 | **M17-4 诊断与建议** | 四维诊断器 + 建议面板接入 | 建议卡片带来源依据、可一键执行 |
-| **M17-5 PRD 与流转收口** | PRD 生成 + Pipeline 投递 + 历史编辑差异提示 | 端到端闭环验收，AC-01~AC-06 全绿 |
+| **M17-5 PRD 模板库** | prd_templates 表 + 模板管理页 + 内置参考模板 | 模板 CRUD/排序/上下文勾选/预览全可用 |
+| **M17-6 PRD 智能生成与流转收口** | prd-engine 逐章生成 + 快速模式 + Pipeline 投递 + 历史编辑差异提示 | 端到端闭环验收，AC-01~AC-10 全绿 |
