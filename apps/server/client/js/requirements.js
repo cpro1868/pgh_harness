@@ -360,6 +360,7 @@
   async function refreshSnapshot() {
     const resp = await api.get(`/api/requirements/${state.sessionId}`);
     state.session = resp.data.session;
+    state.workspacePath = resp.data.workspacePath || null;
     state.agents = resp.data.agents;
     state.messages = resp.data.messages.map((m) => ({
       ...m,
@@ -372,6 +373,7 @@
     renderMessages();
     renderChunkTree();
     renderSuggestions();
+    renderFileTree();
   }
 
   window.reqSend = async function () {
@@ -595,6 +597,51 @@
     } catch (err) { toast(err.message, true); }
   };
   window.prdRetryFailed = function () { toast('失败章节可在生成完成后于结果列表中重试', true); };
+
+  // ═══ 项目文件树（绑定工作区真实文件 + 会话归档产物） ═══
+  async function renderFileTree() {
+    const treeEl = document.getElementById('file-tree');
+    const nameEl = document.getElementById('files-ws-name');
+    const pathEl = document.getElementById('files-ws-path');
+    if (!treeEl) return;
+    const wsPath = state.workspacePath;
+    // 归档产物行（PRD 版本）
+    let archiveHtml = '';
+    try {
+      const prdResp = await api.get(`/api/requirements/${state.sessionId}/prd`);
+      if (prdResp.data && prdResp.data.version) {
+        archiveHtml = `<div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer" style="background:rgba(16,185,129,.08);border-left:2px solid #10b981" onclick="downloadPrd()" title="点击下载">
+          <span>📄</span><span class="text-emerald-300">PRD.md</span><span class="pill bg-emerald-950/60 text-emerald-400 ml-auto">V${prdResp.data.version}</span></div>`;
+      }
+    } catch { /* 尚未生成 PRD */ }
+
+    if (!wsPath) {
+      if (nameEl) nameEl.textContent = '项目文件';
+      if (pathEl) pathEl.textContent = '未绑定工作区';
+      treeEl.innerHTML = `${archiveHtml}<div class="px-3 py-2 text-slate-600 text-[10px] leading-relaxed">当前会话未绑定工作区。<br>如需让 Agent 浏览项目文件，请在列表页编辑会话绑定，或先登记工作区。</div>`;
+      return;
+    }
+    if (nameEl) nameEl.textContent = wsPath.split(/[\\/]/).filter(Boolean).pop() || wsPath;
+    if (pathEl) pathEl.textContent = wsPath;
+    treeEl.innerHTML = '<div class="px-3 py-1 text-slate-600 text-[10px]">加载文件列表…</div>' + archiveHtml;
+    try {
+      const resp = await fetch(`/api/workspace/files?workspace=${encodeURIComponent(wsPath)}&limit=50`);
+      const d = await resp.json();
+      if (d.code !== 0 || !Array.isArray(d.data) || d.data.length === 0) {
+        treeEl.innerHTML = `<div class="px-3 py-1 text-slate-600 text-[10px]">工作区文件为空或读取受限</div>` + archiveHtml;
+        return;
+      }
+      const items = d.data.map((f) => {
+        const isDir = String(f).endsWith('/');
+        const name = String(f).replace(/\/$/, '');
+        return `<div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer ${isDir ? 'text-slate-300' : 'text-slate-400'}"><span>${isDir ? '📁' : '📄'}</span><span class="truncate">${escapeHtml(name)}</span></div>`;
+      }).join('');
+      treeEl.innerHTML = `<div class="px-3 py-1 text-slate-600 text-[9px] font-mono">工作区文件（前 50 项）</div>${items}${archiveHtml}`;
+    } catch (err) {
+      treeEl.innerHTML = `<div class="px-3 py-2 text-rose-400 text-[10px]">文件读取失败：${escapeHtml(err.message)}</div>` + archiveHtml;
+    }
+  }
+  window.renderFileTree = renderFileTree;
 
   // ═══ 启动 ═══
   document.addEventListener('DOMContentLoaded', () => {

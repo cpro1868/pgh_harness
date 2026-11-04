@@ -250,6 +250,17 @@
           </div>
       </div>
 
+      <!-- 项目文件（绑定工作区真实文件 + 会话归档产物） -->
+      <div class="flex-1 overflow-y-auto">
+        <div class="px-3 py-2 border-b border-slate-800">
+          <div class="text-[11px] font-bold text-white truncate" id="files-ws-name">项目文件</div>
+          <div class="text-[9px] text-slate-600 font-mono truncate" id="files-ws-path">未绑定工作区</div>
+        </div>
+        <div class="py-1 text-[11px] font-mono select-none" id="file-tree">
+          <div class="px-3 py-1 text-slate-600 text-[10px]">加载中…</div>
+        </div>
+        <div class="px-3 py-2 border-t border-slate-800"><div class="text-[9px] text-slate-600 leading-relaxed">📁 项目文件夹<br>所有内容归档于此<br>Agent 可直接读写</div></div>
+      </div>
     </aside>
 
     <!-- ═══ 中栏：自由对话区（真实交互） ═══ -->

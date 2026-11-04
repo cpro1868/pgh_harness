@@ -512,6 +512,19 @@ export class RequirementsStore {
     if (res.changes === 0) throw new Error(`SESSION_NOT_FOUND: ${id}`);
   }
 
+  public updateSession(id: string, patch: { title?: string; workspaceId?: string | null }): void {
+    const cur = this.db.raw.prepare('SELECT * FROM req_sessions WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    if (!cur) throw new Error(`SESSION_NOT_FOUND: ${id}`);
+    this.db.raw
+      .prepare('UPDATE req_sessions SET title=?, workspace_id=?, updated_at=? WHERE id=?')
+      .run(
+        patch.title ?? (cur.title as string),
+        patch.workspaceId === undefined ? (cur.workspace_id as string | null) : patch.workspaceId,
+        Date.now(),
+        id
+      );
+  }
+
   public deleteSession(id: string): void {
     this.db.raw.prepare('DELETE FROM req_sessions WHERE id = ?').run(id);
   }

@@ -305,6 +305,10 @@ export class HarnessServer {
         }
         return null;
       },
+      getWorkspacePath: (workspaceId) => {
+        const w = this.workspaceStore.list().find((x) => x.id === workspaceId);
+        return w ? w.path : null;
+      },
     });
 
     // 默认内置流水线初始化（若库中尚无模板）

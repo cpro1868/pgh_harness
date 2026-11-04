@@ -24,6 +24,8 @@ export interface RequirementsRouteDeps {
   llm: RequirementsLlmBridge;
   /** 从资产池取默认模型（首个可用 Provider 的首个模型）；无可用时返回 null */
   resolveDefaultModel?: () => { modelId: string; providerId: string } | null;
+  /** 按 workspaceId 解析工作区路径（查 workspaces 表）；未登记返回 null */
+  getWorkspacePath?: (workspaceId: string) => string | null;
   json?: (res: http.ServerResponse, data: unknown) => void;
   readJsonBody?: <T>(req: http.IncomingMessage) => Promise<T>;
 }
@@ -238,6 +240,7 @@ export class RequirementsRoutes {
           code: 0,
           data: {
             session,
+            workspacePath: session.workspaceId && this.deps.getWorkspacePath ? this.deps.getWorkspacePath(session.workspaceId) : null,
             agents: this.store.listAgents(sessionId),
             messages: this.store.listMessages(sessionId),
             chunkTree: this.store.listChunksTree(sessionId),
@@ -254,6 +257,9 @@ export class RequirementsRoutes {
           const valid = ['draft', 'discussing', 'prd_ready', 'transitioned'];
           if (!valid.includes(body.status)) { res.writeHead(400, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ code: 400, message: '非法状态' })); return true; }
           this.store.updateSessionStatus(sessionId, body.status as never);
+        }
+        if (body.title !== undefined || body.workspaceId !== undefined) {
+          this.store.updateSession(sessionId, { title: body.title, workspaceId: body.workspaceId });
         }
         jsonFn(res, { code: 0, data: { session: this.store.getSession(sessionId) } });
         return true;
