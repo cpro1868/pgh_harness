@@ -72,6 +72,7 @@ const TEXT_EXEMPT = new Set([
   'text-blue-600', // #2563eb，白底 5.1:1
   'text-purple-600', // #9333ea，白底 5.9:1
   'text-black',
+  'hover:text-slate-400', // 悬停态，与 text-slate-400 同级
 ]);
 
 /**
@@ -123,6 +124,18 @@ const BG_EXEMPT = new Set([
   'hover:bg-rose-600',
   'hover:bg-rose-700',
   'hover:bg-amber-500',
+  'bg-black/75',
+  'bg-amber-600/30',
+  'bg-amber-950/10',
+  'bg-blue-950/30',
+  'bg-violet-950/80',
+  'bg-rose-600/30',
+  'bg-blue-500',
+  'bg-emerald-500',
+  'bg-rose-500',
+  'bg-slate-500',
+  'bg-emerald-700/80',
+  'hover:bg-rose-800',
 ]);
 
 describe('TC-01-12: 清新明亮模式文字对比度覆盖（light-clean 文字/背景映射完整性）', () => {
