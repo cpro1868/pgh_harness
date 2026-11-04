@@ -14,4 +14,5 @@ export * from './workflow/bpmn-parser.ts';
 export * from './workflow/bpmn-engine.ts';
 export * from './requirements/coordinator.ts';
 export * from './requirements/engine.ts';
+export * from './requirements/diagnostics.ts';
 
