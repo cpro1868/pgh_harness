@@ -297,6 +297,14 @@ export class HarnessServer {
         chatPrd: async (messages) => this.streamChatCompletionForRequirements(messages),
         resolveAgentModel: () => ({ ok: true }),
       },
+      resolveDefaultModel: () => {
+        const providers = this.providerStore.list();
+        for (const p of providers) {
+          const model = p.models?.[0];
+          if (model?.id) return { modelId: model.id, providerId: p.id };
+        }
+        return null;
+      },
     });
 
     // 默认内置流水线初始化（若库中尚无模板）

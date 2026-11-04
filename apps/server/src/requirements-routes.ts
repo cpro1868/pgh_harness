@@ -22,6 +22,8 @@ export interface RequirementsLlmBridge {
 export interface RequirementsRouteDeps {
   db: SqliteDatabase;
   llm: RequirementsLlmBridge;
+  /** 从资产池取默认模型（首个可用 Provider 的首个模型）；无可用时返回 null */
+  resolveDefaultModel?: () => { modelId: string; providerId: string } | null;
   json?: (res: http.ServerResponse, data: unknown) => void;
   readJsonBody?: <T>(req: http.IncomingMessage) => Promise<T>;
 }
@@ -70,6 +72,12 @@ export class RequirementsRoutes {
     for (const res of clients) this.sseWrite(res, evt);
   }
 
+  /** 从 Provider 资产池解析默认模型（会话创建时为默认 Agent 三人组分配真实模型） */
+  private resolveDefaultModel(): { modelId: string; providerId: string } | null {
+    const resolve = this.deps.resolveDefaultModel;
+    return resolve ? resolve() : null;
+  }
+
   /** 路由入口：返回 true 表示已处理 */
   public async handle(req: http.IncomingMessage, res: http.ServerResponse, pathname: string, method: string): Promise<boolean> {
     const { json, readJsonBody } = this.deps;
@@ -107,7 +115,8 @@ export class RequirementsRoutes {
           initialPrompt: body.initialPrompt,
           workspaceId: body.workspaceId,
         });
-        const agents = DEFAULT_AGENTS.map((a, i) => this.store.insertAgent({ sessionId: session.id, name: a.name, roleTitle: a.roleTitle, systemPrompt: a.systemPrompt, modelId: 'default', providerId: 'default', sortOrder: i }));
+        const defaultModel = this.resolveDefaultModel();
+        const agents = DEFAULT_AGENTS.map((a, i) => this.store.insertAgent({ sessionId: session.id, name: a.name, roleTitle: a.roleTitle, systemPrompt: a.systemPrompt, modelId: defaultModel?.modelId ?? '', providerId: defaultModel?.providerId ?? 'default', sortOrder: i }));
         jsonFn(res, { code: 0, data: { session, agents } });
         return true;
       }
@@ -460,7 +469,12 @@ export class RequirementsRoutes {
             res.end(JSON.stringify({ code: 400, message: 'name 与 roleTitle 必填' }));
             return true;
           }
-          const agent = this.store.insertAgent({ sessionId, name: body.name, roleTitle: body.roleTitle, systemPrompt: body.systemPrompt ?? '', modelId: body.modelId ?? 'default', providerId: body.providerId ?? 'default', sortOrder: this.store.listAgents(sessionId).length });
+          if (!body.modelId || body.modelId === 'default') {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ code: 400, message: 'modelId 必填：请从模型资产池中选择真实模型' }));
+            return true;
+          }
+          const agent = this.store.insertAgent({ sessionId, name: body.name, roleTitle: body.roleTitle, systemPrompt: body.systemPrompt ?? '', modelId: body.modelId, providerId: body.providerId ?? 'default', sortOrder: this.store.listAgents(sessionId).length });
           jsonFn(res, { code: 0, data: { agent } });
           return true;
         }

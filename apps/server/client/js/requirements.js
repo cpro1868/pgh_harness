@@ -96,6 +96,23 @@
       document.getElementById('modal-create')?.classList.remove('hidden');
       const name = document.getElementById('new-req-name');
       if (name) name.focus();
+      // 工作区下拉接真实数据（GET /api/workspaces）
+      const wsSel = document.getElementById('new-req-workspace');
+      if (wsSel) {
+        wsSel.innerHTML = '<option value="">不绑定（后续可在工作区管理中选择）</option>';
+        fetch('/api/workspaces').then((r) => r.json()).then((d) => {
+          const list = d.data || [];
+          for (const w of list) {
+            const opt = document.createElement('option');
+            opt.value = w.id;
+            opt.textContent = `${w.name}（${w.path}）`;
+            wsSel.appendChild(opt);
+          }
+          if (list.length === 0) {
+            wsSel.innerHTML = '<option value="">暂无工作区——请先在【工作区管理与规则】中登记</option>';
+          }
+        }).catch(() => { wsSel.innerHTML = '<option value="">工作区加载失败</option>'; });
+      }
     };
     window.closeCreateModal = function () {
       document.getElementById('modal-create')?.classList.add('hidden');
@@ -108,7 +125,7 @@
       try {
         const body = { initialPrompt: prompt };
         if (name) body.title = name;
-        if (workspace && workspace !== 'default') body.workspaceId = workspace;
+        if (workspace) body.workspaceId = workspace;
         const resp = await api.send('/api/requirements', 'POST', body);
         toast('会话已创建，正在进入工作台…');
         setTimeout(() => { window.location.href = `run-requirements-workbench.html?id=${resp.data.session.id}`; }, 500);
@@ -250,6 +267,35 @@
     window.reqSend();
   };
 
+  // ═══ 模型资产下拉（GET /api/providers → 全部可用模型，option 携带 providerId） ═══
+  async function loadModelOptions(selectedModelId) {
+    const sel = document.getElementById('f-agent-model');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">加载中…</option>';
+    try {
+      const d = await api.get('/api/providers');
+      const providers = d.data || [];
+      const options = [];
+      for (const p of providers) {
+        for (const m of p.models || []) {
+          options.push({ providerId: p.id, providerName: p.name, modelId: m.id, label: `${m.id}（${p.name}）` });
+        }
+      }
+      if (options.length === 0) {
+        sel.innerHTML = '<option value="">暂无模型——请先在【模型与 Provider 资产池】配置并导入模型</option>';
+        return;
+      }
+      sel.innerHTML = options.map((o) => `<option value="${escapeHtml(o.modelId)}" data-provider-id="${escapeHtml(o.providerId)}">${escapeHtml(o.label)}</option>`).join('');
+      if (selectedModelId && selectedModelId !== 'default') {
+        const hit = options.find((o) => o.modelId === selectedModelId);
+        if (hit) sel.value = selectedModelId;
+      }
+      sel.dataset.loaded = '1';
+    } catch (err) {
+      sel.innerHTML = `<option value="">模型资产加载失败：${escapeHtml(err.message)}</option>`;
+    }
+  }
+
   window.reqToggleAgent = async function (id) {
     const agent = state.agents.find((a) => a.id === id);
     if (!agent) return;
@@ -269,8 +315,8 @@
     document.getElementById('agent-modal-title').textContent = '编辑 Agent';
     document.getElementById('f-agent-name').value = agent.name;
     document.getElementById('f-agent-role').value = agent.roleTitle;
-    document.getElementById('f-agent-model').value = agent.modelId === 'default' ? '' : agent.modelId;
     document.getElementById('f-agent-prompt').value = agent.systemPrompt || '';
+    loadModelOptions(agent.modelId);
     document.getElementById('modal-agent').classList.remove('hidden');
   };
   window.reqNewAgent = function () {
@@ -278,8 +324,8 @@
     document.getElementById('agent-modal-title').textContent = '新建 Agent';
     document.getElementById('f-agent-name').value = '';
     document.getElementById('f-agent-role').value = '';
-    document.getElementById('f-agent-model').value = '';
     document.getElementById('f-agent-prompt').value = '';
+    loadModelOptions('');
     document.getElementById('modal-agent').classList.remove('hidden');
   };
 
@@ -475,15 +521,18 @@
   window.reqSaveAgent = async function () {
     const name = document.getElementById('f-agent-name')?.value.trim();
     const role = document.getElementById('f-agent-role')?.value.trim() || name;
-    const model = document.getElementById('f-agent-model')?.value.trim() || 'default';
+    const modelSel = document.getElementById('f-agent-model');
+    const modelId = modelSel?.value || '';
+    const providerId = modelSel?.selectedOptions?.[0]?.getAttribute('data-provider-id') || 'default';
     const prompt = document.getElementById('f-agent-prompt')?.value || '';
     if (!name) { toast('请填写 Agent 名称', true); return; }
+    if (!modelId) { toast('请选择模型——若列表为空请先在【模型与 Provider 资产池】配置', true); return; }
     try {
       if (editingAgentId) {
-        await api.send(`/api/requirements/${state.sessionId}/agents/${editingAgentId}`, 'PATCH', { name, roleTitle: role, modelId: model, systemPrompt: prompt });
+        await api.send(`/api/requirements/${state.sessionId}/agents/${editingAgentId}`, 'PATCH', { name, roleTitle: role, modelId, providerId, systemPrompt: prompt });
         toast('Agent 已更新');
       } else {
-        await api.send(`/api/requirements/${state.sessionId}/agents`, 'POST', { name, roleTitle: role, modelId: model, providerId: 'default', systemPrompt: prompt });
+        await api.send(`/api/requirements/${state.sessionId}/agents`, 'POST', { name, roleTitle: role, modelId, providerId, systemPrompt: prompt });
         toast('Agent 已创建');
       }
       state.agents = (await api.get(`/api/requirements/${state.sessionId}`)).data.agents;
