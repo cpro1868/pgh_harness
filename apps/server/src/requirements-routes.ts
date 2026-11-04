@@ -5,6 +5,7 @@ import type { DetectedProposal } from '../../../packages/plugins/storage-sqlite/
 import { runTurn, acceptProposal, detectEditDivergence } from '../../../packages/core/src/requirements/engine.ts';
 import type { StreamEvent } from '../../../packages/core/src/requirements/engine.ts';
 import { generatePrd } from '../../../packages/core/src/requirements/prd-engine.ts';
+import { buildSectionPrompt } from '../../../packages/core/src/requirements/prd-engine.ts';
 import type { PrdStreamEvent } from '../../../packages/core/src/requirements/prd-engine.ts';
 import { recomputeSuggestions } from '../../../packages/core/src/requirements/diagnostics.ts';
 
@@ -177,6 +178,29 @@ export class RequirementsRoutes {
         try {
           this.store.setDefaultPrdTemplate(tplId);
           jsonFn(res, { code: 0, data: { ok: true } });
+        } catch (err) {
+          res.writeHead(400, { 'Content-Type': 'application/json' });
+          res.end(JSON.stringify({ code: 400, message: err instanceof Error ? err.message : String(err) }));
+        }
+        return true;
+      }
+      if (action === 'preview' && method === 'POST') {
+        const body = await readBody<{ sessionId?: string }>(req);
+        try {
+          const tpl = this.store.getPrdTemplate(tplId);
+          if (!tpl) throw new Error('TEMPLATE_NOT_FOUND');
+          const sid = body.sessionId ?? this.store.listSessions()[0]?.id;
+          if (!sid) throw new Error('NO_SESSION: 暂无探索会话可供 dry-run');
+          const session = this.store.getSession(sid)!;
+          const snapshot = {
+            session: { title: session.title, initialPrompt: session.initialPrompt },
+            chunkTree: this.store.listChunksTree(sid),
+            messages: this.store.listMessages(sid).map((m: Record<string, unknown>) => ({ role: m.role as string, content: m.content as string })),
+            suggestions: this.store.listSuggestions(sid).map((s) => ({ content: s.content, isDismissed: s.isDismissed })),
+          };
+          const first = tpl.sections.find((s) => s.enabled) ?? tpl.sections[0];
+          const rendered = buildSectionPrompt(first.guidance, first, snapshot);
+          jsonFn(res, { code: 0, data: { rendered } });
         } catch (err) {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ code: 400, message: err instanceof Error ? err.message : String(err) }));
