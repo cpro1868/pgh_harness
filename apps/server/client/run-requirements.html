@@ -87,7 +87,7 @@
       <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
           <div class="text-xs text-slate-400">全部探索会话</div>
-          <div class="text-2xl font-extrabold text-white font-mono" id="stat-total">3 <span class="text-xs text-slate-500 font-normal">个项目</span></div>
+          <div class="text-2xl font-extrabold text-white font-mono" id="stat-total">0 <span class="text-xs text-slate-500 font-normal">个项目</span></div>
         </div>
         <div class="p-4 rounded-xl bg-[#0c1220] border border-slate-800 space-y-1">
           <div class="text-xs text-blue-400 font-medium flex items-center"><span class="w-2 h-2 rounded-full bg-blue-400 mr-1.5 animate-pulse"></span>讨论进行中</div>
@@ -133,113 +133,13 @@
       <section class="space-y-3" id="session-list">
 
         <!-- 会话 1：进行中（演示主入口） -->
-        <div class="req-card rounded-xl bg-[#0f1523] border border-slate-800 p-5 shadow-sm space-y-3" data-static data-status="discussing" onclick="location.href='run-requirements-workbench.html'">
-          <div class="flex items-start justify-between">
-            <div class="space-y-1">
-              <div class="flex items-center space-x-2.5">
-                <span class="text-sm font-bold text-white hover:text-blue-400 transition">在线支付校验模块</span>
-                <span class="phase-pill bg-blue-950/80 text-blue-300 border border-blue-800/60 flex items-center">
-                  <span class="w-1.5 h-1.5 rounded-full bg-blue-400 mr-1.5 animate-pulse"></span>讨论中
-                </span>
-                <span class="text-[10px] text-slate-500 font-mono">ID: req_pay_901a</span>
-              </div>
-              <p class="text-xs text-slate-400 leading-relaxed max-w-3xl">
-                起点：我想做一个在线支付校验的东西 → 已讨论支付方式范围、费率规则、精度处理、退款场景，当前正在讨论金额边界与错误码规范。
-              </p>
-            </div>
-            <div class="flex items-center space-x-2 shrink-0">
-              <span class="text-[10px] text-slate-500 font-mono">更新于 10 分钟前</span>
-              <button onclick="event.stopPropagation(); location.href='run-requirements-workbench.html'" class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow">进入工作台 →</button>
-            </div>
-          </div>
-
-          <!-- 分块与统计元数据条 -->
-          <div class="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div class="flex items-center space-x-4 font-mono text-[11px] text-slate-400">
-              <span class="flex items-center text-slate-300">📦 <strong class="text-white ml-1">6</strong>&nbsp;分块</span>
-              <span class="flex items-center text-slate-300">📋 <strong class="text-white ml-1">8</strong>&nbsp;任务点</span>
-              <span class="flex items-center text-slate-300">💬 <strong class="text-white ml-1">3</strong>&nbsp;轮深度讨论</span>
-              <span class="flex items-center text-slate-300">🤖 <strong class="text-white ml-1">3</strong>&nbsp;Agent 参与</span>
-              <span class="flex items-center text-slate-300">📎 <strong class="text-white ml-1">2</strong>&nbsp;参考附件</span>
-            </div>
-
-            <!-- 标签与工作区绑定 -->
-            <div class="flex items-center space-x-1.5">
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-950/60 border border-purple-800/40 text-purple-300">功能分块: 4</span>
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950/60 border border-emerald-800/40 text-emerald-300">非功能: 2</span>
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800/80 text-slate-400 border border-slate-700/60">📁 docs/scope/payment-module/</span>
-            </div>
-          </div>
-        </div>
+        
 
         <!-- 会话 2：已完成 (PRD Ready) -->
-        <div class="req-card rounded-xl bg-[#0f1523] border border-slate-800 p-5 shadow-sm space-y-3 opacity-90" data-status="prd_ready" onclick="alert('原型：打开已完成的探索项目（查看已锁定的 PRD 规范、导出需求树、或基于当前分块一键派发 Pipeline 实施）')">
-          <div class="flex items-start justify-between">
-            <div class="space-y-1">
-              <div class="flex items-center space-x-2.5">
-                <span class="text-sm font-bold text-white hover:text-emerald-400 transition">知识库管理系统 (Knowledge Base)</span>
-                <span class="phase-pill bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 flex items-center">
-                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 mr-1.5"></span>✓ PRD 已就绪
-                </span>
-                <span class="text-[10px] text-slate-500 font-mono">ID: req_kb_8820</span>
-              </div>
-              <p class="text-xs text-slate-400 leading-relaxed max-w-3xl">
-                起点：独立知识库中心需求细化 → 经历 6 轮讨论已完成 4 大需求分块定义与验收指标冻结 → 已生成标准 PRD.md，就绪转入角色流水线。
-              </p>
-            </div>
-            <div class="flex items-center space-x-2 shrink-0">
-              <span class="text-[10px] text-slate-500 font-mono">更新于 3 天前</span>
-              <button onclick="event.stopPropagation(); alert('原型：查看生成的 PRD.md 规格文档')" class="px-3 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg text-xs font-medium">查看 PRD 规范</button>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div class="flex items-center space-x-4 font-mono text-[11px] text-slate-400">
-              <span class="flex items-center text-slate-300">📦 <strong class="text-white ml-1">4</strong>&nbsp;分块 (全 Approved)</span>
-              <span class="flex items-center text-slate-300">📋 <strong class="text-white ml-1">6</strong>&nbsp;实施任务</span>
-              <span class="flex items-center text-slate-300">📄 <strong class="text-emerald-400 ml-1">PRD.md</strong> (已生成)</span>
-              <span class="flex items-center text-slate-300">🚀 <strong class="text-blue-400 ml-1">Pipeline-02</strong> (已关联)</span>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-blue-950/60 border border-blue-800/40 text-blue-300">纯客户端能力</span>
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800/80 text-slate-400 border border-slate-700/60">📁 docs/knowledge/</span>
-            </div>
-          </div>
-        </div>
+        
 
         <!-- 会话 3：草稿待启动 -->
-        <div class="req-card rounded-xl bg-[#0f1523] border border-dashed border-slate-700/80 p-5 shadow-sm space-y-3" data-status="draft" onclick="alert('原型：进入草稿探索会话，配置参与讨论的 Agent 角色后开始第一轮头脑风暴')">
-          <div class="flex items-start justify-between">
-            <div class="space-y-1">
-              <div class="flex items-center space-x-2.5">
-                <span class="text-sm font-bold text-slate-300 hover:text-white transition">数据报表多维导出工具 (Export CLI)</span>
-                <span class="phase-pill bg-slate-800 text-slate-400 border border-slate-700 flex items-center">
-                  <span class="w-1.5 h-1.5 rounded-full bg-slate-500 mr-1.5"></span>草稿未启动
-                </span>
-                <span class="text-[10px] text-slate-500 font-mono">ID: req_exp_0102</span>
-              </div>
-              <p class="text-xs text-slate-500 leading-relaxed max-w-3xl">
-                一句话想法：支持将事件轨迹、审计日志与测试报告一键导出为 CSV、JSON 与 Excel 格式…尚未开始多 Agent 讨论。
-              </p>
-            </div>
-            <div class="flex items-center space-x-2 shrink-0">
-              <span class="text-[10px] text-slate-500 font-mono">创建于 昨天 14:20</span>
-              <button onclick="event.stopPropagation(); alert('原型：开始与 Agent 团队讨论')" class="px-3 py-1 bg-emerald-700/80 hover:bg-emerald-600 text-white rounded-lg text-xs font-semibold shadow">开始讨论 →</button>
-            </div>
-          </div>
-
-          <div class="pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2 text-xs">
-            <div class="flex items-center space-x-4 font-mono text-[11px] text-slate-500">
-              <span>📦 0 分块</span>
-              <span>📋 0 任务</span>
-              <span>💬 0 轮讨论</span>
-              <span>🤖 默认推荐: 产品 + 架构 Agent</span>
-            </div>
-            <div class="flex items-center space-x-1.5">
-              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-500">待分配工作区</span>
-            </div>
-          </div>
-        </div>
+        
 
       </section>
 
@@ -307,86 +207,7 @@
     </div>
   </div>
 
-  <script>
-    let currentFilterStatus = 'all';
 
-    function openCreateModal() {
-      document.getElementById('modal-create').classList.remove('hidden');
-      document.getElementById('new-req-name').focus();
-    }
-
-    function closeCreateModal() {
-      document.getElementById('modal-create').classList.add('hidden');
-    }
-
-    function createSession() {
-      const name = document.getElementById('new-req-name').value.trim();
-      const prompt = document.getElementById('new-req-prompt').value.trim();
-      if (!name) {
-        alert('请输入项目名称');
-        return;
-      }
-      closeCreateModal();
-      alert(`原型：已创建探索会话「${name}」！即将进入多 Agent 讨论工作台。`);
-      location.href = 'run-requirements-workbench.html';
-    }
-
-    function setStatusFilter(status, btn) {
-      currentFilterStatus = status;
-      document.querySelectorAll('.filter-btn').forEach(b => {
-        b.classList.remove('active', 'bg-blue-600', 'text-white');
-        b.classList.add('text-slate-400', 'bg-slate-800/60');
-      });
-      btn.classList.add('active', 'bg-blue-600', 'text-white');
-      btn.classList.remove('text-slate-400', 'bg-slate-800/60');
-      applyFilter();
-    }
-
-    function applyFilter() {
-      const q = document.getElementById('search-input').value.trim().toLowerCase();
-      const clearBtn = document.getElementById('clear-search');
-      if (q) {
-        clearBtn.classList.remove('hidden');
-      } else {
-        clearBtn.classList.add('hidden');
-      }
-
-      const cards = document.querySelectorAll('#session-list .req-card');
-      let visibleCount = 0;
-
-      cards.forEach(card => {
-        const status = card.getAttribute('data-status');
-        const text = card.textContent.toLowerCase();
-        const matchStatus = (currentFilterStatus === 'all') || (status === currentFilterStatus);
-        const matchQuery = !q || text.includes(q);
-
-        if (matchStatus && matchQuery) {
-          card.classList.remove('hidden');
-          visibleCount++;
-        } else {
-          card.classList.add('hidden');
-        }
-      });
-
-      const empty = document.getElementById('empty-state');
-      if (visibleCount === 0) {
-        empty.classList.remove('hidden');
-      } else {
-        empty.classList.add('hidden');
-      }
-    }
-
-    function clearSearch() {
-      document.getElementById('search-input').value = '';
-      applyFilter();
-    }
-
-    function clearFilter() {
-      document.getElementById('search-input').value = '';
-      const allBtn = document.querySelector('.filter-btn[data-status="all"]');
-      if (allBtn) setStatusFilter('all', allBtn);
-    }
-  </script>
   <script src="js/requirements.js"></script>
 </body>
 </html>

@@ -4235,14 +4235,58 @@ Constraints:
       activeProvider && realKey && realKey !== 'none' && !realKey.startsWith('sk-test') && !realKey.includes('xxx') && realKey.length > 5,
     );
     if (hasRealKey && activeProvider) {
-      const model = activeProvider.models?.[0]?.id ?? '';
-      const result = await retryWithBackoff(
-        () => this.streamChatCompletion(activeProvider, realKey, model, messages as MessageItem[], undefined),
-      );
-      return result.content;
+      try {
+        const model = activeProvider.models?.[0]?.id ?? '';
+        const result = await retryWithBackoff(
+          () => this.streamChatCompletion(activeProvider, realKey, model, messages as MessageItem[], undefined),
+        );
+        if (result.content && result.content.trim().length > 0) return result.content;
+        // LLM 返回空内容 → 回落本地演示引擎
+      } catch (err) {
+        console.warn('[Harness][Requirements] LLM 调用失败，回落本地演示引擎:', err instanceof Error ? err.message.slice(0, 120) : err);
+      }
     }
-    // 无可用 Provider：本地降级提示（保证引擎流程可走通，前端可见提示）
-    return '⚠️ 当前未检测到有效模型 API Key，请前往【模型与 Provider 资产池】配置后重试。（本地降级回复）';
+    // 无可用 Provider：本地演示引擎——基于用户输入的规则化响应 + 提议产出，保证 MOD-17 全流程在离线状态可完整体验。
+    // （真实 LLM 接入后此分支自动退位；配置提示保留在回复尾部）
+    return this.localRequirementsDemo(messages);
+  }
+
+  /** 本地演示引擎：无 Key 时的规则化研讨（输出带 proposal 围栏，驱动提议→采纳→PRD 全闭环） */
+  private localRequirementsDemo(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>): string {
+    const lastUser = [...messages].reverse().find((m) => m.role === 'user')?.content ?? '';
+    const lower = lastUser.toLowerCase();
+    const chunksMatch = messages.find((m) => m.role === 'system' && m.content.includes('<chunks>'));
+    const existingChunks = chunksMatch ? (chunksMatch.content.match(/- ([^\[]+)\[/g) ?? []).length : 0;
+
+    // 路由角色感知（Coordinator 已裁决，system prompt 中含角色名）
+    const sysContent = messages.find((m) => m.role === 'system')?.content ?? '';
+    const roleName = sysContent.includes('架构师') ? '技术架构师' : sysContent.includes('质检') || sysContent.includes('安全') ? '质检与安全专家' : '产品分析师';
+
+    const demoProposals: string[] = [];
+    let reply: string;
+
+    if (roleName === '产品分析师') {
+      reply = `【本地演示模式 · 配置真实 Provider Key 后将获得完整 LLM 研讨能力】\n\n收到您的想法：「${lastUser.slice(0, 60)}」。从产品角度需要澄清几个关键点：\n1. **目标用户与核心场景**——这个功能给谁用、解决什么问题？\n2. **范围边界**——第一期明确做什么、明确不做什么？\n3. **验收方式**——怎么判断做完了且做对了？\n\n请依次回答，我会基于您的回答拆分需求分块。`;
+      if (existingChunks === 0 && lastUser.length > 5) {
+        demoProposals.push(JSON.stringify({ kind: 'chunk', title: lastUser.replace(/[，。？！?!.,\s].*$/, '').slice(0, 12) || '核心功能', parentId: null, description: `来自初始想法：${lastUser.slice(0, 40)}`, priority: 'P0', tags: ['功能'] }));
+      }
+    } else if (roleName === '技术架构师') {
+      reply = `【本地演示模式】\n\n从架构角度评估「${lastUser.slice(0, 40)}」：\n1. **存储设计**——建议先明确数据实体与关系，再定持久化方案；\n2. **接口契约**——核心操作建议先定义输入输出与错误码；\n3. **性能边界**——并发量、延迟要求需要量化。`;
+      if (existingChunks > 0 && lower.length > 3) {
+        demoProposals.push(JSON.stringify({ kind: 'task', chunkTitle: (chunksMatch?.content.match(/- ([^\[]+?) \[/) ?? [])[1]?.trim() ?? '', title: `技术方案确认：${lastUser.slice(0, 10)}`, acceptanceCriteria: '技术选型与存储模型经确认', priority: 'P1' }));
+      }
+    } else {
+      reply = `【本地演示模式】\n\n从质检与安全角度审视「${lastUser.slice(0, 40)}」：\n1. **边界异常**——非法输入、空值、超上限如何处理？\n2. **权限与越权**——谁能操作、数据是否隔离？\n3. **可测试性**——每条验收标准应能转化为自动化断言。`;
+      if (existingChunks > 0) {
+        demoProposals.push(JSON.stringify({ kind: 'task', chunkTitle: (chunksMatch?.content.match(/- ([^\[]+?) \[/) ?? [])[1]?.trim() ?? '', title: '边界异常用例梳理', acceptanceCriteria: '覆盖非法输入/空值/超限三类异常', priority: 'P1' }));
+      }
+    }
+
+    const footer = '\n\n> ⚠️ 本地演示模式：配置真实 Provider Key（模型与 Provider 资产池）后，以上回复将由 LLM 生成。';
+    if (demoProposals.length > 0) {
+      return `${reply}\n\n\`\`\`proposal\n[${demoProposals.join(',')}]\n\`\`\`${footer}`;
+    }
+    return reply + footer;
   }
 
   /**
