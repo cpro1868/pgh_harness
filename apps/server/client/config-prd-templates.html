@@ -124,151 +124,29 @@
         <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
           <div class="flex items-center space-x-2">
             <span class="w-2 h-2 rounded-full bg-blue-500"></span>
-            <h2 class="text-sm font-bold text-white">编辑模板：<span id="editor-tpl-name" class="text-blue-300">完整 PRD 标准模板</span></h2>
+            <h2 class="text-sm font-bold text-white">编辑模板：<span id="editor-tpl-name" class="text-blue-300"></span></h2>
           </div>
           <div class="flex items-center space-x-2">
-            <button onclick="alert('原型：dry-run 预览——选择探索会话渲染章节提示词')" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-xs">👁 预览提示词</button>
-            <button onclick="closeEditor()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-xs">取消</button>
-            <button onclick="alert('原型：保存模板（事务性全量替换章节）')" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold shadow">保存模板</button>
+            <button onclick="tplPreview()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded text-xs">👁 预览提示词</button>
+            <button onclick="tplClose()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded text-xs">取消</button>
+            <button onclick="tplSave()" class="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-semibold shadow">保存模板</button>
           </div>
         </div>
-
         <div class="p-5 space-y-4">
-          <!-- 基础信息 -->
           <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label class="text-[11px] text-slate-400 block mb-1">模板名称</label>
-              <input type="text" value="完整 PRD 标准模板" class="w-full bg-[#0c1220] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-            </div>
-            <div>
-              <label class="text-[11px] text-slate-400 block mb-1">模板描述</label>
-              <input type="text" value="以企业级 16 章 PRD 结构为基准的 12 核心章节模板" class="w-full bg-[#0c1220] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500">
-            </div>
+            <div><label class="text-[11px] text-slate-400 block mb-1">模板名称</label>
+              <input type="text" id="editor-name" class="w-full bg-[#0c1220] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></div>
+            <div><label class="text-[11px] text-slate-400 block mb-1">模板描述</label>
+              <input type="text" id="editor-desc" class="w-full bg-[#0c1220] border border-slate-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-blue-500"></div>
           </div>
-
-          <!-- 变量插入工具栏 -->
           <div class="p-3 rounded-lg bg-[#080d18] border border-slate-800">
             <div class="flex items-center justify-between mb-2">
               <span class="text-[11px] font-semibold text-slate-300 uppercase tracking-wider font-mono">系统变量白名单（点击插入到光标处）</span>
               <span class="text-[10px] text-slate-600">注入时自动包裹 &lt;data&gt; 边界标注，防提示注入</span>
             </div>
-            <div class="flex flex-wrap gap-1.5">
-              <button class="var-btn bg-purple-950/60 border border-purple-800/40 text-purple-300" onclick="insertVar('project.title')">project.title</button>
-              <button class="var-btn bg-purple-950/60 border border-purple-800/40 text-purple-300" onclick="insertVar('project.initial_prompt')">project.initial_prompt</button>
-              <button class="var-btn bg-purple-950/60 border border-purple-800/40 text-purple-300" onclick="insertVar('chunks.tree')">chunks.tree</button>
-              <button class="var-btn bg-purple-950/60 border border-purple-800/40 text-purple-300" onclick="insertVar('tasks.by_chunk')">tasks.by_chunk</button>
-              <button class="var-btn bg-purple-950/60 border border-purple-800/40 text-purple-300" onclick="insertVar('messages.recent')">messages.recent</button>
-              <button class="var-btn bg-purple-950/60 border border-purple-800/40 text-purple-300" onclick="insertVar('suggestions.active')">suggestions.active</button>
-            </div>
+            <div class="flex flex-wrap gap-1.5" id="var-toolbar"></div>
           </div>
-
-          <!-- 章节列表（可拖拽排序） -->
-          <div class="space-y-2" id="section-list">
-            <div class="flex items-center justify-between mb-1">
-              <span class="text-[11px] font-semibold text-slate-300 uppercase tracking-wider font-mono">章节骨架（拖拽排序）</span>
-              <button onclick="alert('原型：新增章节')" class="text-blue-400 hover:underline text-xs">＋ 新增章节</button>
-            </div>
-
-            <!-- 章节 1 -->
-            <div class="section-row rounded-lg bg-[#0c1220] border border-slate-800" draggable="true">
-              <div class="flex items-center space-x-2 px-3 py-2" onclick="toggleSection(this)">
-                <span class="text-slate-600 text-xs cursor-grab" title="拖拽排序">⠿</span>
-                <span class="text-xs font-mono text-slate-500">01</span>
-                <span class="text-xs font-semibold text-white flex-1">文档信息与交付完整性检查</span>
-                <label class="flex items-center space-x-1 text-[10px] text-slate-500" onclick="event.stopPropagation()">
-                  <input type="checkbox" checked class="ctx-check"> 启用
-                </label>
-                <span class="text-slate-500 text-[10px]">▾</span>
-              </div>
-              <div class="hidden px-3 pb-3 space-y-2.5 border-t border-slate-800/60 pt-2.5">
-                <div>
-                  <label class="text-[10px] text-slate-500 block mb-1">撰写指导说明（给用户看）</label>
-                  <input type="text" value="汇总产品定位、形态、版本状态与核心概念定义" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200">
-                </div>
-                <div>
-                  <label class="text-[10px] text-slate-500 block mb-1">生成提示词（LLM 撰写指令）</label>
-                  <textarea rows="3" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-300 font-mono leading-relaxed">基于 {{project.title}} 与 {{project.initial_prompt}}，撰写文档信息表：产品名称、产品形态、文档版本、核心定位。以 Markdown 表格输出。</textarea>
-                </div>
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-3 text-[10px] text-slate-500">
-                    <span>章节上下文注入：</span>
-                    <label class="flex items-center space-x-1"><input type="checkbox" checked class="ctx-check"> 会话元信息</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" class="ctx-check"> 讨论记录</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" class="ctx-check"> 分块树</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" class="ctx-check"> 任务清单</label>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <span class="text-[10px] text-slate-600">字数下限</span>
-                    <input type="number" value="150" class="w-16 bg-[#080d1a] border border-slate-700 rounded px-2 py-1 text-xs text-slate-300">
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 章节 2 -->
-            <div class="section-row rounded-lg bg-[#0c1220] border border-slate-800" draggable="true">
-              <div class="flex items-center space-x-2 px-3 py-2" onclick="toggleSection(this)">
-                <span class="text-slate-600 text-xs cursor-grab">⠿</span>
-                <span class="text-xs font-mono text-slate-500">02</span>
-                <span class="text-xs font-semibold text-white flex-1">背景与问题定义</span>
-                <label class="flex items-center space-x-1 text-[10px] text-slate-500" onclick="event.stopPropagation()"><input type="checkbox" checked class="ctx-check"> 启用</label>
-                <span class="text-slate-500 text-[10px]">▾</span>
-              </div>
-              <div class="hidden px-3 pb-3 space-y-2.5 border-t border-slate-800/60 pt-2.5">
-                <div>
-                  <label class="text-[10px] text-slate-500 block mb-1">撰写指导说明</label>
-                  <input type="text" value="提炼讨论中的痛点、机会与 V1 需要回答的核心问题" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-200">
-                </div>
-                <div>
-                  <label class="text-[10px] text-slate-500 block mb-1">生成提示词</label>
-                  <textarea rows="3" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-300 font-mono leading-relaxed">阅读 <data>讨论记录</data> 与分块树，提炼：1.1 背景（现状痛点，3~5 条）；1.2 产品机会；1.3 核心问题（编号列表）。仅使用讨论中出现过的信息，禁止编造。</textarea>
-                </div>
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-3 text-[10px] text-slate-500">
-                    <span>章节上下文注入：</span>
-                    <label class="flex items-center space-x-1"><input type="checkbox" checked class="ctx-check"> 会话元信息</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" checked class="ctx-check"> 讨论记录</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" checked class="ctx-check"> 分块树</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" class="ctx-check"> 任务清单</label>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <span class="text-[10px] text-slate-600">字数下限</span>
-                    <input type="number" value="300" class="w-16 bg-[#080d1a] border border-slate-700 rounded px-2 py-1 text-xs text-slate-300">
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- 章节 3（异常流程示例，展示表格型指令） -->
-            <div class="section-row rounded-lg bg-[#0c1220] border border-slate-800" draggable="true">
-              <div class="flex items-center space-x-2 px-3 py-2" onclick="toggleSection(this)">
-                <span class="text-slate-600 text-xs cursor-grab">⠿</span>
-                <span class="text-xs font-mono text-slate-500">03</span>
-                <span class="text-xs font-semibold text-white flex-1">异常流程</span>
-                <label class="flex items-center space-x-1 text-[10px] text-slate-500" onclick="event.stopPropagation()"><input type="checkbox" checked class="ctx-check"> 启用</label>
-                <span class="text-slate-500 text-[10px]">▾</span>
-              </div>
-              <div class="hidden px-3 pb-3 space-y-2.5 border-t border-slate-800/60 pt-2.5">
-                <div>
-                  <label class="text-[10px] text-slate-500 block mb-1">生成提示词</label>
-                  <textarea rows="3" class="w-full bg-[#080d1a] border border-slate-700 rounded px-2.5 py-1.5 text-xs text-slate-300 font-mono leading-relaxed">基于各叶子分块的任务验收准则与讨论中的边界场景，产出异常流程表。必须以 Markdown 表格输出，列固定为：类别 / 场景 / 系统处理 / 用户反馈 / 是否 P0。覆盖输入异常、权限异常、状态异常三类。</textarea>
-                </div>
-                <div class="flex items-center justify-between">
-                  <div class="flex items-center space-x-3 text-[10px] text-slate-500">
-                    <span>章节上下文注入：</span>
-                    <label class="flex items-center space-x-1"><input type="checkbox" class="ctx-check"> 会话元信息</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" checked class="ctx-check"> 讨论记录</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" checked class="ctx-check"> 分块树</label>
-                    <label class="flex items-center space-x-1"><input type="checkbox" checked class="ctx-check"> 任务清单</label>
-                  </div>
-                  <div class="flex items-center space-x-2">
-                    <span class="text-[10px] text-slate-600">字数下限</span>
-                    <input type="number" value="400" class="w-16 bg-[#080d1a] border border-slate-700 rounded px-2 py-1 text-xs text-slate-300">
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+          <div class="space-y-2" id="section-list"></div>
         </div>
       </section>
     </main>
@@ -329,5 +207,6 @@
       list.querySelectorAll('.section-row').forEach(r => r.classList.remove('drag-over'));
     });
   </script>
+  <script src="js/prd-templates.js"></script>
 </body>
 </html>
