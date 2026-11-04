@@ -464,6 +464,18 @@ export class RequirementsRoutes {
           jsonFn(res, { code: 0, data: { agent } });
           return true;
         }
+        if (agentIdMatch && method === 'PATCH') {
+          const agentId = decodeURIComponent(agentIdMatch[1] as string);
+          const body = await readBody<{ name?: string; roleTitle?: string; systemPrompt?: string; modelId?: string; providerId?: string; isEnabled?: boolean }>(req);
+          try {
+            const agent = this.store.updateAgent(agentId, body);
+            jsonFn(res, { code: 0, data: { agent } });
+          } catch (err) {
+            res.writeHead(400, { 'Content-Type': 'application/json' });
+            res.end(JSON.stringify({ code: 400, message: err instanceof Error ? err.message : String(err) }));
+          }
+          return true;
+        }
         if (agentIdMatch && method === 'DELETE') {
           this.store.deleteAgent(decodeURIComponent(agentIdMatch[1] as string));
           jsonFn(res, { code: 0, data: { ok: true } });

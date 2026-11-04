@@ -244,60 +244,12 @@
       <div class="border-b border-slate-800">
         <div class="px-3 py-2.5 flex items-center justify-between">
           <span class="text-[11px] font-bold text-slate-300">🤖 讨论 Agent</span>
-          <button class="text-blue-400 hover:underline text-[10px]" onclick="openAgentModal()">＋</button>
+          <button class="text-blue-400 hover:underline text-[10px]" onclick="reqNewAgent()">＋</button>
         </div>
         <div class="px-2.5 pb-2.5 space-y-1.5" id="agent-list">
-          <!-- 主 Agent（不可删除） -->
-          <div class="agent-card rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2 flex items-center space-x-2" data-agent="main">
-            <div class="agent-avatar bg-blue-600/30 text-blue-300">🧭</div>
-            <div class="flex-1 min-w-0 cursor-pointer" onclick="openAgentModal('需求分析师','需求分析与引导','deepseek-v4.1-flash','你是一名需求分析师...')">
-              <div class="text-[11px] font-semibold text-slate-200 truncate">需求分析师</div>
-              <div class="text-[9px] text-slate-600 font-mono truncate">deepseek-v4.1-flash</div>
-            </div>
-            <span class="pill bg-blue-950/60 text-blue-400 text-[9px]">主控</span>
           </div>
-          <!-- Agent 2（可点击编辑+删除） -->
-          <div class="agent-card rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2 flex items-center space-x-2" data-agent="sec">
-            <div class="agent-avatar bg-rose-600/30 text-rose-300">🔒</div>
-            <div class="flex-1 min-w-0 cursor-pointer" onclick="openAgentModal('安全评审','安全与合规审查','glm-5.3','你是安全评审专家...')">
-              <div class="text-[11px] font-semibold text-slate-200 truncate">安全评审</div>
-              <div class="text-[9px] text-slate-600 font-mono truncate">glm-5.3</div>
-            </div>
-            <div class="flex items-center space-x-1">
-              <button class="op-btn text-slate-500" title="编辑 Agent" onclick="event.stopPropagation(); openAgentModal('安全评审','安全与合规审查','glm-5.3','你是安全评审专家...')">⚙️</button>
-              <div class="agent-toggle on" onclick="event.stopPropagation(); this.classList.toggle('on'); this.classList.toggle('off')"><div class="knob"></div></div>
-            </div>
-          </div>
-          <!-- Agent 3 -->
-          <div class="agent-card off rounded-lg bg-[#0f1523] border border-slate-800 px-2.5 py-2 flex items-center space-x-2" data-agent="perf">
-            <div class="agent-avatar bg-amber-600/30 text-amber-300">⚡</div>
-            <div class="flex-1 min-w-0 cursor-pointer" onclick="openAgentModal('性能优化','性能分析与建议','kimi-k2.7-code','你是性能优化专家...')">
-              <div class="text-[11px] font-semibold text-slate-400 truncate">性能优化</div>
-              <div class="text-[9px] text-slate-600 font-mono truncate">kimi-k2.7-code</div>
-            </div>
-            <div class="flex items-center space-x-1">
-              <button class="op-btn text-slate-500" title="编辑 Agent" onclick="event.stopPropagation(); openAgentModal('性能优化','性能分析与建议','kimi-k2.7-code','你是性能优化专家...')">⚙️</button>
-              <div class="agent-toggle off" onclick="event.stopPropagation(); this.classList.toggle('on'); this.classList.toggle('off')"><div class="knob"></div></div>
-            </div>
-          </div>
-        </div>
       </div>
 
-      <!-- 项目文件树 -->
-      <div class="flex-1 overflow-y-auto">
-        <div class="px-3 py-2 border-b border-slate-800">
-          <div class="text-[11px] font-bold text-white truncate">在线支付校验模块</div>
-          <div class="text-[9px] text-slate-600 font-mono truncate">docs\scope\payment-module\</div>
-        </div>
-        <div class="py-1 text-[11px] font-mono select-none">
-          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer bg-emerald-950/20 text-emerald-300 border-l-2 border-emerald-500"><span>📄</span><span>GUIDE.md</span><span class="pill bg-emerald-950/60 text-emerald-400 ml-auto">索引</span></div>
-          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-400"><span class="text-slate-600">▸</span><span>💬</span><span>discussions/</span><span class="pill bg-slate-800 text-slate-500 ml-auto">3</span></div>
-          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-400"><span>▾</span><span>📋</span><span>tasks.md</span><span class="pill bg-blue-950/60 text-blue-400 ml-auto">8</span></div>
-          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-500 opacity-50"><span>📄</span><span>PRD.md</span><span class="text-slate-600 text-[9px]">待生成</span></div>
-          <div class="file-tree-item px-3 py-1 flex items-center space-x-1.5 cursor-pointer text-slate-500"><span>▸</span><span>📎</span><span>attachments/</span><span class="pill bg-slate-800 text-slate-500 ml-auto">2</span></div>
-        </div>
-        <div class="px-3 py-2 border-t border-slate-800"><div class="text-[9px] text-slate-600 leading-relaxed">📁 项目文件夹<br>所有内容归档于此<br>Agent 可直接读写</div></div>
-      </div>
     </aside>
 
     <!-- ═══ 中栏：自由对话区（真实交互） ═══ -->
@@ -379,6 +331,12 @@
       document.getElementById('modal-task').classList.remove('hidden');
     }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+    function saveAgent() { window.reqSaveAgent && window.reqSaveAgent(); closeModal('modal-agent'); }
+    function deleteAgent() { if (confirm('确认删除该 Agent？')) { window.reqDelCurrentAgent && window.reqDelCurrentAgent(); closeModal('modal-agent'); } }
+    function saveChunk() { window.reqSaveChunk && window.reqSaveChunk(); closeModal('modal-chunk'); }
+    function deleteChunk() { if (confirm('确认删除该分块（含子分块）？')) { window.reqDelCurrentChunk && window.reqDelCurrentChunk(); closeModal('modal-chunk'); } }
+    function saveTask() { window.reqSaveTask && window.reqSaveTask(); closeModal('modal-task'); }
+    function deleteTask() { if (confirm('确认删除该任务？')) { closeModal('modal-task'); } }
 
     // ═══ Tab 切换 ═══
     function switchTab(tab) {

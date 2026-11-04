@@ -169,6 +169,7 @@
             <div class="text-[9px] text-slate-500 truncate">${escapeHtml(a.roleTitle)}</div></div>
           </div>
           <div class="flex items-center space-x-1">
+            <button class="op-btn text-blue-400" title="编辑 Agent" onclick="reqEditAgent('${a.id}')">⚙️</button>
             <button class="op-btn text-slate-500" title="删除 Agent" onclick="reqDelAgent('${a.id}')">🗑</button>
             <div class="agent-toggle ${a.isEnabled ? 'on' : 'off'}" onclick="reqToggleAgent('${a.id}')"><div class="knob"></div></div>
           </div>
@@ -252,8 +253,34 @@
   window.reqToggleAgent = async function (id) {
     const agent = state.agents.find((a) => a.id === id);
     if (!agent) return;
-    agent.isEnabled = !agent.isEnabled;
-    renderAgents();
+    try {
+      const resp = await api.send(`/api/requirements/${state.sessionId}/agents/${id}`, 'PATCH', { isEnabled: !agent.isEnabled });
+      agent.isEnabled = resp.data.agent.isEnabled;
+      renderAgents();
+      toast(agent.isEnabled ? `「${agent.name}」已启用` : `「${agent.name}」已停用`);
+    } catch (err) { toast(err.message, true); }
+  };
+
+  let editingAgentId = null;
+  window.reqEditAgent = function (id) {
+    const agent = state.agents.find((a) => a.id === id);
+    if (!agent) return;
+    editingAgentId = id;
+    document.getElementById('agent-modal-title').textContent = '编辑 Agent';
+    document.getElementById('f-agent-name').value = agent.name;
+    document.getElementById('f-agent-role').value = agent.roleTitle;
+    document.getElementById('f-agent-model').value = agent.modelId === 'default' ? '' : agent.modelId;
+    document.getElementById('f-agent-prompt').value = agent.systemPrompt || '';
+    document.getElementById('modal-agent').classList.remove('hidden');
+  };
+  window.reqNewAgent = function () {
+    editingAgentId = null;
+    document.getElementById('agent-modal-title').textContent = '新建 Agent';
+    document.getElementById('f-agent-name').value = '';
+    document.getElementById('f-agent-role').value = '';
+    document.getElementById('f-agent-model').value = '';
+    document.getElementById('f-agent-prompt').value = '';
+    document.getElementById('modal-agent').classList.remove('hidden');
   };
 
   window.reqDelAgent = function (id) {
@@ -288,7 +315,11 @@
     const resp = await api.get(`/api/requirements/${state.sessionId}`);
     state.session = resp.data.session;
     state.agents = resp.data.agents;
-    state.messages = resp.data.messages;
+    state.messages = resp.data.messages.map((m) => ({
+      ...m,
+      proposal_json: typeof m.proposal_json === 'string' && m.proposal_json ? JSON.parse(m.proposal_json) : (m.proposal_json || null),
+      agent_name: (state.agents.find((a) => a.id === m.agent_id) || {}).name,
+    }));
     state.chunkTree = resp.data.chunkTree;
     state.suggestions = resp.data.suggestions;
     renderAgents();
@@ -439,6 +470,82 @@
       toast('PRD 全文已复制');
     } catch (err) { toast(err.message, true); }
   };
+
+  // ═══ 弹窗保存与导出（真实现） ═══
+  window.reqSaveAgent = async function () {
+    const name = document.getElementById('f-agent-name')?.value.trim();
+    const role = document.getElementById('f-agent-role')?.value.trim() || name;
+    const model = document.getElementById('f-agent-model')?.value.trim() || 'default';
+    const prompt = document.getElementById('f-agent-prompt')?.value || '';
+    if (!name) { toast('请填写 Agent 名称', true); return; }
+    try {
+      if (editingAgentId) {
+        await api.send(`/api/requirements/${state.sessionId}/agents/${editingAgentId}`, 'PATCH', { name, roleTitle: role, modelId: model, systemPrompt: prompt });
+        toast('Agent 已更新');
+      } else {
+        await api.send(`/api/requirements/${state.sessionId}/agents`, 'POST', { name, roleTitle: role, modelId: model, providerId: 'default', systemPrompt: prompt });
+        toast('Agent 已创建');
+      }
+      state.agents = (await api.get(`/api/requirements/${state.sessionId}`)).data.agents;
+      renderAgents();
+    } catch (err) { toast(err.message, true); }
+  };
+  window.reqDeleteCurrentAgent = function () {
+    const card = document.querySelector('#agent-list .agent-card');
+    const aid = card?.getAttribute('data-agent-id');
+    if (aid) reqDelAgent(aid);
+  };
+  window.reqDelCurrentAgent = window.reqDeleteCurrentAgent;
+  window.reqSaveChunk = async function () {
+    const title = document.getElementById('f-chunk-name')?.value.trim();
+    const desc = document.getElementById('f-chunk-desc')?.value.trim() || '';
+    const priority = document.getElementById('f-chunk-priority')?.value || 'P1';
+    if (!title) { toast('请填写分块名称', true); return; }
+    try {
+      await api.send(`/api/requirements/${state.sessionId}/chunks`, 'POST', { title, description: desc, priority });
+      await refreshSnapshot();
+      toast('分块已创建');
+    } catch (err) { toast(err.message, true); }
+  };
+  window.reqDeleteCurrentChunk = function () { toast('请在分块树上使用 🗑 按钮删除目标分块', true); };
+  window.reqDelCurrentChunk = window.reqDeleteCurrentChunk;
+  window.reqSaveTask = async function () {
+    toast('任务由 Agent 提议采纳自动生成（保证仅叶子分块挂任务的约束）', true);
+  };
+  window.reqDeleteCurrentTask = function () { /* 任务删除按钮直接处理 */ };
+
+  window.reqExportChunks = function () {
+    try {
+      const lines = ['# 需求分块树导出', ''];
+      const walk = (nodes, depth) => nodes.forEach((n) => {
+        lines.push(`${'  '.repeat(depth)}- [${n.status}/${n.priority}] ${n.title}${n.description ? ' — ' + n.description : ''}`);
+        n.tasks.forEach((t) => lines.push(`${'  '.repeat(depth + 1)}· 任务: ${t.title}${t.acceptanceCriteria ? '（验收: ' + t.acceptanceCriteria + '）' : ''}`));
+        walk(n.children, depth + 1);
+      });
+      walk(state.chunkTree, 0);
+      const blob = new Blob([lines.join('\n')], { type: 'text/markdown' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = 'requirements-chunks.md';
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('分块树已导出');
+    } catch (err) { toast(err.message, true); }
+  };
+
+  window.downloadPrd = async function () {
+    try {
+      const resp = await api.get(`/api/requirements/${state.sessionId}/prd`);
+      const blob = new Blob([resp.data.markdownContent], { type: 'text/markdown' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `PRD-v${resp.data.version}.md`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+      toast('PRD 已导出');
+    } catch (err) { toast(err.message, true); }
+  };
+  window.prdRetryFailed = function () { toast('失败章节可在生成完成后于结果列表中重试', true); };
 
   // ═══ 启动 ═══
   document.addEventListener('DOMContentLoaded', () => {

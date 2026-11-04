@@ -551,6 +551,34 @@ export class RequirementsStore {
     }));
   }
 
+  public updateAgent(id: string, patch: { name?: string; roleTitle?: string; modelId?: string; providerId?: string; systemPrompt?: string; isEnabled?: boolean }): ReqAgent {
+    const cur = this.db.raw.prepare('SELECT * FROM req_agents WHERE id = ?').get(id) as Record<string, unknown> | undefined;
+    if (!cur) throw new Error(`AGENT_NOT_FOUND: ${id}`);
+    this.db.raw
+      .prepare('UPDATE req_agents SET name=?, role_title=?, model_id=?, provider_id=?, system_prompt=?, is_enabled=? WHERE id=?')
+      .run(
+        patch.name ?? (cur.name as string),
+        patch.roleTitle ?? (cur.role_title as string),
+        patch.modelId ?? (cur.model_id as string),
+        patch.providerId ?? (cur.provider_id as string),
+        patch.systemPrompt ?? (cur.system_prompt as string),
+        patch.isEnabled === undefined ? (cur.is_enabled as number) : (patch.isEnabled ? 1 : 0),
+        id
+      );
+    const row = this.db.raw.prepare('SELECT * FROM req_agents WHERE id = ?').get(id) as Record<string, unknown>;
+    return {
+      id: row.id as string,
+      sessionId: row.session_id as string,
+      name: row.name as string,
+      roleTitle: row.role_title as string,
+      modelId: row.model_id as string,
+      providerId: row.provider_id as string,
+      systemPrompt: row.system_prompt as string,
+      isEnabled: row.is_enabled === 1,
+      sortOrder: row.sort_order as number,
+    };
+  }
+
   public deleteAgent(id: string): void {
     this.db.raw.prepare('DELETE FROM req_agents WHERE id = ?').run(id);
   }

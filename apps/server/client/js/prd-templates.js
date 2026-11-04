@@ -257,6 +257,24 @@
     input.click();
   };
 
+  window.tplAddSection = function () {
+    const tpl = tplState.current;
+    if (!tpl) return;
+    tpl.sections.push({
+      id: `sec_new_${Date.now().toString(36)}`,
+      templateId: tpl.id,
+      sortOrder: tpl.sections.length + 1,
+      title: `新章节 ${tpl.sections.length + 1}`,
+      guidance: '',
+      promptTemplate: '基于 {{project.title}} 与 {{chunks.tree}}，撰写本章节内容。',
+      contextSources: ['session_meta'],
+      minWords: null,
+      enabled: true,
+    });
+    renderEditor();
+    toast('已新增章节，保存时生效');
+  };
+
   window.tplPreview = async function () {
     const tpl = tplState.current;
     if (!tpl) return;

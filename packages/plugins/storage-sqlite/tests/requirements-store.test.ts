@@ -101,6 +101,24 @@ describe('MOD-17 WP-01: requirements-store 存储层', () => {
     });
   });
 
+  // ═══ Agent 编辑与开关持久化 ═══
+  describe('Agent 编辑修改（F13.2）', () => {
+    it('updateAgent 修改名称/职责/提示词/开关并持久化', () => {
+      const s = store.createSession({ title: 't', initialPrompt: 'p' });
+      const a = store.insertAgent({ sessionId: s.id, name: '产品分析师', roleTitle: 'PM', modelId: 'm1', providerId: 'p1', systemPrompt: 'sp1' });
+      const updated = store.updateAgent(a.id, { name: '资深产品专家', roleTitle: '产品负责人', modelId: 'm2', systemPrompt: '新提示词', isEnabled: false });
+      assert.equal(updated.name, '资深产品专家');
+      assert.equal(updated.isEnabled, false);
+      const list = store.listAgents(s.id);
+      assert.equal(list[0].name, '资深产品专家');
+      assert.equal(list[0].modelId, 'm2');
+      assert.equal(list[0].isEnabled, false);
+    });
+    it('updateAgent 不存在 → 抛错', () => {
+      assert.throws(() => store.updateAgent('ag_none', { name: 'x' }));
+    });
+  });
+
   // ═══ TS-ST-04 提议状态机非法流转 ═══
   describe('TS-ST-04: proposal_state 非法流转被拒', () => {
     it('accepted 后再 dismiss 抛错且状态不变', () => {
