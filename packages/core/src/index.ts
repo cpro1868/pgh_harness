@@ -15,4 +15,6 @@ export * from './workflow/bpmn-engine.ts';
 export * from './requirements/coordinator.ts';
 export * from './requirements/engine.ts';
 export * from './requirements/diagnostics.ts';
+export * from './requirements/template-renderer.ts';
+export * from './requirements/prd-engine.ts';
 

@@ -123,6 +123,7 @@ export interface PrdVersionModel {
   version: number;
   markdownContent: string;
   templateId: string | null;
+  sectionResults: Array<{ sectionId: string; title: string; content: string; status: string; error?: string }>;
   exportedAt: number;
 }
 
@@ -138,6 +139,17 @@ const PROPOSAL_TRANSITIONS: Record<string, ReadonlySet<string>> = {
   accepted: new Set<string>(),
   dismissed: new Set(['pending']),
 };
+
+function safeParseSectionResults(json: string | undefined | null): Array<{ sectionId: string; title: string; content: string; status: string; error?: string }> {
+  try {
+    const arr = JSON.parse(json ?? '[]') as unknown;
+    return Array.isArray(arr)
+      ? (arr as Array<{ sectionId: string; title: string; content: string; status: string; error?: string }>)
+      : [];
+  } catch {
+    return [];
+  }
+}
 
 function genId(prefix: string): string {
   return `${prefix}_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -300,7 +312,16 @@ export class RequirementsStore {
   constructor(db: SqliteDatabase) {
     this.db = db;
     this.ensureSchema();
+    this.migratePrdColumns();
     this.seedBuiltinTemplate();
+  }
+
+  /** 向后兼容：旧库 req_prds 无 section_results_json 列时补充 */
+  private migratePrdColumns(): void {
+    const cols = this.db.raw.prepare('PRAGMA table_info(req_prds)').all() as Array<{ name: string }>;
+    if (!cols.some((c) => c.name === 'section_results_json')) {
+      this.db.raw.exec("ALTER TABLE req_prds ADD COLUMN section_results_json TEXT NOT NULL DEFAULT '[]'");
+    }
   }
 
   private ensureSchema(): void {
@@ -390,6 +411,7 @@ export class RequirementsStore {
         version INTEGER NOT NULL,
         markdown_content TEXT NOT NULL,
         template_id TEXT,
+        section_results_json TEXT NOT NULL DEFAULT '[]',
         exported_at INTEGER NOT NULL
       );
       CREATE INDEX IF NOT EXISTS idx_req_prds_session ON req_prds(session_id, version DESC);
@@ -736,27 +758,27 @@ export class RequirementsStore {
 
   // ═══ PRD 版本 ═══
 
-  public insertPrd(sessionId: string, markdown: string, templateId: string | null): PrdVersionModel {
+  public insertPrd(sessionId: string, markdown: string, templateId: string | null, sectionResults?: Array<{ sectionId: string; title: string; content: string; status: string; error?: string }>): PrdVersionModel {
     const maxRow = this.db.raw.prepare('SELECT MAX(version) AS v FROM req_prds WHERE session_id = ?').get(sessionId) as { v: number | null };
     const version = (maxRow.v ?? 0) + 1;
     const id = genId('prd');
     this.db.raw
-      .prepare('INSERT INTO req_prds (id, session_id, version, markdown_content, template_id, exported_at) VALUES (?,?,?,?,?,?)')
-      .run(id, sessionId, version, markdown, templateId, Date.now());
-    return { id, sessionId, version, markdownContent: markdown, templateId, exportedAt: Date.now() };
+      .prepare('INSERT INTO req_prds (id, session_id, version, markdown_content, template_id, section_results_json, exported_at) VALUES (?,?,?,?,?,?,?)')
+      .run(id, sessionId, version, markdown, templateId, JSON.stringify(sectionResults ?? []), Date.now());
+    return { id, sessionId, version, markdownContent: markdown, templateId, sectionResults: sectionResults ?? [], exportedAt: Date.now() };
   }
 
   public latestPrd(sessionId: string): PrdVersionModel | undefined {
     const r = this.db.raw.prepare('SELECT * FROM req_prds WHERE session_id = ? ORDER BY version DESC LIMIT 1').get(sessionId) as Record<string, unknown> | undefined;
     return r
-      ? { id: r.id as string, sessionId: r.session_id as string, version: r.version as number, markdownContent: r.markdown_content as string, templateId: (r.template_id as string) ?? null, exportedAt: r.exported_at as number }
+      ? { id: r.id as string, sessionId: r.session_id as string, version: r.version as number, markdownContent: r.markdown_content as string, templateId: (r.template_id as string) ?? null, sectionResults: safeParseSectionResults(r.section_results_json as string), exportedAt: r.exported_at as number }
       : undefined;
   }
 
   public getPrdVersion(sessionId: string, version: number): PrdVersionModel | undefined {
     const r = this.db.raw.prepare('SELECT * FROM req_prds WHERE session_id = ? AND version = ?').get(sessionId, version) as Record<string, unknown> | undefined;
     return r
-      ? { id: r.id as string, sessionId: r.session_id as string, version: r.version as number, markdownContent: r.markdown_content as string, templateId: (r.template_id as string) ?? null, exportedAt: r.exported_at as number }
+      ? { id: r.id as string, sessionId: r.session_id as string, version: r.version as number, markdownContent: r.markdown_content as string, templateId: (r.template_id as string) ?? null, sectionResults: safeParseSectionResults(r.section_results_json as string), exportedAt: r.exported_at as number }
       : undefined;
   }
 
