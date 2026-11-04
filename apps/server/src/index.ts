@@ -31,6 +31,7 @@ import {
 import { McpClientPool, MCP_PREFIX } from '../../../packages/plugins/tools-mcp/src/index.ts';
 import type { McpServerConfig } from '../../../packages/plugins/tools-mcp/src/index.ts';
 import { MemoryCascade, migrateMemory } from '../../../packages/plugins/memory/src/index.ts';
+import { RequirementsRoutes } from './requirements-routes.ts';
 import type { MemoryStorageMode } from '../../../packages/plugins/memory/src/index.ts';
 import { openNativeFolderDialog, listDirectory, createDirectory, revealInFileManager } from './native-dialog.ts';
 import type { BaseEvent, NetworkProxyConfig, WorkflowExecutionLogItem, WorkflowInstanceModel, WorkflowToolCallAudit } from '@harness/protocol';
@@ -227,6 +228,7 @@ export class HarnessServer {
   public governor: ContextGovernor;
   public mcpPool: McpClientPool;
   public pipelineStore: PipelineStore;
+  public requirementsRoutes: RequirementsRoutes;
   public workflowStore: WorkflowStore;
   public pipelineRunner = new PipelineRunner();
   public lockDelegator: LockDelegator;
@@ -288,6 +290,14 @@ export class HarnessServer {
     this.pipelineStore = new PipelineStore(this.db);
     this.workflowStore = new WorkflowStore(this.db);
     this.lockDelegator = new LockDelegator(this.writeLocks);
+    this.requirementsRoutes = new RequirementsRoutes({
+      db: this.db,
+      llm: {
+        chat: async (messages) => this.streamChatCompletionForRequirements(messages),
+        chatPrd: async (messages) => this.streamChatCompletionForRequirements(messages),
+        resolveAgentModel: () => ({ ok: true }),
+      },
+    });
 
     // 默认内置流水线初始化（若库中尚无模板）
     if (this.pipelineStore.list().length === 0) {
@@ -379,6 +389,12 @@ export class HarnessServer {
       dataDir: this.dataDir,
       port: this.port,
       pid: process.pid,
+    });
+
+    // MOD-17 路由的 http helper 延迟绑定（json/readJsonBody 为原型方法）
+    this.requirementsRoutes.setHttpHelpers({
+      json: (res, data) => this.json(res, data),
+      readJsonBody: <T,>(req: http.IncomingMessage) => this.readJsonBody<T>(req),
     });
 
     if (!lock.acquired) {
@@ -611,6 +627,12 @@ export class HarnessServer {
           return;
         }
       }
+    }
+
+    // 0.9 MOD-17 需求探索与分块管理路由（含 SSE）
+    if (url.pathname.startsWith('/api/requirements') || url.pathname.startsWith('/api/prd-templates')) {
+      const handled = await this.requirementsRoutes.handle(req, res, url.pathname, method);
+      if (handled) return;
     }
 
     // 1. 健康检查
@@ -4202,6 +4224,25 @@ Constraints:
       // 既非本机密钥也非旧版密钥（第三方密钥材料），如实保持无法解密
     }
     return '';
+  }
+
+  /** MOD-17 需求探索 LLM 通道：复用激活 Provider 的非工具纯文本对话（凭据不出机） */
+  private async streamChatCompletionForRequirements(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>): Promise<string> {
+    const providers = this.providerStore.list();
+    const activeProvider = providers.find((p) => p.models && p.models.length > 0) ?? providers[0];
+    const realKey = activeProvider ? this.resolveProviderApiKey(activeProvider) : '';
+    const hasRealKey = Boolean(
+      activeProvider && realKey && realKey !== 'none' && !realKey.startsWith('sk-test') && !realKey.includes('xxx') && realKey.length > 5,
+    );
+    if (hasRealKey && activeProvider) {
+      const model = activeProvider.models?.[0]?.id ?? '';
+      const result = await retryWithBackoff(
+        () => this.streamChatCompletion(activeProvider, realKey, model, messages as MessageItem[], undefined),
+      );
+      return result.content;
+    }
+    // 无可用 Provider：本地降级提示（保证引擎流程可走通，前端可见提示）
+    return '⚠️ 当前未检测到有效模型 API Key，请前往【模型与 Provider 资产池】配置后重试。（本地降级回复）';
   }
 
   /**
