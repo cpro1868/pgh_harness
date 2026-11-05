@@ -68,6 +68,16 @@
       if (empty) empty.classList.toggle('hidden', visible > 0);
       const count = document.getElementById('count-all');
       if (count) count.textContent = String(document.querySelectorAll('#session-list .req-card').length);
+      // 各状态筛选按钮计数动态回填（避免空列表显示原型遗留的硬编码 (1)）
+      const countBy = (st) => document.querySelectorAll(`#session-list .req-card[data-status="${st}"]`).length;
+      const setBtnCount = (status, n) => {
+        const btn = document.querySelector(`.filter-btn[data-status="${status}"]`);
+        if (btn) btn.textContent = btn.textContent.replace(/\(\d+\)$/, `(${n})`).replace(/（\d+）$/, `（${n}）`);
+      };
+      setBtnCount('all', document.querySelectorAll('#session-list .req-card').length);
+      setBtnCount('discussing', countBy('discussing'));
+      setBtnCount('prd_ready', countBy('prd_ready'));
+      setBtnCount('draft', countBy('draft'));
     }
 
     window.applyFilter = applyFilter;
