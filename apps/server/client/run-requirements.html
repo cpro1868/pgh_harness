@@ -156,7 +156,7 @@
   </div>
 
   <!-- 3. 模态弹窗：新建需求探索会话 -->
-  <div id="modal-create" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4" onclick="if(event.target===this) closeCreateModal()">
+  <div data-drag-guard data-close-expr="closeCreateModal()" id="modal-create" class="hidden fixed inset-0 z-50 bg-black/75 flex items-center justify-center p-4">
     <div class="w-full max-w-lg rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl overflow-hidden space-y-4">
       <div class="px-6 py-4 border-b border-slate-800 flex items-center justify-between">
         <div class="flex items-center space-x-2">
@@ -206,5 +206,25 @@
 
 
   <script src="js/requirements.js"></script>
+<script>
+  // 弹窗防拖拽误关：mousedown 在遮罩上才开始记录，click 时 target 仍为遮罩且位移 ≤ 5px 才执行关闭
+  (function () {
+    let downPos = null;
+    document.addEventListener('mousedown', function (e) {
+      const overlay = e.target.closest('[data-drag-guard]');
+      downPos = overlay && e.target === overlay ? { x: e.clientX, y: e.clientY } : null;
+    }, true);
+    document.addEventListener('click', function (e) {
+      const overlay = e.target.closest('[data-drag-guard]');
+      if (!overlay || e.target !== overlay || !downPos) return;
+      const dx = Math.abs(e.clientX - downPos.x);
+      const dy = Math.abs(e.clientY - downPos.y);
+      downPos = null;
+      if (dx > 5 || dy > 5) { e.stopPropagation(); e.preventDefault(); return; }
+      const expr = overlay.getAttribute('data-close-expr');
+      if (expr) new Function(expr)();
+    }, true);
+  })();
+</script>
 </body>
 </html>

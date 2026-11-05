@@ -52,7 +52,7 @@
 <body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden">
 
   <!-- ═══ 弹出层：PRD 生成（模板选择 + 逐章进度） ═══ -->
-  <div id="modal-prd" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-prd')">
+  <div data-drag-guard data-close-expr="closeModal('modal-prd')" id="modal-prd" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4">
     <div class="w-full max-w-lg rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
       <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
         <h3 class="text-sm font-bold text-white flex items-center space-x-2"><span>📄</span><span>生成 PRD 需求文档</span></h3>
@@ -158,7 +158,7 @@
   </div>
 
   <!-- ═══ 弹出层：Agent 设置 ═══ -->
-  <div id="modal-agent" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-agent')">
+  <div data-drag-guard data-close-expr="closeModal('modal-agent')" id="modal-agent" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4">
     <div class="w-full max-w-md rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
       <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
         <span class="text-sm font-bold text-white" id="agent-modal-title">编辑 Agent</span>
@@ -178,7 +178,7 @@
   </div>
 
   <!-- ═══ 弹出层：需求分块设置 ═══ -->
-  <div id="modal-chunk" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-chunk')">
+  <div data-drag-guard data-close-expr="closeModal('modal-chunk')" id="modal-chunk" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4">
     <div class="w-full max-w-md rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
       <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
         <span class="text-sm font-bold text-white">编辑分块</span>
@@ -201,7 +201,7 @@
   </div>
 
   <!-- ═══ 弹出层：任务设置 ═══ -->
-  <div id="modal-task" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4" onclick="if(event.target===this) closeModal('modal-task')">
+  <div data-drag-guard data-close-expr="closeModal('modal-task')" id="modal-task" class="hidden fixed inset-0 z-[80] bg-black/70 flex items-center justify-center p-4">
     <div class="w-full max-w-md rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl modal-box">
       <div class="px-5 py-3.5 border-b border-slate-800 flex items-center justify-between">
         <span class="text-sm font-bold text-white">编辑任务</span>
@@ -397,6 +397,26 @@
     });
   </script>
   <script src="js/requirements.js"></script>
+<script>
+  // 弹窗防拖拽误关：mousedown 在遮罩上才开始记录，click 时 target 仍为遮罩且位移 ≤ 5px 才执行关闭
+  (function () {
+    let downPos = null;
+    document.addEventListener('mousedown', function (e) {
+      const overlay = e.target.closest('[data-drag-guard]');
+      downPos = overlay && e.target === overlay ? { x: e.clientX, y: e.clientY } : null;
+    }, true);
+    document.addEventListener('click', function (e) {
+      const overlay = e.target.closest('[data-drag-guard]');
+      if (!overlay || e.target !== overlay || !downPos) return;
+      const dx = Math.abs(e.clientX - downPos.x);
+      const dy = Math.abs(e.clientY - downPos.y);
+      downPos = null;
+      if (dx > 5 || dy > 5) { e.stopPropagation(); e.preventDefault(); return; }
+      const expr = overlay.getAttribute('data-close-expr');
+      if (expr) new Function(expr)();
+    }, true);
+  })();
+</script>
 </body>
 </html>
 
