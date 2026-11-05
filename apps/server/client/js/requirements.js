@@ -149,6 +149,7 @@
       try {
         const resp = await api.get('/api/requirements');
         const { sessions, stats } = resp.data;
+        state.sessionsCache = sessions;
         document.getElementById('stat-total').innerHTML = `${stats.total} <span class="text-xs text-slate-500 font-normal">个项目</span>`;
         document.getElementById('stat-discussing').innerHTML = `${stats.discussing} <span class="text-xs text-slate-500 font-normal">Active</span>`;
         document.getElementById('stat-done').innerHTML = `${stats.prdReady} <span class="text-xs text-slate-500 font-normal">PRD Ready</span>`;
@@ -165,9 +166,10 @@
               <p class="text-xs text-slate-400 leading-relaxed max-w-3xl">${escapeHtml(s.initialPrompt)}</p>
             </div>
             <div class="flex items-center space-x-2 shrink-0"><span class="text-[10px] text-slate-500 font-mono">${new Date(s.updatedAt).toLocaleString()}</span>
+            <button onclick="event.stopPropagation(); reqBindWorkspace('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs">📁 ${s.workspaceId ? '换绑工作区' : '绑定工作区'}</button>
             <button class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow">进入工作台 →</button></div></div>
             <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
-              <div class="flex items-center space-x-4 font-mono text-[11px] text-slate-400"><span>状态: ${s.status}</span></div></div></div>`;
+              <div class="flex items-center space-x-4 font-mono text-[11px] text-slate-400"><span>状态: ${s.status}</span>${s.workspaceId ? '<span class="text-emerald-400">📁 已绑定工作区</span>' : '<span class="text-slate-600">未绑定工作区</span>'}</div></div></div>`;
         });
         // 保留原型静态卡片之后追加真实会话（若原型卡片存在则替换整区）
         const existing = listEl.querySelectorAll('.req-card[data-static]');
@@ -277,32 +279,96 @@
     window.reqSend();
   };
 
-  // ═══ 模型资产下拉（GET /api/providers → 全部可用模型，option 携带 providerId） ═══
+  // ═══ 模型选择器（Provider 分组折叠，对齐主会话 model-select-v2 交互） ═══
+  const modelAsset = { groups: [], open: new Set(), picked: null };
+  function renderModelPanelFromSelect() {
+    const sel = document.getElementById('f-agent-model');
+    const panel = document.getElementById('f-agent-model-panel');
+    if (!sel || !panel) return;
+    const groups = new Map();
+    [...sel.options].forEach((opt) => {
+      const gid = opt.getAttribute('data-provider-id') || 'default';
+      if (!groups.has(gid)) groups.set(gid, { name: opt.getAttribute('data-provider-name') || gid, models: [] });
+      groups.get(gid).models.push({ id: opt.value });
+    });
+    panel.innerHTML = [...groups.entries()].map(([pid, g]) => {
+      const open = modelAsset.open.has(pid);
+      const hasCurrent = sel.value && (sel.selectedOptions[0]?.getAttribute('data-provider-id') === pid);
+      const rows = open ? g.models.map((m) => {
+        const selected = sel.value === m.id;
+        const rowCls = 'ms-model-row ' + (selected ? 'selected' : '') + ' pl-8 pr-3 py-1.5 cursor-pointer flex items-center justify-between';
+        return '<div class="' + rowCls + '" onclick="pickAgentModel(\'' + pid + '\',\'' + m.id + '\')">'
+          + '<span class="font-mono text-[11px] ' + (selected ? 'text-blue-300 font-bold' : 'text-slate-200') + '">' + escapeHtml(m.id) + '</span>'
+          + (selected ? '<span class="text-blue-400 text-[10px]">✓</span>' : '')
+          + '</div>';
+      }).join('') : '';
+      const headerCls = 'ms-group-header flex items-center justify-between px-3 py-2 cursor-pointer select-none';
+      return '<div class="ms-group ' + (open ? 'open' : '') + ' border-b border-slate-800/60 last:border-b-0">'
+        + '<div class="' + headerCls + '" onclick="toggleAgentModelGroup(\'' + pid + '\')">'
+        + '<div class="flex items-center space-x-2 min-w-0"><span class="ms-group-arrow text-slate-500 text-[10px]">▶</span>'
+        + '<span class="text-[11px] font-bold ' + (hasCurrent ? 'text-blue-300' : 'text-slate-200') + ' truncate">' + escapeHtml(g.name) + '</span></div>'
+        + '<span class="text-[10px] text-slate-600 font-mono">' + g.models.length + '</span></div>'
+        + rows + '</div>';
+    }).join('');
+  }
+  window.toggleAgentModelGroup = function (pid) {
+    if (modelAsset.open.has(pid)) modelAsset.open.delete(pid); else modelAsset.open.add(pid);
+    renderModelPanelFromSelect();
+  };
+  window.pickAgentModel = function (pid, mid) {
+    const sel = document.getElementById('f-agent-model');
+    const opt = [...sel.options].find((o) => o.value === mid && (o.getAttribute('data-provider-id') || 'default') === pid);
+    if (opt) {
+      sel.value = mid;
+      modelAsset.picked = { modelId: mid, providerId: pid };
+    }
+    const panel = document.getElementById('f-agent-model-panel');
+    if (panel) panel.classList.add('hidden');
+    const cur = document.getElementById('f-agent-model-current');
+    if (cur) cur.textContent = mid;
+  };
+  window.toggleAgentModelPanel = function (ev) {
+    ev.stopPropagation();
+    const panel = document.getElementById('f-agent-model-panel');
+    if (panel) panel.classList.toggle('hidden');
+  };
+  document.addEventListener('click', (e) => {
+    const panel = document.getElementById('f-agent-model-panel');
+    const trigger = e.target.closest('[data-model-trigger]');
+    if (panel && !panel.contains(e.target) && !trigger) panel.classList.add('hidden');
+  });
+
   async function loadModelOptions(selectedModelId) {
     const sel = document.getElementById('f-agent-model');
-    if (!sel) return;
+    const panel = document.getElementById('f-agent-model-panel');
+    if (!sel || !panel) return;
     sel.innerHTML = '<option value="">加载中…</option>';
+    panel.innerHTML = '';
     try {
       const d = await api.get('/api/providers');
       const providers = d.data || [];
-      const options = [];
+      modelAsset.groups = [];
       for (const p of providers) {
-        for (const m of p.models || []) {
-          options.push({ providerId: p.id, providerName: p.name, modelId: m.id, label: `${m.id}（${p.name}）` });
-        }
+        const models = (p.models || []).map((m) => ({ id: m.id, label: m.id }));
+        if (models.length > 0) modelAsset.groups.push({ providerId: p.id, providerName: p.name, models });
       }
-      if (options.length === 0) {
+      if (modelAsset.groups.length === 0) {
         sel.innerHTML = '<option value="">暂无模型——请先在【模型与 Provider 资产池】配置并导入模型</option>';
         return;
       }
-      sel.innerHTML = options.map((o) => `<option value="${escapeHtml(o.modelId)}" data-provider-id="${escapeHtml(o.providerId)}">${escapeHtml(o.label)}</option>`).join('');
-      if (selectedModelId && selectedModelId !== 'default') {
-        const hit = options.find((o) => o.modelId === selectedModelId);
-        if (hit) sel.value = selectedModelId;
-      }
-      sel.dataset.loaded = '1';
+      sel.innerHTML = modelAsset.groups.map((g) => g.models.map((m) =>
+        '<option value="' + escapeHtml(m.id) + '" data-provider-id="' + escapeHtml(g.providerId) + '" data-provider-name="' + escapeHtml(g.providerName) + '">' + escapeHtml(m.id) + '（' + escapeHtml(g.providerName) + '）</option>'
+      ).join('')).join('');
+      if (selectedModelId && selectedModelId !== 'default') sel.value = selectedModelId;
+      const selOpt = sel.selectedOptions[0];
+      modelAsset.picked = { modelId: sel.value, providerId: selOpt?.getAttribute('data-provider-id') || 'default' };
+      const cur = document.getElementById('f-agent-model-current');
+      if (cur) cur.textContent = sel.value;
+      if (selOpt) modelAsset.open.add(selOpt.getAttribute('data-provider-id') || 'default');
+      renderModelPanelFromSelect();
     } catch (err) {
-      sel.innerHTML = `<option value="">模型资产加载失败：${escapeHtml(err.message)}</option>`;
+      sel.innerHTML = '<option value="">加载失败</option>';
+      panel.innerHTML = '<div class="px-3 py-2 text-rose-400 text-[10px]">' + escapeHtml(err.message) + '</div>';
     }
   }
 
@@ -315,6 +381,11 @@
       renderAgents();
       toast(agent.isEnabled ? `「${agent.name}」已启用` : `「${agent.name}」已停用`);
     } catch (err) { toast(err.message, true); }
+  };
+
+  window.reqEditAgentByName = function (name) {
+    const agent = state.agents.find((a) => a.name === name);
+    if (agent) window.reqEditAgent(agent.id);
   };
 
   let editingAgentId = null;
@@ -533,12 +604,12 @@
   window.reqSaveAgent = async function () {
     const name = document.getElementById('f-agent-name')?.value.trim();
     const role = document.getElementById('f-agent-role')?.value.trim() || name;
-    const modelSel = document.getElementById('f-agent-model');
-    const modelId = modelSel?.value || '';
-    const providerId = modelSel?.selectedOptions?.[0]?.getAttribute('data-provider-id') || 'default';
+    const sel = document.getElementById('f-agent-model');
+    const modelId = modelAsset.picked?.modelId || sel?.value || '';
+    const providerId = modelAsset.picked?.providerId || sel?.selectedOptions?.[0]?.getAttribute('data-provider-id') || 'default';
     const prompt = document.getElementById('f-agent-prompt')?.value || '';
     if (!name) { toast('请填写 Agent 名称', true); return; }
-    if (!modelId) { toast('请选择模型——若列表为空请先在【模型与 Provider 资产池】配置', true); return; }
+    if (!modelId || modelId === '') { toast('请选择模型——若列表为空请先在【模型与 Provider 资产池】配置', true); return; }
     try {
       if (editingAgentId) {
         await api.send(`/api/requirements/${state.sessionId}/agents/${editingAgentId}`, 'PATCH', { name, roleTitle: role, modelId, providerId, systemPrompt: prompt });
@@ -652,6 +723,42 @@
     }
   }
   window.renderFileTree = renderFileTree;
+
+  // ═══ 会话补绑定/更换工作区（列表页卡片操作） ═══
+  window.reqBindWorkspace = async function (sessionId) {
+    try {
+      const d = await api.get('/api/workspaces');
+      const list = d.data || [];
+      if (list.length === 0) { toast('暂无已登记工作区——请先在【工作区管理与规则】登记', true); return; }
+      const cur = state.sessionsCache?.find?.((x) => x.id === sessionId);
+      const options = ['<option value="">不绑定</option>'].concat(list.map((w) =>
+        `<option value="${escapeHtml(w.id)}" ${cur && cur.workspaceId === w.id ? 'selected' : ''}>${escapeHtml(w.name)}（${escapeHtml(w.path)}）</option>`
+      )).join('');
+      const modal = document.createElement('div');
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:9998;display:flex;align-items:center;justify-content:center;padding:24px;';
+      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+      modal.innerHTML = `<div style="background:#0f172a;border:1px solid #334155;border-radius:12px;max-width:460px;width:100%;padding:20px;font-size:12px;">
+        <h3 style="color:#fff;margin-bottom:4px">绑定工作区</h3>
+        <p style="color:#94a3b8;font-size:11px;margin-bottom:12px">工作区是登记给 Agent 使用的本地项目目录；绑定后文件树将展示该项目实际文件，后续实施也在该目录进行。</p>
+        <select id="bind-ws-select" style="width:100%;background:#080d1a;border:1px solid #334155;border-radius:8px;padding:8px;color:#e2e8f0;font-family:ui-monospace,monospace">${options}</select>
+        <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:14px">
+          <button onclick="this.closest('div[style*=fixed]').remove()" style="background:#1e293b;color:#cbd5e1;border:1px solid #334155;border-radius:8px;padding:6px 14px">取消</button>
+          <button onclick="window.__doBind('${sessionId}')" style="background:#2563eb;color:#fff;border-radius:8px;padding:6px 14px;font-weight:600">保存绑定</button>
+        </div></div>`;
+      document.body.appendChild(modal);
+    } catch (err) { toast(err.message, true); }
+  };
+  window.__doBind = async function (sessionId) {
+    const wid = document.getElementById('bind-ws-select')?.value || null;
+    try {
+      await api.send(`/api/requirements/${sessionId}`, 'PATCH', { workspaceId: wid });
+      toast(wid ? '工作区已绑定' : '已解除绑定');
+      document.querySelector('div[style*=fixed]')?.remove();
+      // 刷新列表
+      const resp = await api.get('/api/requirements');
+      state.sessionsCache = resp.data.sessions;
+    } catch (err) { toast(err.message, true); }
+  };
 
   // ═══ 启动 ═══
   document.addEventListener('DOMContentLoaded', () => {

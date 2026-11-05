@@ -47,6 +47,16 @@
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
     .modal-box { animation: pop .15s ease; }
     @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+    /* ═══ Agent 模型分组选择器（对齐主会话 model-select-v2） ═══ */
+    .ms-panel { animation: ms-pop .12s ease; }
+    @keyframes ms-pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
+    .ms-group-header { transition: background .12s; }
+    .ms-group-header:hover { background: rgba(59,130,246,.12); }
+    .ms-group-arrow { transition: transform .15s; display: inline-block; }
+    .ms-group.open .ms-group-arrow { transform: rotate(90deg); }
+    .ms-model-row { transition: background .1s; }
+    .ms-model-row:hover { background: rgba(59,130,246,.18); }
+    .ms-model-row.selected { background: rgba(37,99,235,.3); }
   </style>
 </head>
 <body class="bg-[#070a12] text-slate-100 h-screen flex overflow-hidden">
@@ -167,7 +177,16 @@
       <div class="p-5 space-y-3">
         <div><label class="text-slate-400 text-[11px] block mb-1">名称</label><input id="f-agent-name" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></div>
         <div><label class="text-slate-400 text-[11px] block mb-1">角色描述</label><input id="f-agent-role" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"></div>
-        <div><label class="text-slate-400 text-[11px] block mb-1">模型</label><select id="f-agent-model" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200"><option value="">加载中…</option></select></div>
+        <div><label class="text-slate-400 text-[11px] block mb-1">模型（按 Provider 分组）</label>
+          <div class="relative" data-model-trigger>
+            <button type="button" onclick="toggleAgentModelPanel(event)" class="flex items-center justify-between w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 font-mono hover:border-blue-500 transition">
+              <span id="f-agent-model-current">选择模型…</span>
+              <span class="text-slate-600 ml-1">▾</span>
+            </button>
+            <div id="f-agent-model-panel" class="ms-panel hidden absolute left-0 top-full mt-1 w-full max-h-[280px] overflow-y-auto rounded-lg border border-slate-700 bg-[#0d1424] shadow-xl shadow-black/60 z-[90]"></div>
+          </div>
+          <select id="f-agent-model" class="hidden"><option value="">选择模型…</option></select>
+        </div>
         <div><label class="text-slate-400 text-[11px] block mb-1">系统提示词</label><textarea id="f-agent-prompt" rows="4" class="w-full bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 font-mono"></textarea></div>
         <div class="flex items-center justify-between pt-1">
           <button onclick="deleteAgent()" class="text-rose-400 hover:text-rose-300 text-[11px] underline">🗑 删除此 Agent</button>
@@ -319,12 +338,16 @@
   <script>
     // ═══ 弹出层控制 ═══
     function openAgentModal(name, role, model, prompt) {
-      document.getElementById('agent-modal-title').textContent = name ? '编辑 Agent' : '新建 Agent';
-      document.getElementById('f-agent-name').value = name || '';
-      document.getElementById('f-agent-role').value = role || '';
-      document.getElementById('f-agent-model').value = model || 'deepseek-v4.1-flash';
-      document.getElementById('f-agent-prompt').value = prompt || '';
-      document.getElementById('modal-agent').classList.remove('hidden');
+      // 原型遗留签名兼容：无参数时走真实新建流程
+      if (!name && !role && !model && !prompt) { window.reqNewAgent && window.reqNewAgent(); return; }
+      window.reqEditAgentByName && window.reqEditAgentByName(name);
+      if (!window.reqEditAgentByName) {
+        document.getElementById('agent-modal-title').textContent = '编辑 Agent';
+        document.getElementById('f-agent-name').value = name || '';
+        document.getElementById('f-agent-role').value = role || '';
+        document.getElementById('f-agent-prompt').value = prompt || '';
+        document.getElementById('modal-agent').classList.remove('hidden');
+      }
     }
     function openChunkModal(name, desc, status, priority, tags) {
       document.getElementById('f-chunk-name').value = name || '';
