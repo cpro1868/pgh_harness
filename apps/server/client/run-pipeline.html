@@ -52,26 +52,22 @@
   <div class="flex-1 flex flex-col overflow-y-auto">
     
     <!-- 顶栏 -->
-    <header class="h-12 bg-[#090d18] border-b border-[#1a2333] px-6 flex items-center justify-between sticky top-0 z-40">
-      <div class="flex items-center space-x-3">
+      <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs select-none">
+    <div class="flex items-center space-x-2.5">
       <img src="ico/pgh.svg" alt="PG Harness" class="w-6 h-6 rounded shadow-sm">
       <span class="font-bold text-white tracking-wide text-xs">PG Harness</span>
       <span class="text-slate-600">/</span>
-        <span class="text-xs font-semibold px-2 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60 font-mono">模式A · 运行中心</span>
-        <h1 class="text-sm font-bold text-white">多角色流水线任务列表 (Pipeline Runs)</h1>
-      </div>
-
-      <div class="flex items-center space-x-3 text-xs">
-        <a href="config-pipelines.html" class="px-3 py-1.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center space-x-1">
-          <svg class="w-3.5 h-3.5 text-purple-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path></svg>
-          <span>流水线模板库</span>
-        </a>
-        <a href="run-pipeline-create.html" class="px-3.5 py-1.5 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold flex items-center space-x-1.5 shadow">
-          <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-          <span>配置步骤/角色并启动新流水线任务</span>
-        </a>
-      </div>
-    </header>
+      <span class="font-semibold text-slate-200">角色流水线任务列表 (Pipeline Runs)</span>
+    </div>
+    <div class="flex items-center space-x-2 text-xs">
+      <a href="config-pipelines.html" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center space-x-1">
+        <span>流水线模板库</span>
+      </a>
+      <a href="run-pipeline-create.html" class="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold flex items-center space-x-1.5 shadow">
+        <span>配置并启动新任务</span>
+      </a>
+    </div>
+  </header>
 
     <main class="flex-1 p-6 lg:p-8 space-y-6 w-full max-w-[1720px] mx-auto">
       
