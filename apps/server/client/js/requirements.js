@@ -21,6 +21,24 @@
     },
   };
 
+  // ═══ Markdown 渲染（对齐主会话：marked + hljs + DOMPurify 消毒） ═══
+  function renderMarkdown(rawMd) {
+    if (!rawMd) return '';
+    let html = rawMd;
+    if (window.marked) {
+      try {
+        if (window.hljs) {
+          marked.setOptions({ highlight: (code, lang) => { const language = hljs.getLanguage(lang) ? lang : 'plaintext'; return hljs.highlight(code, { language }).value; }, breaks: true, gfm: true });
+        }
+        html = marked.parse(rawMd);
+      } catch { html = rawMd; }
+    }
+    if (window.DOMPurify) {
+      try { return DOMPurify.sanitize(html); } catch { return html; }
+    }
+    return html;
+  }
+
   // ═══ 安全渲染 ═══
   function escapeHtml(s) {
     return String(s ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -227,7 +245,7 @@
           <span class="text-[10px] font-bold ${isUser ? 'text-blue-300' : isSystem ? 'text-amber-300' : 'text-emerald-300'}">${isUser ? '👤 我' : isSystem ? '⚙️ 系统' : `🤖 ${escapeHtml(m.agent_name || 'Agent')}`}</span>
           <span class="text-[9px] text-slate-600 font-mono">${new Date(m.created_at).toLocaleTimeString()}</span>
         </div>
-        <div class="text-[11px] text-slate-300 leading-relaxed whitespace-pre-wrap">${escapeHtml(m.content)}</div>
+        <div class="text-[11px] text-slate-300 leading-relaxed markdown-body">${renderMarkdown(m.content)}</div>
         ${proposalCard}</div>`;
     }).join('');
     el.scrollTop = el.scrollHeight;
@@ -322,6 +340,9 @@
       sel.value = mid;
       modelAsset.picked = { modelId: mid, providerId: pid };
     }
+    // 对齐主会话 pickModel：清空展开记忆、只保留当前组、收起面板（单选语义）
+    modelAsset.open.clear();
+    modelAsset.open.add(pid);
     const panel = document.getElementById('f-agent-model-panel');
     if (panel) panel.classList.add('hidden');
     const cur = document.getElementById('f-agent-model-current');

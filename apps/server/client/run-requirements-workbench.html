@@ -7,6 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="js/theme.js"></script>
   <link rel="stylesheet" href="css/shared.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/styles/github-dark.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/highlight.js@11.9.0/lib/highlight.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.9/dist/purify.min.js"></script>
   <style>
     .chat-msg { animation: msg-in .15s ease; }
     @keyframes msg-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
@@ -47,6 +51,15 @@
     @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
     .modal-box { animation: pop .15s ease; }
     @keyframes pop { from { opacity: 0; transform: scale(.96); } to { opacity: 1; transform: none; } }
+    .markdown-body pre { background: #080d1a; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 10px; overflow-x: auto; font-size: 10px; margin: 6px 0; }
+    .markdown-body code { font-family: ui-monospace, monospace; font-size: 10px; color: #93c5fd; }
+    .markdown-body pre code { background: transparent; color: #e2e8f0; }
+    .markdown-body table { border-collapse: collapse; font-size: 10px; margin: 6px 0; width: 100%; }
+    .markdown-body th, .markdown-body td { border: 1px solid #334155; padding: 4px 8px; text-align: left; }
+    .markdown-body th { background: #0c1220; color: #94a3b8; }
+    .markdown-body ul, .markdown-body ol { padding-left: 18px; margin: 4px 0; }
+    .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-size: 12px; font-weight: bold; color: #e2e8f0; margin: 8px 0 4px; }
+    .markdown-body blockquote { border-left: 3px solid #475569; padding-left: 8px; color: #94a3b8; margin: 4px 0; }
     /* ═══ Agent 模型分组选择器（对齐主会话 model-select-v2） ═══ */
     .ms-panel { animation: ms-pop .12s ease; }
     @keyframes ms-pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
