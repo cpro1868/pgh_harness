@@ -73,6 +73,7 @@ const TEXT_EXEMPT = new Set([
   'text-purple-600', // #9333ea，白底 5.9:1
   'text-black',
   'hover:text-slate-400', // 悬停态，与 text-slate-400 同级
+  'text-blue-200', // 发送按钮提示字（蓝底白系）
 ]);
 
 /**
