@@ -84,17 +84,18 @@
   }
 
   function toggle() {
-    const drawer = document.getElementById('bg-tasks-drawer');
-    if (!drawer) return;
-    drawer.classList.toggle('hidden');
-    if (!drawer.classList.contains('hidden')) render();
+    const popup = document.getElementById('bg-task-popup');
+    if (!popup) return;
+    popup.classList.toggle('hidden');
+    if (!popup.classList.contains('hidden')) render();
   }
   window.toggleBgTasks = toggle;
+  window.renderBgTasks = render;
 
   // 定时刷新运行时长
   setInterval(() => {
-    const drawer = document.getElementById('bg-tasks-drawer');
-    if (drawer && !drawer.classList.contains('hidden')) render();
+    const popup = document.getElementById('bg-task-popup');
+    if (popup && !popup.classList.contains('hidden')) render();
   }, 5000);
 
   document.addEventListener('DOMContentLoaded', render);
