@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>后台任务中心 - 原型</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body { background: #070a12; color: #e2e8f0; font-family: Inter, -apple-system, "Segoe UI", sans-serif; }
+    @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .running-dot { animation: pulse-dot 1.2s infinite; }
+    .task-item { transition: all .12s; cursor: pointer; }
+    .task-item:hover { border-color: #3b82f6; }
+    .annot { color: #f59e0b; font-size: 10px; font-family: ui-monospace, monospace; }
+  </style>
+</head>
+<body class="min-h-screen p-8">
+  <div class="max-w-3xl mx-auto space-y-6">
+    <div>
+      <h1 class="text-xl font-bold text-white">后台任务中心 — 交互原型说明</h1>
+      <p class="text-xs text-slate-400 mt-1">原型文件：本文档页 · 实现文件：apps/server/client/home.html 顶栏「⚙️ 后台任务」+ js/bg-tasks.js</p>
+    </div>
+
+    <!-- 入口形态 -->
+    <section class="rounded-xl bg-[#0f1523] border border-slate-800 p-5 space-y-3">
+      <h2 class="text-sm font-bold text-white">1. 入口形态（每个页面顶栏右上角）</h2>
+      <div class="flex items-center justify-between bg-[#0a0f1d] border border-[#1a2333] rounded px-4 h-10">
+        <div class="flex items-center space-x-2.5">
+          <img src="../ico/pgh.svg" class="w-6 h-6 rounded shadow-sm" alt="">
+          <span class="font-bold text-white text-xs">PG Harness</span><span class="text-slate-600">/</span><span class="text-slate-300 text-xs">当前页面</span>
+        </div>
+        <div class="flex items-center space-x-2">
+          <div class="relative">
+            <span class="px-2 py-1 rounded bg-slate-800 border border-slate-700 text-slate-300 text-[11px] flex items-center space-x-1.5">⚙️ 后台任务
+              <span class="absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center running-dot">2</span>
+            </span>
+          </div>
+        </div>
+      </div>
+      <p class="annot">↳ 角标数字 = 运行中任务数（红色闪烁）；0 时隐藏。点击按钮弹出右侧抽屉。任何页面均有入口。</p>
+    </section>
+
+    <!-- 抽屉展开态 -->
+    <section class="rounded-xl bg-[#0f1523] border border-slate-800 p-5 space-y-3">
+      <h2 class="text-sm font-bold text-white">2. 抽屉展开态（右侧 380px 抽屉，不离开当前页面）</h2>
+      <div class="flex justify-end">
+        <div class="w-[380px] rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl overflow-hidden">
+          <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white">后台任务</h3>
+            <span class="text-slate-500 text-sm">✕</span>
+          </div>
+          <div class="p-3 space-y-2">
+            <div class="task-item rounded-lg bg-[#0c1220] border border-blue-800 p-2.5">
+              <div class="flex items-center justify-between mb-1"><span class="text-[11px] font-semibold text-slate-200">流水线任务 · 订单系统</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 flex items-center"><span class="running-dot w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>运行中</span></div>
+              <div class="text-[10px] text-slate-500 truncate mb-1">阶段 2/4：TDD 编码实施</div>
+              <div class="flex justify-between text-[9px] text-slate-600 font-mono"><span>pipeline · 3m20s</span></div>
+            </div>
+            <div class="task-item rounded-lg bg-[#0c1220] border border-slate-800 p-2.5">
+              <div class="flex items-center justify-between mb-1"><span class="text-[11px] font-semibold text-slate-200">PRD 生成 · 支付模块</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-300 flex items-center"><span class="running-dot w-1.5 h-1.5 rounded-full bg-blue-400 mr-1"></span>运行中</span></div>
+              <div class="text-[10px] text-slate-500 truncate mb-1">逐章节生成（6/12）</div>
+              <div class="flex justify-between text-[9px] text-slate-600 font-mono"><span>prd · 45s</span></div>
+            </div>
+            <div class="task-item rounded-lg bg-[#0c1220] border border-slate-800 p-2.5 opacity-80">
+              <div class="flex items-center justify-between mb-1"><span class="text-[11px] font-semibold text-slate-300">研讨回合 · 知识库</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-300">✓ 已完成</span></div>
+              <div class="flex justify-between text-[9px] text-slate-600 font-mono"><span>requirements · 12s</span><button class="hover:text-slate-400">✕ 清除</button></div>
+            </div>
+            <div class="task-item rounded-lg bg-[#0c1220] border border-rose-900/50 p-2.5 opacity-80">
+              <div class="flex items-center justify-between mb-1"><span class="text-[11px] font-semibold text-rose-300">PRD 生成 · 导出工具</span>
+                <span class="text-[10px] px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300">✕ 失败</span></div>
+              <div class="text-[10px] text-rose-400/70 truncate mb-1">LLM 调用失败（3 次重试后）</div>
+              <div class="flex justify-between text-[9px] text-slate-600 font-mono"><span>prd · 8s</span><button class="hover:text-slate-400">✕ 清除</button></div>
+            </div>
+          </div>
+          <div class="px-4 py-2.5 border-t border-slate-800 text-[10px] text-slate-600">任务后台持续运行，切页不中断 · 点击卡片跳转对应页面 · 完成/失败可清除，3h 自动过期</div>
+        </div>
+      </div>
+      <p class="annot">↳ 状态四类：运行中（蓝点闪烁）/ 已完成（绿）/ 失败（红）/ [规划] 已取消。运行中显示阶段进度摘要与实时耗时（5s 刷新）。</p>
+    </section>
+
+    <!-- 任务来源 -->
+    <section class="rounded-xl bg-[#0f1523] border border-slate-800 p-5 space-y-2">
+      <h2 class="text-sm font-bold text-white">3. 任务来源与注册时机</h2>
+      <table class="w-full text-[11px]">
+        <thead class="text-slate-400 border-b border-slate-800"><tr><th class="text-left py-1.5">类型</th><th class="text-left">注册时机</th><th class="text-left">跳转目标</th></tr></thead>
+        <tbody class="text-slate-300 divide-y divide-slate-800/60">
+          <tr><td class="py-1.5 font-mono">pipeline</td><td>流水线实例启动时</td><td>run-pipeline.html</td></tr>
+          <tr><td class="py-1.5 font-mono">workflow</td><td>BPMN 实例启动时</td><td>run-workflow.html</td></tr>
+          <tr><td class="py-1.5 font-mono">prd</td><td>PRD 生成点击时（逐章/快速）</td><td>run-requirements-workbench.html</td></tr>
+          <tr><td class="py-1.5 font-mono">requirements</td><td>研讨回合发送时</td><td>run-requirements-workbench.html</td></tr>
+        </tbody>
+      </table>
+      <p class="annot">↳ 存储：localStorage（跨页面共享）；流水线/BPMN 实例本身有服务端持久化，此处为聚合展示层。</p>
+    </section>
+  </div>
+</body>
+</html>

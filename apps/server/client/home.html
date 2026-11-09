@@ -8,15 +8,15 @@
   <link rel="stylesheet" href="css/shared.css">
   <script src="js/theme.js"></script>
   <style>
-    .flow-step { transition: all .15s ease; cursor: pointer; }
-    .flow-step:hover { transform: translateY(-3px); border-color: #3b82f6; box-shadow: 0 8px 20px -6px rgba(59,130,246,.35); }
-    .flow-arrow { color: #475569; font-size: 18px; }
+    .node-card { transition: all .15s ease; cursor: pointer; }
+    .node-card:hover { border-color: #3b82f6; box-shadow: 0 0 16px rgba(59,130,246,.25); }
     .func-card { transition: all .12s ease; }
     .func-card:hover { border-color: #3b82f6; transform: translateY(-1px); }
-    .bg-task-item { transition: background .12s; cursor: pointer; }
-    .bg-task-item:hover { background: rgba(59,130,246,.12); }
     @keyframes pulse-dot { 0%,100%{opacity:1} 50%{opacity:.3} }
     .running-dot { animation: pulse-dot 1.2s infinite; }
+    .flow-link { stroke: #475569; stroke-width: 2; fill: none; marker-end: url(#arrow); }
+    .flow-link.active { stroke: #3b82f6; }
+    .flow-label { font-size: 10px; fill: #64748b; font-family: ui-monospace, monospace; }
   </style>
 </head>
 <body class="bg-[#070a12] text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
@@ -24,13 +24,12 @@
   <!-- 统一 40px 顶栏 -->
   <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs select-none">
     <div class="flex items-center space-x-2.5">
-      <a href="home.html" title="返回系统主页" class="shrink-0"><img src="ico/pgh.svg" alt="PG Harness"></a>
+      <a href="home.html" title="返回系统主页" class="shrink-0"><img src="ico/pgh.svg" alt="PG Harness" class="w-6 h-6 rounded shadow-sm"></a>
       <span class="font-bold text-white tracking-wide text-xs">PG Harness</span>
       <span class="text-slate-600">/</span>
       <span class="font-semibold text-slate-200">系统主页</span>
     </div>
     <div class="flex items-center space-x-2 text-[11px]">
-      <!-- 后台任务中心入口 -->
       <button onclick="toggleBgTasks(event)" class="px-2 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center space-x-1.5 relative">
         <span>⚙️</span><span>后台任务</span>
         <span id="bg-task-badge" class="hidden absolute -top-1.5 -right-1.5 min-w-[16px] h-4 px-1 rounded-full bg-rose-500 text-white text-[9px] font-bold flex items-center justify-center running-dot">0</span>
@@ -40,7 +39,7 @@
   </header>
 
   <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
-    <!-- 活动栏（与全站一致） -->
+    <!-- 活动栏（全站统一） -->
     <aside class="activity-bar h-full">
       <a href="run-requirements.html" class="activity-btn" title="需求探索与分块 (Requirements)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5.5 5.5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a>
       <a href="run-chat.html" class="activity-btn" title="对话工作台 (Chat)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg></a>
@@ -56,148 +55,107 @@
       <a href="config-settings.html" class="activity-btn" title="系统全局设置"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg></a>
     </aside>
 
-    <!-- 主内容区 -->
     <main class="flex-1 overflow-y-auto p-8 space-y-8">
 
-      <!-- ═══ 主流程（明确先后顺序） ═══ -->
+      <!-- ═══ 功能流程图（节点 + 连线把跳转串起来） ═══ -->
       <section>
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h1 class="text-xl font-bold text-white">核心工作流程</h1>
-            <p class="text-xs text-slate-400 mt-1">从想法到交付的完整链路——按顺序点击进入各阶段</p>
-          </div>
-        </div>
-        <div class="flex items-stretch gap-2 overflow-x-auto pb-2">
-          <!-- 步骤 1 -->
-          <div class="flow-step flex-1 min-w-[190px] p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-requirements.html'">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[10px] font-mono text-blue-400">STEP 1</span>
-              <span class="text-lg">🧭</span>
-            </div>
-            <div class="text-sm font-bold text-white mb-1">需求探索</div>
-            <p class="text-[11px] text-slate-500 leading-relaxed">一句话想法 → 多 Agent 研讨 → 需求分块 → PRD 规范</p>
-          </div>
-          <div class="flex items-center flow-arrow">→</div>
-          <!-- 步骤 2 -->
-          <div class="flow-step flex-1 min-w-[190px] p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-pipeline.html'">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[10px] font-mono text-blue-400">STEP 2</span>
-              <span class="text-lg">🚀</span>
-            </div>
-            <div class="text-sm font-bold text-white mb-1">流水线实施</div>
-            <p class="text-[11px] text-slate-500 leading-relaxed">PRD 任务包 → 多角色自动执行（需求→架构→编码→QA）</p>
-          </div>
-          <div class="flex items-center flow-arrow">→</div>
-          <!-- 步骤 3 -->
-          <div class="flow-step flex-1 min-w-[190px] p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-chat.html'">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[10px] font-mono text-blue-400">STEP 3</span>
-              <span class="text-lg">💬</span>
-            </div>
-            <div class="text-sm font-bold text-white mb-1">对话精修</div>
-            <p class="text-[11px] text-slate-500 leading-relaxed">Agent 结对调试、代码修改、Git 检查点与回滚</p>
-          </div>
-          <div class="flex items-center flow-arrow">→</div>
-          <!-- 步骤 4 -->
-          <div class="flow-step flex-1 min-w-[190px] p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-workflow.html'">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[10px] font-mono text-blue-400">STEP 4</span>
-              <span class="text-lg">🔄</span>
-            </div>
-            <div class="text-sm font-bold text-white mb-1">流程编排（进阶）</div>
-            <p class="text-[11px] text-slate-500 leading-relaxed">BPMN 可视化编排复杂业务流程、网关分支与人工干预</p>
-          </div>
+        <h1 class="text-xl font-bold text-white mb-1">系统功能流程</h1>
+        <p class="text-xs text-slate-400 mb-4">点击节点进入对应功能；连线表示推荐的先后顺序</p>
+
+        <div class="p-6 rounded-xl bg-[#0c1220] border border-slate-800 overflow-x-auto">
+          <svg viewBox="0 0 980 240" class="min-w-[900px]" style="width:100%">
+            <defs>
+              <marker id="arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 z" fill="#475569"/>
+              </marker>
+            </defs>
+            <!-- 连线 -->
+            <path class="flow-link" d="M 175 90 L 245 90"/>
+            <path class="flow-link" d="M 385 90 L 455 90"/>
+            <path class="flow-link" d="M 595 90 L 665 90"/>
+            <!-- 分支：PRD 完成后可选直接对话 -->
+            <path class="flow-link" d="M 490 130 L 490 175 L 310 175 L 310 130" stroke-dasharray="5,4"/>
+            <text class="flow-label" x="380" y="170">也可直接对话精修</text>
+            <!-- 分支标注 -->
+            <text class="flow-label" x="185" y="80">PRD 产出</text>
+            <text class="flow-label" x="400" y="80">任务包</text>
+            <text class="flow-label" x="610" y="80">按需编排</text>
+
+            <!-- 节点 1：准备工作（资产） -->
+            <g onclick="location.href='config-workspace.html'" style="cursor:pointer">
+              <rect x="20" y="55" width="150" height="70" rx="10" fill="#0f1523" stroke="#334155"/>
+              <text x="95" y="82" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="bold">① 准备资产</text>
+              <text x="95" y="102" text-anchor="middle" fill="#64748b" font-size="10">工作区 · 模型 · Skills</text>
+            </g>
+            <!-- 节点 2：需求探索 -->
+            <g onclick="location.href='run-requirements.html'" style="cursor:pointer">
+              <rect x="245" y="55" width="140" height="70" rx="10" fill="#0f1523" stroke="#3b82f6"/>
+              <text x="315" y="82" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="bold">② 需求探索</text>
+              <text x="315" y="102" text-anchor="middle" fill="#64748b" font-size="10">多 Agent 研讨 → PRD</text>
+            </g>
+            <!-- 节点 3：流水线实施 -->
+            <g onclick="location.href='run-pipeline.html'" style="cursor:pointer">
+              <rect x="455" y="55" width="140" height="70" rx="10" fill="#0f1523" stroke="#334155"/>
+              <text x="525" y="82" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="bold">③ 流水线实施</text>
+              <text x="525" y="102" text-anchor="middle" fill="#64748b" font-size="10">多角色自动执行</text>
+            </g>
+            <!-- 节点 4：对话精修 -->
+            <g onclick="location.href='run-chat.html'" style="cursor:pointer">
+              <rect x="665" y="55" width="140" height="70" rx="10" fill="#0f1523" stroke="#334155"/>
+              <text x="735" y="82" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="bold">④ 对话精修</text>
+              <text x="735" y="102" text-anchor="middle" fill="#64748b" font-size="10">结对调试 · Git 回滚</text>
+            </g>
+            <!-- 节点 5：流程编排（虚线可选） -->
+            <g onclick="location.href='config-workflows.html'" style="cursor:pointer">
+              <rect x="830" y="55" width="130" height="70" rx="10" fill="#0f1523" stroke="#334155" stroke-dasharray="5,3"/>
+              <text x="895" y="82" text-anchor="middle" fill="#e2e8f0" font-size="13" font-weight="bold">⑤ 流程编排</text>
+              <text x="895" y="102" text-anchor="middle" fill="#64748b" font-size="10">BPMN（进阶可选）</text>
+            </g>
+            <path class="flow-link" d="M 805 90 L 828 90" stroke-dasharray="5,4"/>
+
+            <!-- 审计横条 -->
+            <g onclick="location.href='run-trajectory.html'" style="cursor:pointer">
+              <rect x="245" y="205" width="530" height="24" rx="6" fill="#0f1523" stroke="#334155"/>
+              <text x="510" y="221" text-anchor="middle" fill="#64748b" font-size="10">全程事件轨迹可审计：run-trajectory.html（任意阶段产生的会话、审批、执行记录均可回溯）</text>
+            </g>
+            <path class="flow-link" d="M 315 125 L 315 205" stroke-dasharray="3,3" opacity="0.5"/>
+          </svg>
         </div>
       </section>
 
-      <!-- ═══ 功能全景 ═══ -->
+      <!-- ═══ 功能入口汇总 ═══ -->
       <section>
-        <h2 class="text-base font-bold text-white mb-1">功能全景</h2>
-        <p class="text-xs text-slate-400 mb-4">全部能力模块汇总</p>
-        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3">
-          <!-- 运行态 -->
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-requirements.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🧭</span><span class="text-sm font-bold text-white">需求探索</span></div>
-            <p class="text-[11px] text-slate-500">多 Agent 研讨、需求分块、PRD 生成与流转</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-chat.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>💬</span><span class="text-sm font-bold text-white">对话工作台</span></div>
-            <p class="text-[11px] text-slate-500">ReAct 智能体、六工具沙箱、Git 检查点回滚</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-pipeline.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🚀</span><span class="text-sm font-bold text-white">角色流水线</span></div>
-            <p class="text-[11px] text-slate-500">多角色自动接力：需求→架构→TDD 编码→QA</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-workflow.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🔄</span><span class="text-sm font-bold text-white">BPMN 工作流</span></div>
-            <p class="text-[11px] text-slate-500">可视化流程编排、网关分支、人工干预节点</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-terminal.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🖥️</span><span class="text-sm font-bold text-white">终端与长任务</span></div>
-            <p class="text-[11px] text-slate-500">后台 Shell 执行、长任务监控</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='run-trajectory.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>📋</span><span class="text-sm font-bold text-white">事件轨迹审计</span></div>
-            <p class="text-[11px] text-slate-500">全量事件溯源、会话历史回放</p>
-          </div>
-          <!-- 资产配置 -->
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-workspace.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>📁</span><span class="text-sm font-bold text-white">工作区管理</span></div>
-            <p class="text-[11px] text-slate-500">本地项目目录登记、AGENTS.md 规则生成</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-providers.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🤖</span><span class="text-sm font-bold text-white">模型资产池</span></div>
-            <p class="text-[11px] text-slate-500">多 Provider 接入、API Key 加密、模型导入</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-memories.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🧠</span><span class="text-sm font-bold text-white">记忆中心</span></div>
-            <p class="text-[11px] text-slate-500">经验沉淀、双层记忆装配（全局/项目）</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-knowledge.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>📚</span><span class="text-sm font-bold text-white">知识库</span></div>
-            <p class="text-[11px] text-slate-500">独立知识库管理与检索</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-skills.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>⚡</span><span class="text-sm font-bold text-white">Skills 技能库</span></div>
-            <p class="text-[11px] text-slate-500">渐进披露技能包、规范指令注入</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-mcp.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🔌</span><span class="text-sm font-bold text-white">MCP 外部服务</span></div>
-            <p class="text-[11px] text-slate-500">MCP 服务器连接池、工具命名空间隔离</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-pipelines.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🧩</span><span class="text-sm font-bold text-white">流水线模板</span></div>
-            <p class="text-[11px] text-slate-500">角色阶段编排模板、Gatekeeper 审批</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-workflows.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>🎨</span><span class="text-sm font-bold text-white">BPMN 流程设计</span></div>
-            <p class="text-[11px] text-slate-500">可视化流程设计器、XML 导入导出</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-prd-templates.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>📄</span><span class="text-sm font-bold text-white">PRD 模板库</span></div>
-            <p class="text-[11px] text-slate-500">PRD 章节模板与生成提示词管理</p>
-          </div>
-          <div class="func-card p-4 rounded-xl bg-[#0f1523] border border-slate-800" onclick="location.href='config-settings.html'">
-            <div class="flex items-center space-x-2 mb-1.5"><span>⚙️</span><span class="text-sm font-bold text-white">系统设置</span></div>
-            <p class="text-[11px] text-slate-500">主题、网络代理、权限预设、语音偏好</p>
-          </div>
+        <h2 class="text-base font-bold text-white mb-1">全部功能入口</h2>
+        <div class="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-3 mt-3">
+          <a href="run-requirements.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🧭</span><span class="text-sm font-bold text-white">需求探索</span></div><p class="text-[11px] text-slate-500">研讨 · 分块 · PRD · 流转</p></a>
+          <a href="run-chat.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>💬</span><span class="text-sm font-bold text-white">对话工作台</span></div><p class="text-[11px] text-slate-500">ReAct · 工具沙箱 · 回滚</p></a>
+          <a href="run-pipeline.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🚀</span><span class="text-sm font-bold text-white">角色流水线</span></div><p class="text-[11px] text-slate-500">多角色自动接力</p></a>
+          <a href="run-workflow.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🔄</span><span class="text-sm font-bold text-white">BPMN 监控</span></div><p class="text-[11px] text-slate-500">实例拓扑 · 人工干预</p></a>
+          <a href="run-terminal.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🖥️</span><span class="text-sm font-bold text-white">终端</span></div><p class="text-[11px] text-slate-500">Shell · 长任务</p></a>
+          <a href="run-trajectory.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>📋</span><span class="text-sm font-bold text-white">轨迹审计</span></div><p class="text-[11px] text-slate-500">事件溯源回放</p></a>
+          <a href="config-workspace.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>📁</span><span class="text-sm font-bold text-white">工作区</span></div><p class="text-[11px] text-slate-500">目录登记 · 规则</p></a>
+          <a href="config-providers.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🤖</span><span class="text-sm font-bold text-white">模型资产池</span></div><p class="text-[11px] text-slate-500">Provider · Key · 模型</p></a>
+          <a href="config-memories.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🧠</span><span class="text-sm font-bold text-white">记忆中心</span></div><p class="text-[11px] text-slate-500">经验沉淀装配</p></a>
+          <a href="config-knowledge.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>📚</span><span class="text-sm font-bold text-white">知识库</span></div><p class="text-[11px] text-slate-500">管理与检索</p></a>
+          <a href="config-skills.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>⚡</span><span class="text-sm font-bold text-white">Skills</span></div><p class="text-[11px] text-slate-500">渐进披露技能</p></a>
+          <a href="config-mcp.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🔌</span><span class="text-sm font-bold text-white">MCP 服务</span></div><p class="text-[11px] text-slate-500">外部工具连接</p></a>
+          <a href="config-pipelines.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🧩</span><span class="text-sm font-bold text-white">流水线模板</span></div><p class="text-[11px] text-slate-500">角色阶段编排</p></a>
+          <a href="config-workflows.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>🎨</span><span class="text-sm font-bold text-white">BPMN 设计</span></div><p class="text-[11px] text-slate-500">可视化设计器</p></a>
+          <a href="config-prd-templates.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>📄</span><span class="text-sm font-bold text-white">PRD 模板库</span></div><p class="text-[11px] text-slate-500">章节模板与提示词</p></a>
+          <a href="config-settings.html" class="func-card p-3.5 rounded-xl bg-[#0f1523] border border-slate-800 block"><div class="flex items-center space-x-2 mb-1"><span>⚙️</span><span class="text-sm font-bold text-white">系统设置</span></div><p class="text-[11px] text-slate-500">主题 · 代理 · 权限</p></a>
         </div>
       </section>
     </main>
   </div>
 
-  <!-- ═══ 后台任务抽屉（跨页面状态展示） ═══ -->
+  <!-- 后台任务抽屉 -->
   <div id="bg-tasks-drawer" class="hidden fixed top-12 right-4 w-[380px] max-h-[70vh] overflow-y-auto rounded-xl bg-[#0f172a] border border-slate-700 shadow-2xl z-[95]">
     <div class="px-4 py-3 border-b border-slate-800 flex items-center justify-between">
       <h3 class="text-sm font-bold text-white">后台任务</h3>
       <button onclick="toggleBgTasks()" class="text-slate-500 hover:text-white text-sm">✕</button>
     </div>
-    <div id="bg-task-list" class="p-3 space-y-2">
-      <!-- 由 bg-tasks.js 渲染 -->
-    </div>
-    <div class="px-4 py-2.5 border-t border-slate-800 text-[10px] text-slate-600 leading-relaxed">
-      任务在后台持续运行，切换页面不会中断。点击任务卡片可跳转到对应页面查看详情。
-    </div>
+    <div id="bg-task-list" class="p-3 space-y-2"></div>
+    <div class="px-4 py-2.5 border-t border-slate-800 text-[10px] text-slate-600 leading-relaxed">任务在后台持续运行，切换页面不会中断。点击任务卡片跳转对应页面。</div>
   </div>
 
   <script src="js/bg-tasks.js"></script>
