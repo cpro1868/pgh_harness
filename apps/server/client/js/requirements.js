@@ -465,6 +465,11 @@
     // 本地先渲染用户消息
     state.messages.push({ id: `local_${Date.now()}`, role: 'user', content, created_at: Date.now() });
     renderMessages();
+    // 注册后台任务（跨页面可见）
+    const taskId = `req_turn_${state.sessionId}_${Date.now()}`;
+    if (window.bgTaskUpsert) {
+      window.bgTaskUpsert({ id: taskId, type: 'requirements', status: 'running', title: state.session?.title || '需求研讨', detail: content.slice(0, 40), sessionId: state.sessionId });
+    }
     try {
       // SSE 读取研讨回合
       const resp = await fetch(`/api/requirements/${state.sessionId}/messages`, {
@@ -491,8 +496,14 @@
         }
       }
       await refreshSnapshot();
+      if (window.bgTaskUpsert) {
+        window.bgTaskUpsert({ id: taskId, type: 'requirements', status: 'completed', title: state.session?.title || '需求研讨', detail: content.slice(0, 40), sessionId: state.sessionId });
+      }
     } catch (err) {
       toast('研讨回合失败: ' + err.message, true);
+      if (window.bgTaskUpsert) {
+        window.bgTaskUpsert({ id: taskId, type: 'requirements', status: 'failed', title: state.session?.title || '需求研讨', detail: err.message.slice(0, 40), sessionId: state.sessionId });
+      }
       await refreshSnapshot();
     }
   };
@@ -528,6 +539,10 @@
     const progress = document.getElementById('prd-progress');
     progress?.classList.remove('hidden');
     const listEl = progress?.querySelector('.space-y-1\\.5') || progress;
+    const prdTaskId = `prd_gen_${state.sessionId}_${Date.now()}`;
+    if (window.bgTaskUpsert) {
+      window.bgTaskUpsert({ id: prdTaskId, type: 'prd', status: 'running', title: `PRD 生成 · ${state.session?.title || ''}`, detail: mode === 'fast' ? '快速模式' : '逐章节生成', sessionId: state.sessionId });
+    }
     try {
       const resp = await fetch(`/api/requirements/${state.sessionId}/prd/generate`, {
         method: 'POST',
@@ -575,9 +590,15 @@
         }
       }
       toast(`PRD V${lastVersion} 已生成`);
+      if (window.bgTaskUpsert) {
+        window.bgTaskUpsert({ id: prdTaskId, type: 'prd', status: 'completed', title: `PRD 生成 · ${state.session?.title || ''}`, detail: `V${lastVersion} 已落盘`, sessionId: state.sessionId });
+      }
       showPrdResult(lastVersion);
     } catch (err) {
       toast(err.message, true);
+      if (window.bgTaskUpsert) {
+        window.bgTaskUpsert({ id: prdTaskId, type: 'prd', status: 'failed', title: `PRD 生成 · ${state.session?.title || ''}`, detail: err.message.slice(0, 40), sessionId: state.sessionId });
+      }
       document.getElementById('prd-config')?.classList.remove('hidden');
       progress?.classList.add('hidden');
     }
