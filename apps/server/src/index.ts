@@ -3517,7 +3517,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
     } catch {
       rawPath = url.pathname;
     }
-    if (rawPath === '/' || rawPath === '') rawPath = '/index.html';
+    if (rawPath === '/' || rawPath === '') rawPath = '/run-chat.html';
     // Strip leading slashes then resolve inside staticDir (blocks ../ escape).
     const safeRel = rawPath.replace(/^\/+/, '');
     let filePath = path.resolve(this.staticDir, safeRel);
