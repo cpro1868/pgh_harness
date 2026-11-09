@@ -10,9 +10,28 @@
   <script src="js/theme.js"></script>
   <script src="js/toast.js"></script>
 </head>
-<body class="bg-[#070a12] text-slate-100 min-h-screen flex">
+<body class="bg-[#070a12] text-slate-100 font-sans flex flex-col h-screen overflow-hidden">
+<header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs select-none">
+    <div class="flex items-center space-x-2.5">
+      <img src="ico/pgh.svg" alt="PG Harness" class="w-6 h-6 rounded shadow-sm">
+      <span class="font-bold text-white tracking-wide text-xs">PG Harness</span>
+      <span class="text-slate-600">/</span>
+      <span class="font-semibold text-slate-200">角色流水线任务列表 (Pipeline Runs)</span>
+    </div>
+    <div class="flex items-center space-x-2 text-xs">
+      <a href="config-pipelines.html" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center space-x-1">
+        <span>流水线模板库</span>
+      </a>
+      <a href="run-pipeline-create.html" class="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold flex items-center space-x-1.5 shadow">
+        <span>配置并启动新任务</span>
+      </a>
+    </div>
+  </header>
+
 
   <!-- 1. 全局最左侧活动栏 -->
+  
+  <div class="flex flex-1 overflow-hidden" style="height: calc(100vh - 40px);">
   <aside class="activity-bar h-full">
       <a href="run-requirements.html" class="activity-btn" title="需求探索与分块 (Requirements)"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5.5 5.5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z"></path></svg></a><a href="run-chat.html" class="activity-btn" title="主会话工作台 (Chat)">
         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"></path></svg>
@@ -52,22 +71,7 @@
   <div class="flex-1 flex flex-col overflow-y-auto">
     
     <!-- 顶栏 -->
-      <header class="h-10 border-b border-[#1a2333] flex items-center justify-between px-4 bg-[#0a0f1d] shrink-0 text-xs select-none">
-    <div class="flex items-center space-x-2.5">
-      <img src="ico/pgh.svg" alt="PG Harness" class="w-6 h-6 rounded shadow-sm">
-      <span class="font-bold text-white tracking-wide text-xs">PG Harness</span>
-      <span class="text-slate-600">/</span>
-      <span class="font-semibold text-slate-200">角色流水线任务列表 (Pipeline Runs)</span>
-    </div>
-    <div class="flex items-center space-x-2 text-xs">
-      <a href="config-pipelines.html" class="px-3 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 font-medium transition flex items-center space-x-1">
-        <span>流水线模板库</span>
-      </a>
-      <a href="run-pipeline-create.html" class="px-3 py-1 rounded bg-purple-600 hover:bg-purple-500 text-white font-semibold flex items-center space-x-1.5 shadow">
-        <span>配置并启动新任务</span>
-      </a>
-    </div>
-  </header>
+      
 
     <main class="flex-1 p-6 lg:p-8 space-y-6 w-full max-w-[1720px] mx-auto">
       
@@ -370,6 +374,8 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 
   </script>
+  </div>
+
 </body>
 </html>
 
