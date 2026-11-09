@@ -144,7 +144,11 @@ export async function routeTurn(input: RouteTurnInput): Promise<CoordinatorDecis
     if (parsed) {
       const primary = enabled.find((a) => a.id === parsed.primaryAgentId);
       if (primary) {
-        const secondary = parsed.secondaryAgentId ? (enabled.find((a) => a.id === parsed.secondaryAgentId && a.id !== primary.id) ?? null) : null;
+        let secondary = parsed.secondaryAgentId ? (enabled.find((a) => a.id === parsed.secondaryAgentId && a.id !== primary.id) ?? null) : null;
+        // R2 多视角讨论：LLM 未指派协作者时，自动补一个不同范畴的协作者（保证每轮至少 2 个视角）
+        if (!secondary) {
+          secondary = enabled.find((a) => a.id !== primary.id) ?? null;
+        }
         return { primaryAgentId: primary.id, secondaryAgentId: secondary?.id ?? null, topic: parsed.topic || '需求研讨', reason: parsed.reason || 'LLM 裁决' };
       }
     }
@@ -155,9 +159,11 @@ export async function routeTurn(input: RouteTurnInput): Promise<CoordinatorDecis
   // 3. 关键词规则兜底
   const fallbackId = ruleFallbackId(input.userMessage, enabled);
   if (!fallbackId) throw new Error('NO_ENABLED_AGENT');
+  // 兜底路由同样补充协作者（多视角）
+  const secondaryFallback = enabled.find((a) => a.id !== fallbackId) ?? null;
   return {
     primaryAgentId: fallbackId,
-    secondaryAgentId: null,
+    secondaryAgentId: secondaryFallback?.id ?? null,
     topic: input.userMessage.slice(0, 20),
     reason: '规则兜底路由',
   };

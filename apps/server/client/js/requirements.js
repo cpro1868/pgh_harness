@@ -297,14 +297,14 @@
       const rows = open ? g.models.map((m) => {
         const selected = sel.value === m.id;
         const rowCls = 'ms-model-row ' + (selected ? 'selected' : '') + ' pl-8 pr-3 py-1.5 cursor-pointer flex items-center justify-between';
-        return '<div class="' + rowCls + '" onclick="pickAgentModel(\'' + pid + '\',\'' + m.id + '\')">'
+        return '<div class="' + rowCls + '" onclick="event.stopPropagation(); pickAgentModel(\'' + pid + '\',\'' + m.id + '\')">'
           + '<span class="font-mono text-[11px] ' + (selected ? 'text-blue-300 font-bold' : 'text-slate-200') + '">' + escapeHtml(m.id) + '</span>'
           + (selected ? '<span class="text-blue-400 text-[10px]">✓</span>' : '')
           + '</div>';
       }).join('') : '';
       const headerCls = 'ms-group-header flex items-center justify-between px-3 py-2 cursor-pointer select-none';
       return '<div class="ms-group ' + (open ? 'open' : '') + ' border-b border-slate-800/60 last:border-b-0">'
-        + '<div class="' + headerCls + '" onclick="toggleAgentModelGroup(\'' + pid + '\')">'
+        + '<div class="' + headerCls + '" onclick="event.stopPropagation(); toggleAgentModelGroup(\'' + pid + '\')">'
         + '<div class="flex items-center space-x-2 min-w-0"><span class="ms-group-arrow text-slate-500 text-[10px]">▶</span>'
         + '<span class="text-[11px] font-bold ' + (hasCurrent ? 'text-blue-300' : 'text-slate-200') + ' truncate">' + escapeHtml(g.name) + '</span></div>'
         + '<span class="text-[10px] text-slate-600 font-mono">' + g.models.length + '</span></div>'

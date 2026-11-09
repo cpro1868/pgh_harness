@@ -335,9 +335,24 @@
       <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3">
         <div class="text-[11px] text-slate-600 text-center py-10" id="chat-empty-hint">开始输入你的想法，多 Agent 团队将协作研讨…</div>
       </div>
-      <div class="border-t border-slate-800 p-3 flex items-center space-x-2">
-        <input id="chat-input" placeholder="描述你的想法，或 @产品分析师 点名提问…" class="flex-1 bg-[#080d1a] border border-slate-700 rounded px-3 py-2 text-xs text-slate-200 focus:outline-none focus:border-blue-500">
-        <button onclick="reqSend()" class="px-4 py-2 rounded bg-blue-600 text-white text-xs font-semibold">发送</button>
+      <div class="border-t border-slate-800 p-3">
+        <!-- 输入主卡片容器（对齐主会话工作台 composer） -->
+        <div class="relative border border-slate-700/80 rounded-xl bg-[#080d1a] p-3 focus-within:border-blue-500 transition shadow-inner">
+          <textarea
+            id="chat-input"
+            placeholder="描述你的想法，或 @产品分析师 点名提问…（Enter 发送，Shift+Enter 换行）"
+            rows="2"
+            class="w-full bg-transparent border-0 resize-none text-xs text-white placeholder-slate-500 focus:outline-none leading-relaxed"
+          ></textarea>
+          <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
+            <div class="flex items-center space-x-2 text-[10px] text-slate-500 font-mono">
+              <span id="composer-agent-hint"> Coordinator 将指派最相关的 Agent 发言 </span>
+            </div>
+            <button onclick="reqSend()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-1.5">
+              <span>发送</span><span class="text-[9px] text-blue-200 font-mono">Enter</span>
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
