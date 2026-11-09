@@ -21,7 +21,9 @@ describe('TC-03-02-002: 设计器与监控页视口高度与双栏布局防线 (
   it('run-workflow-detail.html 必须显式声明 flex-row 且具备双栏布局', () => {
     const html = fs.readFileSync(path.join(clientDir, 'run-workflow-detail.html'), 'utf8');
     const bodyTag = html.match(/<body[^>]*>/i)?.[0] || '';
-    assert.ok(bodyTag.includes('flex-row'), '监控页 body 必须包含 flex-row');
+    // 布局规范 v2：40px 顶栏横贯全宽（body flex-col），双栏横排语义由 calc 内容容器承载
+    const containerTag = html.match(/<div class="flex flex-1 overflow-hidden[^>]*>/i)?.[0] || '';
+    assert.ok(bodyTag.includes('flex-col') && containerTag.includes('flex'), '监控页必须为顶栏(flex-col) + 横排双栏内容容器结构');
   });
 
   it('shared.css 必须包含 body.flex-row / body.app-shell.flex-row 的 !important 强制水平规则', () => {
