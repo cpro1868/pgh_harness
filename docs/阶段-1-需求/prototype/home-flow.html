@@ -44,20 +44,16 @@
       <div class="p-5 rounded-xl bg-[#0c1220] border border-slate-800 flex justify-center">
         <pre class="mermaid">
 flowchart LR
-  A["📁 准备资产<br/>工作区 · 模型 · Skills"] --> B["🧭 需求探索<br/>多 Agent 研讨 → PRD"]
+  A["📁 准备资产<br/>工作区 · 模型 · Skills"] --> B["🧭 需求探索<br/>研讨 → PRD"]
   B --> C["🚀 流水线实施<br/>多角色自动执行"]
-  B -.-> D["💬 对话精修<br/>结对调试 · 回滚"]
-  C --> D
-  D -.-> E["🔄 流程编排<br/>BPMN（进阶可选）"]
-  C -.-> E
-  B & C & D -.-> T["📋 事件轨迹审计"]
+  C --> D["💬 对话精修<br/>结对调试 · 回滚"]
   click A call navA()
   click B call navB()
   click C call navC()
   click D call navD()
-  click E call navE()
-  click T call navT()
         </pre>
+      </div>
+      <p class="text-[10px] text-slate-500 mt-2 px-1">① 资产就绪后进入需求探索；② PRD 任务包流转流水线自动实施；③ 需要人工微调时用对话精修。全部操作记录可在「事件轨迹审计」中回溯。</p>
       </div>
     </section>
 
@@ -152,8 +148,6 @@ flowchart LR
     window.navB = () => location.href = 'run-requirements.html';
     window.navC = () => location.href = 'run-pipeline.html';
     window.navD = () => location.href = 'run-chat.html';
-    window.navE = () => location.href = 'config-workflows.html';
-    window.navT = () => location.href = 'run-trajectory.html';
     mermaid.initialize({
       startOnLoad: true,
       theme: 'dark',
