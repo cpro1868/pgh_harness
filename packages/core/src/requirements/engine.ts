@@ -137,11 +137,13 @@ export async function runTurn(input: RunTurnInput): Promise<void> {
         }
       } catch { /* 补召失败不影响主流程 */ }
     }
+    // 落库正文剥离 proposal 围栏（JSON 不展示给用户，提议由前端卡片呈现）
+    const cleanContent = (text: string) => text.replace(/```proposal[\s\S]*?```/g, '').trim();
     const saved = store.insertMessage({
       sessionId,
       agentId: decision.primaryAgentId,
       role: 'assistant',
-      content: full,
+      content: cleanContent(full),
       proposalJson: proposals.length > 0 ? proposals[0] : null,
     });
     if (proposals.length > 0) {
@@ -179,7 +181,7 @@ export async function runTurn(input: RunTurnInput): Promise<void> {
           sessionId,
           agentId: secondary.id,
           role: 'assistant',
-          content: secReply,
+          content: cleanContent(secReply),
           proposalJson: secProposals.length > 0 ? secProposals[0] : null,
         });
         if (secProposals.length > 0) {

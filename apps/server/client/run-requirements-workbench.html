@@ -60,6 +60,12 @@
     .markdown-body ul, .markdown-body ol { padding-left: 18px; margin: 4px 0; }
     .markdown-body h1, .markdown-body h2, .markdown-body h3 { font-size: 12px; font-weight: bold; color: #e2e8f0; margin: 8px 0 4px; }
     .markdown-body blockquote { border-left: 3px solid #475569; padding-left: 8px; color: #94a3b8; margin: 4px 0; }
+    .collapsed-msg { max-height: 320px; overflow: hidden; position: relative; }
+    .collapsed-msg::after { content: ''; position: absolute; bottom: 0; left: 0; right: 0; height: 48px; background: linear-gradient(transparent, #0f1523); pointer-events: none; }
+    .collapsed-msg.expanded { max-height: none; }
+    .collapsed-msg.expanded::after { display: none; }
+    .chat-round-divider { display: flex; align-items: center; gap: 8px; margin: 4px 0; font-size: 9px; color: #64748b; font-family: ui-monospace, monospace; }
+    .chat-round-divider::before, .chat-round-divider::after { content: ''; flex: 1; height: 1px; background: #1e293b; }
     /* ═══ Agent 模型分组选择器（对齐主会话 model-select-v2） ═══ */
     .ms-panel { animation: ms-pop .12s ease; }
     @keyframes ms-pop { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: none; } }
@@ -344,6 +350,9 @@
           <button onclick="reqExportChunks()" class="px-2.5 py-1.5 rounded bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-400 text-[11px]" title="导出需求分块">📤</button>
           <button onclick="openPrdModal()" class="px-3 py-1.5 rounded bg-emerald-700 hover:bg-emerald-600 text-white text-[11px] font-semibold flex items-center space-x-1"><span>📄</span><span>生成 PRD</span></button>
         </div>
+      </div>
+      <div class="px-4 pt-2">
+        <button id="load-earlier-btn" onclick="reqLoadEarlier()" class="hidden w-full py-1.5 rounded-lg border border-slate-700 bg-slate-800/50 hover:bg-slate-700/50 text-[10px] text-slate-400 font-mono">↑ 加载更早的研讨消息</button>
       </div>
       <div id="chat-messages" class="flex-1 overflow-y-auto p-4 space-y-3">
         <div class="text-[11px] text-slate-600 text-center py-10" id="chat-empty-hint">开始输入你的想法，多 Agent 团队将协作研讨…</div>

@@ -298,8 +298,15 @@ export class HarnessServer {
         resolveAgentModel: () => ({ ok: true }),
       },
       resolveDefaultModel: () => {
-        const HINTS = ['flash', 'reasoner', 'thinking', 'r1'];
         const providers = this.providerStore.list();
+        // 推荐 OpenDesign · deepseek-v4.1-flash（用户指定）
+        const od = providers.find((p) => p.name === 'OpenDesign');
+        if (od) {
+          const m = (od.models || []).find((x) => x.id === 'deepseek-v4.1-flash');
+          if (m) return { modelId: m.id, providerId: od.id };
+        }
+        // 回退：首个非推理模型
+        const HINTS = ['flash', 'reasoner', 'thinking', 'r1'];
         for (const p of providers) {
           const m = (p.models || []).find((x) => !HINTS.some((h) => x.id.toLowerCase().includes(h)));
           if (m?.id) return { modelId: m.id, providerId: p.id };
@@ -4245,12 +4252,14 @@ Constraints:
   /** MOD-17 需求探索 LLM 通道：复用激活 Provider 的非工具纯文本对话（凭据不出机） */
   private async streamChatCompletionForRequirements(messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }>): Promise<string> {
     const providers = this.providerStore.list();
-    // 优先选择非推理对话模型（deepseek-flash 等推理模型仅输出思考链，不适合研讨回复）
-    const REASONING_HINTS = ['flash', 'reasoner', 'thinking', 'r1'];
+    // 优先用户推荐的 OpenDesign · deepseek-v4.1-flash；回退首个非推理模型
+    const REASONING_HINTS = ['reasoner', 'thinking', 'r1'];
     const pickChat = (p: ProviderRecord) => (p.models || []).find((m) => !REASONING_HINTS.some((h) => m.id.toLowerCase().includes(h))) || (p.models || [])[0];
     let activeProvider = providers[0];
     let pickedModelId = '';
-    for (const p of providers) { const m = pickChat(p); if (m) { activeProvider = p; pickedModelId = m.id; break; } }
+    const od = providers.find((p) => p.name === 'OpenDesign' && (p.models || []).some((m) => m.id === 'deepseek-v4.1-flash'));
+    if (od) { activeProvider = od; pickedModelId = 'deepseek-v4.1-flash'; }
+    else { for (const p of providers) { const m = pickChat(p); if (m) { activeProvider = p; pickedModelId = m.id; break; } } }
     const realKey = activeProvider ? this.resolveProviderApiKey(activeProvider) : '';
     const hasRealKey = Boolean(
       activeProvider && realKey && realKey !== 'none' && !realKey.startsWith('sk-test') && !realKey.includes('xxx') && realKey.length > 5,

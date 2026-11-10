@@ -106,7 +106,7 @@ export class RequirementsRoutes {
         return true;
       }
       if (method === 'POST') {
-        const body = await readBody<{ title?: string; initialPrompt?: string; workspaceId?: string }>(req);
+        const body = await readBody<{ title?: string; initialPrompt?: string; workspaceId?: string; modelId?: string; providerId?: string }>(req);
         if (!body.initialPrompt || typeof body.initialPrompt !== 'string') {
           res.writeHead(400, { 'Content-Type': 'application/json' });
           res.end(JSON.stringify({ code: 400, message: 'initialPrompt 必填' }));
@@ -117,8 +117,12 @@ export class RequirementsRoutes {
           initialPrompt: body.initialPrompt,
           workspaceId: body.workspaceId,
         });
-        const defaultModel = this.resolveDefaultModel();
-        const agents = DEFAULT_AGENTS.map((a, i) => this.store.insertAgent({ sessionId: session.id, name: a.name, roleTitle: a.roleTitle, systemPrompt: a.systemPrompt, modelId: defaultModel?.modelId ?? '', providerId: defaultModel?.providerId ?? 'default', sortOrder: i }));
+        // 用户显式选模型优先；否则资产池推荐（OpenDesign · deepseek-v4.1-flash）
+        const fallback = this.resolveDefaultModel();
+        const chosen = (body.modelId && body.providerId)
+          ? { modelId: body.modelId, providerId: body.providerId }
+          : fallback;
+        const agents = DEFAULT_AGENTS.map((a, i) => this.store.insertAgent({ sessionId: session.id, name: a.name, roleTitle: a.roleTitle, systemPrompt: a.systemPrompt, modelId: chosen?.modelId ?? '', providerId: chosen?.providerId ?? 'default', sortOrder: i }));
         jsonFn(res, { code: 0, data: { session, agents } });
         return true;
       }
@@ -236,13 +240,19 @@ export class RequirementsRoutes {
       if (method === 'GET') {
         const session = this.store.getSession(sessionId);
         if (!session) { res.writeHead(404, { 'Content-Type': 'application/json' }); res.end(JSON.stringify({ code: 404, message: '会话不存在' })); return true; }
+        // 消息分页（默认最近 30 条，支持向上回溯）
+        const limit = Math.min(Number(new URL(req.url ?? '/', 'http://localhost').searchParams.get('msgLimit') || 30), 100);
+        const beforeRaw = new URL(req.url ?? '/', 'http://localhost').searchParams.get('msgBefore');
+        const before = beforeRaw ? Number(beforeRaw) : null;
+        const paged = this.store.listMessagesPaged(sessionId, Number.isFinite(before) ? before : null, limit);
         jsonFn(res, {
           code: 0,
           data: {
             session,
             workspacePath: session.workspaceId && this.deps.getWorkspacePath ? this.deps.getWorkspacePath(session.workspaceId) : null,
             agents: this.store.listAgents(sessionId),
-            messages: this.store.listMessages(sessionId),
+            messages: paged.rows,
+            hasMoreMessages: paged.hasMore,
             chunkTree: this.store.listChunksTree(sessionId),
             suggestions: this.store.listSuggestions(sessionId),
           },

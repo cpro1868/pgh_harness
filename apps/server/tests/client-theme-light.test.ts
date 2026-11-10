@@ -74,6 +74,7 @@ const TEXT_EXEMPT = new Set([
   'text-black',
   'hover:text-slate-400', // 悬停态，与 text-slate-400 同级
   'text-blue-200', // 发送按钮提示字（蓝底白系）
+  'text-violet-300', // 技术架构师角色标签
 ]);
 
 /**
@@ -125,6 +126,10 @@ const BG_EXEMPT = new Set([
   'hover:bg-rose-600',
   'hover:bg-rose-700',
   'hover:bg-amber-500',
+  'bg-rose-900/40',
+  'hover:bg-rose-800/60',
+  'bg-violet-950/20',
+  'hover:bg-slate-700/50',
   'bg-black/75',
   'bg-amber-600/30',
   'bg-amber-950/10',

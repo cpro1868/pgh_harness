@@ -141,6 +141,30 @@
           }
         }).catch(() => { wsSel.innerHTML = '<option value="">工作区加载失败</option>'; });
       }
+      // 默认模型下拉（推荐 OpenDesign · deepseek-v4.1-flash）
+      const modelSel = document.getElementById('new-req-model');
+      if (modelSel) {
+        modelSel.innerHTML = '<option value="">加载中…</option>';
+        fetch('/api/providers').then((r) => r.json()).then((d) => {
+          const providers = d.data || [];
+          modelSel.innerHTML = '';
+          const recommended = { providerName: 'OpenDesign', modelId: 'deepseek-v4.1-flash' };
+          let recommendedValue = '';
+          for (const p of providers) {
+            for (const m of p.models || []) {
+              const val = `${p.id}::${m.id}`;
+              const label = `${m.id}（${p.name}）`;
+              const opt = document.createElement('option');
+              opt.value = val;
+              opt.textContent = label;
+              if (p.name === recommended.providerName && m.id === recommended.modelId) { opt.selected = true; recommendedValue = val; }
+              modelSel.appendChild(opt);
+            }
+          }
+          if (recommendedValue) modelSel.value = recommendedValue;
+          if (!modelSel.options.length) modelSel.innerHTML = '<option value="">暂无模型——请先在资产池配置</option>';
+        }).catch(() => { modelSel.innerHTML = '<option value="">模型加载失败</option>'; });
+      }
     };
     window.closeCreateModal = function () {
       document.getElementById('modal-create')?.classList.add('hidden');
@@ -154,6 +178,12 @@
         const body = { initialPrompt: prompt };
         if (name) body.title = name;
         if (workspace) body.workspaceId = workspace;
+        const modelVal = document.getElementById('new-req-model')?.value || '';
+        if (modelVal && modelVal.includes('::')) {
+          const [providerId, modelId] = modelVal.split('::');
+          body.providerId = providerId;
+          body.modelId = modelId;
+        }
         const resp = await api.send('/api/requirements', 'POST', body);
         toast('会话已创建，正在进入工作台…');
         setTimeout(() => { window.location.href = `run-requirements-workbench.html?id=${resp.data.session.id}`; }, 500);
@@ -184,8 +214,9 @@
               <p class="text-xs text-slate-400 leading-relaxed max-w-3xl">${escapeHtml(s.initialPrompt)}</p>
             </div>
             <div class="flex items-center space-x-2 shrink-0"><span class="text-[10px] text-slate-500 font-mono">${new Date(s.updatedAt).toLocaleString()}</span>
-            <button onclick="event.stopPropagation(); reqBindWorkspace('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs">📁 ${s.workspaceId ? '换绑工作区' : '绑定工作区'}</button>
-            <button class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow">进入工作台 →</button></div></div>
+             <button onclick="event.stopPropagation(); reqBindWorkspace('${s.id}')" class="px-2 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 rounded-lg text-xs">📁 ${s.workspaceId ? '换绑工作区' : '绑定工作区'}</button>
+             <button onclick="event.stopPropagation(); reqDeleteSession('${s.id}', '${escapeHtml(s.title)}')" class="px-2 py-1 bg-rose-900/40 hover:bg-rose-800/60 text-rose-300 border border-rose-800/50 rounded-lg text-xs">🗑 删除</button>
+             <button class="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-semibold shadow">进入工作台 →</button></div></div>
             <div class="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
               <div class="flex items-center space-x-4 font-mono text-[11px] text-slate-400"><span>状态: ${s.status}</span>${s.workspaceId ? '<span class="text-emerald-400">📁 已绑定工作区</span>' : '<span class="text-slate-600">未绑定工作区</span>'}</div></div></div>`;
         });
@@ -224,32 +255,66 @@
       </div>`).join('');
   }
 
+  function cleanMarkdown(text) {
+    return String(text || '').replace(/```proposal[\s\S]*?```/g, '').trim();
+  }
+  function proposalSummary(p) {
+    if (!p) return '';
+    if (p.kind === 'chunk') return `📦 新增需求分块「${escapeHtml(p.title)}」· 优先级 ${escapeHtml(p.priority || 'P1')}${p.description ? ` · ${escapeHtml(p.description.slice(0, 60))}` : ''}`;
+    return `📋 新增叶子任务「${escapeHtml(p.title)}」${p.chunkTitle ? `（归属分块：${escapeHtml(p.chunkTitle)}）` : ''} · 优先级 ${escapeHtml(p.priority || 'P1')}`;
+  }
+  const AGENT_COLORS = {
+    '产品分析师': 'text-blue-300 border-blue-800/40 bg-blue-950/20',
+    '技术架构师': 'text-violet-300 border-violet-800/40 bg-violet-950/20',
+    '质检与安全专家': 'text-amber-300 border-amber-800/40 bg-amber-950/20',
+  };
+  function agentStyle(name) {
+    for (const [k, v] of Object.entries(AGENT_COLORS)) if (String(name || '').includes(k)) return v;
+    return 'text-emerald-300 border-slate-800 bg-[#0f1523]';
+  }
   function renderMessages() {
     const el = document.getElementById('chat-messages');
     if (!el) return;
-    el.innerHTML = state.messages.map((m) => {
+    let round = 0;
+    const parts = [];
+    state.messages.forEach((m, idx) => {
+      if (m.role === 'user') { round += 1; parts.push(`<div class="chat-round-divider">— 第 ${round} 轮研讨 —</div>`); }
       const isUser = m.role === 'user';
       const isSystem = m.role === 'system';
+      const agentTag = !isUser && !isSystem && m.agent_name
+        ? `<span class="text-[9px] px-1.5 py-0.5 rounded font-mono border ${agentStyle(m.agent_name)}">${escapeHtml(m.agent_name)}</span>`
+        : '';
       const proposalCard = m.proposal_json && m.proposal_state === 'pending'
-        ? `<div class="mt-2 rounded-lg bg-[#080d1a] border border-blue-800/50 p-2.5 text-[11px]">
-            <div class="text-blue-300 font-semibold mb-1">💡 Agent 提议（待确认）</div>
-            <pre class="text-[10px] text-slate-400 whitespace-pre-wrap">${escapeHtml(JSON.stringify(m.proposal_json, null, 2))}</pre>
+        ? `<div class="mt-2 rounded-lg bg-[#080d1a] border border-emerald-800/50 p-2.5 text-[11px]">
+            <div class="text-emerald-300 font-semibold mb-1">💡 Agent 提议（待确认）</div>
+            <div class="text-slate-300">${proposalSummary(m.proposal_json)}</div>
             <div class="flex space-x-1.5 mt-2">
               <button class="px-2 py-1 rounded bg-blue-600 text-white text-[10px]" onclick="reqAcceptProposal('${m.id}')">✓ 采纳落盘</button>
               <button class="px-2 py-1 rounded bg-slate-800 text-slate-400 text-[10px]" onclick="reqDismissProposal('${m.id}')">✕ 忽略</button>
             </div></div>`
-        : '';
-      const noticeStyle = isSystem ? 'bg-amber-950/40 border-amber-800/50 text-amber-200' : isUser ? 'bg-blue-950/40 border-blue-800/40' : 'bg-[#0f1523] border-slate-800';
-      return `<div class="chat-msg rounded-lg border ${noticeStyle} p-3">
+        : m.proposal_state === 'accepted' ? '<div class="mt-2 text-[10px] text-emerald-400">✓ 提议已采纳</div>'
+        : m.proposal_state === 'dismissed' ? '<div class="mt-2 text-[10px] text-slate-600">已忽略提议</div>' : '';
+      const folded = isLong ? 'collapsed-msg' : '';
+      parts.push(`<div class="chat-msg rounded-lg border ${noticeStyle} p-3">
         <div class="flex items-center space-x-1.5 mb-1.5">
-          <span class="text-[10px] font-bold ${isUser ? 'text-blue-300' : isSystem ? 'text-amber-300' : 'text-emerald-300'}">${isUser ? '👤 我' : isSystem ? '⚙️ 系统' : `🤖 ${escapeHtml(m.agent_name || 'Agent')}`}</span>
+          <span class="text-[10px] font-bold ${isUser ? 'text-blue-300' : isSystem ? 'text-amber-300' : 'text-emerald-300'}">${isUser ? '👤 我' : isSystem ? '⚙️ 系统' : '🤖 Agent'}</span>
+          ${agentTag}
           <span class="text-[9px] text-slate-600 font-mono">${new Date(m.created_at).toLocaleTimeString()}</span>
         </div>
-        <div class="text-[11px] text-slate-300 leading-relaxed markdown-body">${renderMarkdown(m.content)}</div>
-        ${proposalCard}</div>`;
-    }).join('');
+        <div class="text-[11px] text-slate-300 leading-relaxed markdown-body ${folded}" data-msg-idx="${idx}">${renderMarkdown(bodyText)}</div>
+        ${isLong ? `<button class="text-[10px] text-blue-400 hover:underline mt-1" onclick="reqToggleMsgFold(${idx})">展开全文 ▾</button>` : ''}
+        ${proposalCard}</div>`);
+    });
+    el.innerHTML = parts.join('');
     el.scrollTop = el.scrollHeight;
   }
+  window.reqToggleMsgFold = function (idx) {
+    const el = document.querySelector(`.collapsed-msg[data-msg-idx="${idx}"]`);
+    if (!el) return;
+    el.classList.toggle('expanded');
+    const btn = el.parentElement?.querySelector('button');
+    if (btn) btn.textContent = el.classList.contains('expanded') ? '收起 ▴' : '展开全文 ▾';
+  };
 
   function renderChunkTree() {
     const el = document.getElementById('chunk-tree-live');
@@ -469,6 +534,26 @@
     } catch (err) { toast(err.message, true); }
   };
 
+  window.reqLoadEarlier = async function () {
+    if (!state.hasMoreMessages || !state.messages.length) return;
+    const oldest = state.messages[0];
+    try {
+      const resp = await api.get(`/api/requirements/${state.sessionId}?msgLimit=20&msgBefore=${oldest.created_at}`);
+      const earlier = resp.data.messages.map((m) => ({
+        ...m,
+        proposal_json: typeof m.proposal_json === 'string' && m.proposal_json ? JSON.parse(m.proposal_json) : (m.proposal_json || null),
+        agent_name: (state.agents.find((a) => a.id === m.agent_id) || {}).name,
+      }));
+      state.messages = [...earlier, ...state.messages];
+      state.hasMoreMessages = Boolean(resp.data.hasMoreMessages);
+      const btn = document.getElementById('load-earlier-btn');
+      if (btn) btn.classList.toggle('hidden', !state.hasMoreMessages);
+      renderMessages();
+      const box = document.getElementById('chat-messages');
+      if (box) box.scrollTop = 0;
+    } catch (err) { toast(err.message, true); }
+  };
+
   async function refreshSnapshot() {
     const resp = await api.get(`/api/requirements/${state.sessionId}`);
     state.session = resp.data.session;
@@ -481,6 +566,9 @@
     }));
     state.chunkTree = resp.data.chunkTree;
     state.suggestions = resp.data.suggestions;
+    state.hasMoreMessages = Boolean(resp.data.hasMoreMessages);
+    const earlierBtn = document.getElementById('load-earlier-btn');
+    if (earlierBtn) earlierBtn.classList.toggle('hidden', !state.hasMoreMessages);
     renderAgents();
     renderMessages();
     renderChunkTree();
@@ -580,7 +668,8 @@
                 live.className = 'chat-msg rounded-lg border bg-[#0f1523] border-slate-800 p-3';
                 document.getElementById('chat-messages')?.appendChild(live);
               }
-              live.innerHTML = `<div class="flex items-center space-x-1.5 mb-1.5"><span class="text-[10px] font-bold text-emerald-300">🤖 Agent 正在回复…</span><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span></div><div class="text-[11px] text-slate-300 leading-relaxed markdown-body">${renderMarkdown(evt.text)}</div>`;
+              const liveText = cleanMarkdown(evt.text);
+              live.innerHTML = `<div class="flex items-center space-x-1.5 mb-1.5"><span class="text-[10px] font-bold text-emerald-300">🤖 Agent 正在回复…</span><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span></div><div class="text-[11px] text-slate-300 leading-relaxed markdown-body">${renderMarkdown(liveText)}</div>`;
               const box = document.getElementById('chat-messages');
               if (box) box.scrollTop = box.scrollHeight;
             } else if (evt.type === 'done') continue;
@@ -842,6 +931,24 @@
   window.renderFileTree = renderFileTree;
 
   // ═══ 会话补绑定/更换工作区（列表页卡片操作） ═══
+  window.reqDeleteSession = async function (sessionId, title) {
+    if (!confirm(`确认删除探索会话「${title}」？\n该操作不可恢复，会话下的全部研讨记录、分块与任务将一并删除。`)) return;
+    try {
+      const resp = await api.send(`/api/requirements/${sessionId}`, 'DELETE');
+      if (resp.code !== 0) throw new Error(resp.message || '删除失败');
+      toast('会话已删除');
+      // 重新加载列表 + 刷新计数
+      const d = await api.get('/api/requirements');
+      const { sessions, stats } = d.data;
+      const listEl = document.getElementById('session-list');
+      if (listEl) {
+        // 复用首屏渲染逻辑
+        window.dispatchEvent(new Event('pgh:session-deleted'));
+        location.reload();
+      }
+    } catch (err) { toast(err.message, true); }
+  };
+
   window.reqBindWorkspace = async function (sessionId) {
     try {
       const d = await api.get('/api/workspaces');
