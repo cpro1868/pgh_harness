@@ -3554,7 +3554,10 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
         '.png': 'image/png',
         '.svg': 'image/svg+xml',
       };
-      res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream' });
+      // html/js/css 禁缓存（开发迭代必须实时生效），其余资源允许短缓存
+      const noCache = ['.html', '.js', '.css'].includes(ext);
+      const cacheHeader = noCache ? 'no-cache, no-store, must-revalidate' : 'public, max-age=3600';
+      res.writeHead(200, { 'Content-Type': mimeTypes[ext] || 'application/octet-stream', 'Cache-Control': cacheHeader });
       fs.createReadStream(filePath).pipe(res);
       return;
     }
