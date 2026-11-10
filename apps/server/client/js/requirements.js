@@ -378,6 +378,7 @@
       const d = await api.get('/api/providers');
       const providers = d.data || [];
       modelAsset.groups = [];
+      modelAsset.open.clear(); // 打开选择器时清空展开记忆（单选语义，对齐主会话）
       for (const p of providers) {
         const models = (p.models || []).map((m) => ({ id: m.id, label: m.id }));
         if (models.length > 0) modelAsset.groups.push({ providerId: p.id, providerName: p.name, models });
