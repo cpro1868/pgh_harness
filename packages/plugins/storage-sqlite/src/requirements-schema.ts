@@ -751,6 +751,15 @@ export class RequirementsStore {
     return this.db.raw.prepare('SELECT * FROM req_messages WHERE session_id = ? ORDER BY created_at').all(sessionId) as Array<Record<string, unknown>>;
   }
 
+  public listMessagesPaged(sessionId: string, beforeCreatedAt: number | null, limit: number): { rows: Array<Record<string, unknown>>; hasMore: boolean } {
+    const safeLimit = Math.min(Math.max(limit, 1), 100);
+    const rows = beforeCreatedAt === null
+      ? this.db.raw.prepare('SELECT * FROM (SELECT * FROM req_messages WHERE session_id = ? ORDER BY created_at DESC LIMIT ?) ORDER BY created_at').all(sessionId, safeLimit + 1) as Array<Record<string, unknown>>
+      : this.db.raw.prepare('SELECT * FROM (SELECT * FROM req_messages WHERE session_id = ? AND created_at < ? ORDER BY created_at DESC LIMIT ?) ORDER BY created_at').all(sessionId, beforeCreatedAt, safeLimit + 1) as Array<Record<string, unknown>>;
+    const hasMore = rows.length > safeLimit;
+    return { rows: hasMore ? rows.slice(1) : rows, hasMore };
+  }
+
   public updateProposalState(messageId: string, state: ProposalState): void {
     const cur = this.db.raw.prepare('SELECT proposal_state FROM req_messages WHERE id = ?').get(messageId) as { proposal_state: string | null } | undefined;
     if (!cur) throw new Error(`MESSAGE_NOT_FOUND: ${messageId}`);
