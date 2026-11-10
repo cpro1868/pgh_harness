@@ -534,6 +534,13 @@
     // 本地先渲染用户消息
     state.messages.push({ id: `local_${Date.now()}`, role: 'user', content, created_at: Date.now() });
     renderMessages();
+    // 立即显示"思考中"占位气泡（用户发消息后 0 延迟反馈，不再像无反应）
+    const think = document.createElement('div');
+    think.id = 'chat-live-bubble';
+    think.className = 'chat-msg rounded-lg border bg-[#0f1523] border-slate-800 p-3';
+    think.innerHTML = '<div class="flex items-center space-x-1.5"><span class="text-[10px] font-bold text-emerald-300">🤖 Coordinator 正在指派 Agent…</span><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span></div><div class="text-[10px] text-slate-500 mt-1">请稍候，多 Agent 研讨通常需要 10~30 秒</div>';
+    const msgBox = document.getElementById('chat-messages');
+    if (msgBox) { msgBox.appendChild(think); msgBox.scrollTop = msgBox.scrollHeight; }
     // 注册后台任务（跨页面可见）
     const taskId = `req_turn_${state.sessionId}_${Date.now()}`;
     if (window.bgTaskUpsert) {
@@ -550,6 +557,7 @@
       const reader = resp.body.getReader();
       const decoder = new TextDecoder();
       let buffer = '';
+      let gotAnyResponse = false;
       for (;;) {
         const { done, value } = await reader.read();
         if (done) break;
@@ -560,15 +568,34 @@
           if (!line.startsWith('data: ')) continue;
           try {
             const evt = JSON.parse(line.slice(6));
-            if (evt.type === 'done') continue;
+            if (evt.type === 'delta' && evt.kind === 'content' && evt.text) {
+              // 流式增量渲染：把当前已收到的文本作为临时 assistant 气泡显示（不再等整段 SSE 结束）
+              gotAnyResponse = true;
+              const hint = document.getElementById('chat-empty-hint');
+              if (hint) hint.classList.add('hidden');
+              let live = document.getElementById('chat-live-bubble');
+              if (!live) {
+                live = document.createElement('div');
+                live.id = 'chat-live-bubble';
+                live.className = 'chat-msg rounded-lg border bg-[#0f1523] border-slate-800 p-3';
+                document.getElementById('chat-messages')?.appendChild(live);
+              }
+              live.innerHTML = `<div class="flex items-center space-x-1.5 mb-1.5"><span class="text-[10px] font-bold text-emerald-300">🤖 Agent 正在回复…</span><span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span></div><div class="text-[11px] text-slate-300 leading-relaxed markdown-body">${renderMarkdown(evt.text)}</div>`;
+              const box = document.getElementById('chat-messages');
+              if (box) box.scrollTop = box.scrollHeight;
+            } else if (evt.type === 'done') continue;
           } catch { /* ignore parse error */ }
         }
       }
+      const liveEl = document.getElementById('chat-live-bubble');
+      if (liveEl) liveEl.remove();
       await refreshSnapshot();
+      if (!gotAnyResponse) toast('本轮未收到 Agent 回复，请重试', true);
       if (window.bgTaskUpsert) {
         window.bgTaskUpsert({ id: taskId, type: 'requirements', status: 'completed', title: state.session?.title || '需求研讨', detail: content.slice(0, 40), sessionId: state.sessionId });
       }
     } catch (err) {
+      document.getElementById('chat-live-bubble')?.remove();
       toast('研讨回合失败: ' + err.message, true);
       if (window.bgTaskUpsert) {
         window.bgTaskUpsert({ id: taskId, type: 'requirements', status: 'failed', title: state.session?.title || '需求研讨', detail: err.message.slice(0, 40), sessionId: state.sessionId });

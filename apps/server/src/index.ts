@@ -3735,6 +3735,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
     messages: MessageItem[],
     onDelta?: (kind: 'reasoning' | 'content', text: string) => void,
     signal?: AbortSignal,
+    omitTools?: boolean,
   ): Promise<ChatTurnResult> {
     const endpoint = `${provider.baseUrl.replace(/\/+$/, '')}/chat/completions`;
     const __t0 = Date.now();
@@ -3771,7 +3772,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
                 content: m.content || '',
               };
             }),
-            tools: TurnLoop.toolSchemas().map((t) => {
+            ...(omitTools ? {} : { tools: TurnLoop.toolSchemas().map((t) => {
               const tool = t as { name: string; description: string; parameters?: object };
               return {
                 type: 'function',
@@ -3781,8 +3782,7 @@ ${projectRules ? `\n[Project Rules & Constraints]:\n${projectRules}` : ''}${skil
                   parameters: tool.parameters || { type: 'object', properties: {} },
                 },
               };
-            }),
-          tool_choice: 'auto',
+            }), tool_choice: 'auto' }),
           stream: true,
         }),
       },
@@ -4258,17 +4258,17 @@ Constraints:
     if (hasRealKey && activeProvider) {
       try {
         const model = pickedModelId || activeProvider.models?.[0]?.id || '';
-        // 整体超时保护（90s）：上游卡死时不挂起研讨回合，超时回落本地演示引擎
-        const TIMEOUT_MS = 90_000;
-        const withTimeout = async <T>(p: Promise<T>): Promise<T> => {
-          return await Promise.race([
-            p,
-            new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`LLM_TIMEOUT: ${TIMEOUT_MS / 1000}s 超时`)), TIMEOUT_MS)),
-          ]);
-        };
-        const result = await withTimeout(retryWithBackoff(
-          () => this.streamChatCompletion(activeProvider, realKey, model, messages as MessageItem[], undefined),
-        ));
+        // 单次 LLM 调用 30s 硬超时（AbortController 直传 fetch），避免上游慢响应叠加拖垮双 Agent 回合
+        const ac = new AbortController();
+        const abortTimer = setTimeout(() => ac.abort(), 30_000);
+        let result;
+        try {
+          result = await retryWithBackoff(
+            () => this.streamChatCompletion(activeProvider, realKey, model, messages as MessageItem[], undefined, ac.signal, true),
+          );
+        } finally {
+          clearTimeout(abortTimer);
+        }
         // 部分推理模型（deepseek-flash 等）仅输出 reasoning_content——此时以 reasoning 作为回复内容
         const effective = (result.content && result.content.trim().length > 0)
           ? result.content
