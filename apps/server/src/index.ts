@@ -4255,9 +4255,17 @@ Constraints:
     if (hasRealKey && activeProvider) {
       try {
         const model = pickedModelId || activeProvider.models?.[0]?.id || '';
-        const result = await retryWithBackoff(
+        // 整体超时保护（90s）：上游卡死时不挂起研讨回合，超时回落本地演示引擎
+        const TIMEOUT_MS = 90_000;
+        const withTimeout = async <T>(p: Promise<T>): Promise<T> => {
+          return await Promise.race([
+            p,
+            new Promise<T>((_, reject) => setTimeout(() => reject(new Error(`LLM_TIMEOUT: ${TIMEOUT_MS / 1000}s 超时`)), TIMEOUT_MS)),
+          ]);
+        };
+        const result = await withTimeout(retryWithBackoff(
           () => this.streamChatCompletion(activeProvider, realKey, model, messages as MessageItem[], undefined),
-        );
+        ));
         // 部分推理模型（deepseek-flash 等）仅输出 reasoning_content——此时以 reasoning 作为回复内容
         const effective = (result.content && result.content.trim().length > 0)
           ? result.content

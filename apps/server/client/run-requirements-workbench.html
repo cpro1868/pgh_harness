@@ -357,9 +357,15 @@
             rows="2"
             class="w-full bg-transparent border-0 resize-none text-xs text-white placeholder-slate-500 focus:outline-none leading-relaxed"
           ></textarea>
+          <!-- 待发送附件 chips -->
+          <div id="attachment-chips" class="hidden flex-wrap gap-1.5 pt-2"></div>
           <div class="flex items-center justify-between pt-2 border-t border-slate-800/80">
             <div class="flex items-center space-x-2 text-[10px] text-slate-500 font-mono">
-              <span id="composer-agent-hint"> Coordinator 将指派最相关的 Agent 发言 </span>
+              <input type="file" id="attachment-input" accept=".md,text/markdown" multiple class="hidden" onchange="reqAttachmentPicked(event)">
+              <button type="button" onclick="document.getElementById('attachment-input').click()" class="px-2.5 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 flex items-center space-x-1 transition" title="添加 Markdown 参考材料（仅 .md，单个 ≤ 64KB，最多 3 个）">
+                <span>📎 添加 .md</span>
+              </button>
+              <span id="composer-agent-hint">Coordinator 将指派最相关的 Agent 发言</span>
             </div>
             <button onclick="reqSend()" class="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center space-x-1.5">
               <span>发送</span><span class="text-[9px] text-blue-200 font-mono">Enter</span>

@@ -351,7 +351,16 @@
   window.toggleAgentModelPanel = function (ev) {
     ev.stopPropagation();
     const panel = document.getElementById('f-agent-model-panel');
-    if (panel) panel.classList.toggle('hidden');
+    if (!panel) return;
+    panel.classList.toggle('hidden');
+    if (!panel.classList.contains('hidden')) {
+      // 展开时只保留当前选中模型所在组（单选语义，对齐主会话）
+      const sel = document.getElementById('f-agent-model');
+      modelAsset.open.clear();
+      const curPid = sel?.selectedOptions?.[0]?.getAttribute('data-provider-id');
+      if (curPid) modelAsset.open.add(curPid);
+      renderModelPanelFromSelect();
+    }
   };
   document.addEventListener('click', (e) => {
     const panel = document.getElementById('f-agent-model-panel');
@@ -478,10 +487,48 @@
     renderFileTree();
   }
 
+  // ═══ 附件（Markdown 参考材料，对齐主会话 composer：单文件 ≤64KB、最多 3 个） ═══
+  const attachments = [];
+  window.reqAttachmentPicked = function (ev) {
+    const files = [...ev.target.files || []];
+    ev.target.value = '';
+    for (const file of files) {
+      if (!file.name.endsWith('.md')) { toast('仅支持 .md 文件', true); continue; }
+      if (file.size > 64 * 1024) { toast(`「${file.name}」超过 64KB`, true); continue; }
+      if (attachments.length >= 3) { toast('最多 3 个附件', true); break; }
+      const reader = new FileReader();
+      reader.onload = () => {
+        attachments.push({ name: file.name, content: reader.result });
+        renderAttachmentChips();
+      };
+      reader.readAsText(file);
+    }
+  };
+  function renderAttachmentChips() {
+    const el = document.getElementById('attachment-chips');
+    if (!el) return;
+    el.classList.toggle('hidden', attachments.length === 0);
+    el.classList.add('flex');
+    el.innerHTML = attachments.map((a, i) => `
+      <span class="pill flex items-center space-x-1" style="background:rgba(59,130,246,.15);color:#93c5fd">📎 ${escapeHtml(a.name)}
+        <button onclick="reqRemoveAttachment(${i})" class="text-slate-400 hover:text-rose-400">✕</button></span>`).join('');
+  }
+  window.reqRemoveAttachment = function (i) {
+    attachments.splice(i, 1);
+    renderAttachmentChips();
+  };
+
   window.reqSend = async function () {
     const input = document.getElementById('chat-input');
     if (!input || !input.value.trim() || !state.sessionId) return;
-    const content = input.value.trim();
+    let content = input.value.trim();
+    // 附件内容并入消息（Markdown 参考材料）
+    if (attachments.length > 0) {
+      const parts = attachments.map((a) => `\n\n---\n📎 附件「${a.name}」：\n${a.content}`);
+      content = content + parts.join('');
+      attachments.length = 0;
+      renderAttachmentChips();
+    }
     input.value = '';
     // 本地先渲染用户消息
     state.messages.push({ id: `local_${Date.now()}`, role: 'user', content, created_at: Date.now() });
